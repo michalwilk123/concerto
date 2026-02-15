@@ -5,16 +5,13 @@ services:
       - NODE_ENV=production
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - LIVEKIT_URL=http://livekit:7880
+      - LIVEKIT_URL=http://host.docker.internal:7880
       - LIVEKIT_CLIENT_URL=wss://livekit.${DOMAIN}
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=https://${DOMAIN}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.app.rule=Host(`${DOMAIN}`)
-      - traefik.http.routers.app.tls.certresolver=letsencrypt
-      - traefik.http.services.app.loadbalancer.server.port=3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,17 +26,9 @@ services:
   livekit:
     image: livekit/livekit-server:v1.8
     command: --config /etc/livekit.yaml --node-ip=${HOST_IP}
+    network_mode: host
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml:ro
-    ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "50000-60000:50000-60000/udp"
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.livekit.rule=Host(`livekit.${DOMAIN}`)
-      - traefik.http.routers.livekit.tls.certresolver=letsencrypt
-      - traefik.http.services.livekit.loadbalancer.server.port=7880
     restart: unless-stopped
 
   postgres:
