@@ -1,0 +1,61 @@
+services:
+  app:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_URL=http://livekit:7880
+      - LIVEKIT_CLIENT_URL=wss://livekit.${DOMAIN}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=https://${DOMAIN}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.services.app.loadbalancer.server.port=3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  livekit:
+    image: livekit/livekit-server:v1.8
+    command: --config /etc/livekit.yaml --node-ip=${HOST_IP}
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-60000:50000-60000/udp"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.livekit.rule=Host(`livekit.${DOMAIN}`)
+      - traefik.http.routers.livekit.tls.certresolver=letsencrypt
+      - traefik.http.services.livekit.loadbalancer.server.port=7880
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
