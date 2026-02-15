@@ -7,7 +7,3 @@ keys:
   ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
 logging:
   level: info
-turn:
-  enabled: true
-  udp_port: 3478
-  tls_port: 5349

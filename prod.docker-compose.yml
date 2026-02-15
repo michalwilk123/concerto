@@ -23,10 +23,19 @@ services:
       start_period: 30s
 
   livekit:
-    image: livekit/livekit-server:v1.8
-    command: --config /etc/livekit.yaml --node-ip=${HOST_IP}
-    volumes:
-      - ./livekit.yaml:/etc/livekit.yaml:ro
+    image: livekit/livekit-server:latest
+    command: --node-ip=${HOST_IP}
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          udp_port: 7882
+          tcp_port: 7881
+          use_external_ip: true
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        logging:
+          level: info
     ports:
       - "7880:7880"
       - "7881:7881"
