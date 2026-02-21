@@ -1,13 +1,16 @@
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { groupMember } from "@/db/schema";
 import type { Role } from "@/types/room";
-import { AccessToken, LIVEKIT_API_KEY, LIVEKIT_API_SECRET } from "./livekit";
+import { addParticipant, roleToPreset } from "./realtimekit";
 import { type Room, rooms } from "./room-store";
 
 /**
- * Get a room by key or return a 404 error response
+ * Get a room by meeting ID or return a 404 error response
  */
-export function getRoomOrFail(roomKey: string): Room | NextResponse {
-	const room = rooms.get(roomKey);
+export function getRoomOrFail(meetingId: string): Room | NextResponse {
+	const room = rooms.get(meetingId);
 	if (!room) {
 		return NextResponse.json({ error: "Room not found" }, { status: 404 });
 	}
@@ -15,53 +18,33 @@ export function getRoomOrFail(roomKey: string): Room | NextResponse {
 }
 
 /**
- * Check if a participant is a moderator (admin or moderator role)
- * Returns an error response if unauthorized
+ * Determine the role of a user in a group. Returns "teacher" for admins and group teachers.
  */
-export function requireModerator(room: Room, participantName: string): undefined | NextResponse {
-	const isCreator = room.creatorIdentity === participantName;
-	const isModerator = room.moderators.has(participantName);
+export async function determineRole(groupId: string, userId: string, userRole?: string | null): Promise<Role> {
+	if (userRole === "admin") return "teacher";
 
-	if (!isCreator && !isModerator) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-	}
+	const [member] = await db
+		.select()
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
+		.limit(1);
+
+	if (member?.role === "teacher") return "teacher";
+	return "student";
 }
 
 /**
- * Determine the role of a participant in a room
+ * Create a RealtimeKit participant and store the participant ID mapping
  */
-export function determineRole(room: Room, participantName: string): Role {
-	const isCreator = room.creatorIdentity === participantName;
-	const isModerator = room.moderators.has(participantName);
-	const isStudent = room.students.has(participantName);
-
-	if (isCreator) return "admin";
-	if (isModerator) return "moderator";
-	if (isStudent) return "student";
-	return "participant";
-}
-
-/**
- * Create a LiveKit access token for a participant
- */
-export async function createLiveKitToken(params: {
-	roomKey: string;
+export async function createRealtimeKitParticipant(params: {
+	room: Room;
+	rtkMeetingId: string;
 	participantName: string;
 	role: Role;
-}): Promise<string> {
-	const { roomKey, participantName, role } = params;
-
-	const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-		identity: participantName,
-		metadata: JSON.stringify({ role }),
-	});
-
-	token.addGrant({
-		room: roomKey,
-		roomJoin: true,
-		canPublish: true,
-		canSubscribe: true,
-	});
-
-	return await token.toJwt();
+}): Promise<{ token: string; participantId: string }> {
+	const { room, rtkMeetingId, participantName, role } = params;
+	const preset = roleToPreset(role);
+	const { id, token } = await addParticipant(rtkMeetingId, participantName, preset);
+	room.participantIds.set(participantName, id);
+	return { token, participantId: id };
 }

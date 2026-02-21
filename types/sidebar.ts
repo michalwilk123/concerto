@@ -1,1 +1,1 @@
-export type SidebarTab = "participants" | "sounds";
+export type SidebarTab = "participants" | "files" | "chat";

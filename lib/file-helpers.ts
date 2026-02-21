@@ -1,15 +1,58 @@
+import { nanoid } from "nanoid";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { folder } from "@/db/schema";
 
-export async function getMeetingsFolderId(userId: string): Promise<string | null> {
-	const result = await db
+/**
+ * Ensures the system "meetings" folder exists for a group, creating it if needed.
+ * Returns the meetings folder ID.
+ */
+export async function ensureMeetingsFolder(groupId: string): Promise<string> {
+	const existing = await db
 		.select({ id: folder.id })
 		.from(folder)
-		.where(and(eq(folder.ownerId, userId), eq(folder.isSystem, true), eq(folder.name, "meetings")))
+		.where(and(eq(folder.groupId, groupId), eq(folder.isSystem, true), eq(folder.name, "meetings")))
 		.limit(1);
 
-	return result[0]?.id ?? null;
+	if (existing.length > 0) return existing[0].id;
+
+	const id = nanoid();
+	await db.insert(folder).values({
+		id,
+		name: "meetings",
+		groupId,
+		parentId: null,
+		isSystem: true,
+	});
+	return id;
+}
+
+/**
+ * Ensures a meeting subfolder exists inside the group's meetings folder.
+ * Creates the meetings folder + meeting subfolder if they don't exist.
+ * Returns the meeting subfolder ID.
+ */
+export async function ensureMeetingFolder(groupId: string, meetingName: string): Promise<string> {
+	const meetingsFolderId = await ensureMeetingsFolder(groupId);
+
+	// Check if a subfolder for this meeting already exists
+	const existing = await db
+		.select({ id: folder.id })
+		.from(folder)
+		.where(and(eq(folder.groupId, groupId), eq(folder.parentId, meetingsFolderId), eq(folder.name, meetingName)))
+		.limit(1);
+
+	if (existing.length > 0) return existing[0].id;
+
+	const id = nanoid();
+	await db.insert(folder).values({
+		id,
+		name: meetingName,
+		groupId,
+		parentId: meetingsFolderId,
+		isSystem: false,
+	});
+	return id;
 }
 
 export function formatFileSize(bytes: number): string {

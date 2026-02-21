@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { InlineButton } from "@/components/ui/inline-button";
 
 interface NameEntryPhaseProps {
-	roomKey: string;
+	meetingId: string;
 	participantName: string;
 	onParticipantNameChange: (value: string) => void;
 	onSubmit: (e: FormEvent) => void;
@@ -12,7 +12,7 @@ interface NameEntryPhaseProps {
 }
 
 export default function NameEntryPhase({
-	roomKey,
+	meetingId,
 	participantName,
 	onParticipantNameChange,
 	onSubmit,
@@ -62,7 +62,7 @@ export default function NameEntryPhase({
 						}}
 					>
 						<ArrowLeft size={14} />
-						Back to Lobby
+						Back to Dashboard
 					</InlineButton>
 
 					<h2 style={{ margin: "0 0 var(--space-sm)", fontSize: "1.25rem" }}>Join Room</h2>
@@ -73,7 +73,7 @@ export default function NameEntryPhase({
 							color: "var(--text-secondary)",
 						}}
 					>
-						Room:{" "}
+						Meeting:{" "}
 						<code
 							style={{
 								color: "var(--text-primary)",
@@ -81,7 +81,7 @@ export default function NameEntryPhase({
 								letterSpacing: "0.05em",
 							}}
 						>
-							{roomKey}
+							{meetingId}
 						</code>
 					</p>
 

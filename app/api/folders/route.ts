@@ -1,27 +1,46 @@
+import { nanoid } from "nanoid";
 import { and, eq, isNull } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { folder } from "@/db/schema";
-import { getSessionOrNull, requireAdmin } from "@/lib/auth-helpers";
-import { rooms } from "@/lib/room-store";
+import { requireGroupMember, requireGroupTeacher } from "@/lib/auth-helpers";
 
 export async function POST(req: NextRequest) {
-	const { error, session } = await requireAdmin();
-	if (error) return error;
+	const { name, parentId, groupId } = await req.json();
 
-	const { name, parentId } = await req.json();
+	if (!groupId) {
+		return NextResponse.json({ error: "groupId is required" }, { status: 400 });
+	}
+
+	const { error } = await requireGroupTeacher(groupId);
+	if (error) return error;
 
 	if (!name || typeof name !== "string" || !name.trim()) {
 		return NextResponse.json({ error: "Folder name is required" }, { status: 400 });
 	}
 
-	const folderId = crypto.randomUUID();
+	const trimmedName = name.trim();
+	const parentCondition = parentId
+		? eq(folder.parentId, parentId)
+		: isNull(folder.parentId);
+
+	const existing = await db
+		.select({ id: folder.id })
+		.from(folder)
+		.where(and(eq(folder.groupId, groupId), eq(folder.name, trimmedName), parentCondition))
+		.limit(1);
+
+	if (existing.length > 0) {
+		return NextResponse.json({ error: "A folder with this name already exists here" }, { status: 409 });
+	}
+
+	const folderId = nanoid();
 	const [inserted] = await db
 		.insert(folder)
 		.values({
 			id: folderId,
-			name: name.trim(),
-			ownerId: session?.user.id,
+			name: trimmedName,
+			groupId,
 			parentId: parentId || null,
 			isSystem: false,
 		})
@@ -33,53 +52,20 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
 	const { searchParams } = new URL(req.url);
 	const parentId = searchParams.get("parentId");
+	const groupId = searchParams.get("groupId");
 
-	// Try admin first
-	const { error, session } = await requireAdmin();
-	if (!error) {
-		const userId = session?.user.id;
-		const whereClause = parentId
-			? and(eq(folder.ownerId, userId), eq(folder.parentId, parentId))
-			: and(eq(folder.ownerId, userId), isNull(folder.parentId));
-
-		const folders = await db.select().from(folder).where(whereClause);
-		return NextResponse.json(folders);
+	if (!groupId) {
+		return NextResponse.json({ error: "groupId is required" }, { status: 400 });
 	}
 
-	// Fall back to meeting participant - only show meetings folder
-	const sess = await getSessionOrNull();
-	if (!sess) {
-		return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-	}
+	const { error } = await requireGroupMember(groupId);
+	if (error) return error;
 
-	// Find creator's meetings folder if participant is in a room
-	let creatorUserId: string | null = null;
-	for (const [, room] of rooms) {
-		const participantName = sess.user.name;
-		if (
-			room.creatorUserId !== sess.user.id &&
-			(room.moderators.has(participantName) || room.students.has(participantName))
-		) {
-			creatorUserId = room.creatorUserId;
-			break;
-		}
-	}
+	const whereClause = parentId
+		? and(eq(folder.groupId, groupId), eq(folder.parentId, parentId))
+		: and(eq(folder.groupId, groupId), isNull(folder.parentId));
 
-	if (!creatorUserId) {
-		return NextResponse.json([]);
-	}
-
-	// Only return the meetings folder for participants
-	const meetingsFolders = await db
-		.select()
-		.from(folder)
-		.where(
-			and(
-				eq(folder.ownerId, creatorUserId),
-				eq(folder.isSystem, true),
-				eq(folder.name, "meetings"),
-			),
-		);
-
-	return NextResponse.json(meetingsFolders);
+	const folders = await db.select().from(folder).where(whereClause);
+	console.log(`[folders/list] groupId=${groupId}, parentId=${parentId ?? "ROOT"} → ${folders.length} folders: ${folders.map((f) => `${f.name}(id=${f.id},system=${f.isSystem})`).join(", ") || "none"}`);
+	return NextResponse.json(folders);
 }

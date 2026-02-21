@@ -31,7 +31,7 @@ export default function RegisterPage() {
 			setError(result.error.message || "Registration failed");
 			setLoading(false);
 		} else {
-			router.push("/lobby");
+			router.push("/dashboard");
 		}
 	};
 

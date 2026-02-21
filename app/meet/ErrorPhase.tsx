@@ -62,7 +62,7 @@ export default function ErrorPhase({ message, onRetry, onBack }: ErrorPhaseProps
 							onClick={onBack}
 							style={{ padding: "var(--space-sm) var(--space-xl)" }}
 						>
-							Back to Lobby
+							Back to Dashboard
 						</InlineButton>
 					</div>
 				</div>

@@ -178,7 +178,7 @@ input::placeholder {
 	background: var(--text-tertiary);
 }
 
-/* LiveKit video overrides: scale down instead of crop, 4:3 aspect ratio */
+/* Realtime video tile overrides: scale down instead of crop, 4:3 aspect ratio */
 .lk-grid-layout {
 	place-content: center;
 	place-items: center;

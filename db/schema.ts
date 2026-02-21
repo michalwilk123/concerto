@@ -8,7 +8,7 @@ export const user = pgTable("user", {
 	image: text("image"),
 	createdAt: timestamp("created_at").notNull().defaultNow(),
 	updatedAt: timestamp("updated_at").notNull().defaultNow(),
-	role: text("role").default("user"),
+	role: text("role").default("student"),
 	banned: boolean("banned").default(false),
 	banReason: text("ban_reason"),
 	banExpires: timestamp("ban_expires"),
@@ -56,19 +56,44 @@ export const verification = pgTable("verification", {
 	updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const group = pgTable("group", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const groupMember = pgTable(
+	"group_member",
+	{
+		id: text("id").primaryKey(),
+		groupId: text("group_id")
+			.notNull()
+			.references(() => group.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		role: text("role").notNull().default("student"),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(table) => [
+		index("group_member_group_idx").on(table.groupId),
+		index("group_member_user_idx").on(table.userId),
+	],
+);
+
 export const folder = pgTable(
 	"folder",
 	{
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
-		ownerId: text("owner_id")
+		groupId: text("group_id")
 			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
+			.references(() => group.id, { onDelete: "cascade" }),
 		parentId: text("parent_id"),
 		isSystem: boolean("is_system").notNull().default(false),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
 	},
-	(table) => [index("folder_owner_parent_idx").on(table.ownerId, table.parentId)],
+	(table) => [index("folder_group_parent_idx").on(table.groupId, table.parentId)],
 );
 
 export const file = pgTable(
@@ -79,11 +104,79 @@ export const file = pgTable(
 		mimeType: text("mime_type").notNull(),
 		size: bigint("size", { mode: "number" }).notNull(),
 		storagePath: text("storage_path").notNull(),
-		ownerId: text("owner_id")
+		groupId: text("group_id")
+			.notNull()
+			.references(() => group.id, { onDelete: "cascade" }),
+		uploadedById: text("uploaded_by_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		isEditable: boolean("is_editable").notNull().default(false),
 		folderId: text("folder_id").references(() => folder.id, { onDelete: "set null" }),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
 	},
-	(table) => [index("file_owner_folder_idx").on(table.ownerId, table.folderId)],
+	(table) => [index("file_group_folder_idx").on(table.groupId, table.folderId)],
+);
+
+export const meeting = pgTable(
+	"meeting",
+	{
+		id: text("id").primaryKey(), // nanoid
+		name: text("name").notNull(),
+		groupId: text("group_id")
+			.notNull()
+			.references(() => group.id, { onDelete: "cascade" }),
+		rtkMeetingId: text("rtk_meeting_id"),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(table) => [index("meeting_group_idx").on(table.groupId)],
+);
+
+export const meetingSession = pgTable(
+	"meeting_session",
+	{
+		id: text("id").primaryKey(), // RTK meeting ID
+		meetingId: text("meeting_id")
+			.notNull()
+			.references(() => meeting.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(table) => [index("meeting_session_meeting_idx").on(table.meetingId)],
+);
+
+export const chatMessage = pgTable(
+	"chat_message",
+	{
+		id: text("id").primaryKey(),
+		content: text("content").notNull(),
+		senderId: text("sender_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		senderName: text("sender_name").notNull(),
+		groupId: text("group_id")
+			.notNull()
+			.references(() => group.id, { onDelete: "cascade" }),
+		meetingId: text("meeting_id").references(() => meeting.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(table) => [
+		index("chat_message_group_created_idx").on(table.groupId, table.createdAt),
+		index("chat_message_meeting_created_idx").on(table.meetingId, table.createdAt),
+	],
+);
+
+export const chatReaction = pgTable(
+	"chat_reaction",
+	{
+		id: text("id").primaryKey(),
+		messageId: text("message_id")
+			.notNull()
+			.references(() => chatMessage.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		userName: text("user_name").notNull(),
+		emoji: text("emoji").notNull(),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(table) => [index("chat_reaction_message_idx").on(table.messageId)],
 );

@@ -1,5 +1,4 @@
 import "./globals.css";
-import "@livekit/components-styles";
 import { ToastProvider } from "@/components/Toast";
 
 export const metadata = {

@@ -1,6 +1,6 @@
 import { unlink } from "node:fs/promises";
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { file, folder } from "@/db/schema";
@@ -30,7 +30,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 	const [folderDoc] = await db
 		.select()
 		.from(folder)
-		.where(and(eq(folder.id, id), eq(folder.ownerId, session?.user.id)))
+		.where(eq(folder.id, id))
 		.limit(1);
 
 	if (!folderDoc) {
@@ -42,17 +42,17 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 	}
 
 	// Recursively delete all contents
-	await deleteFolderRecursive(id, session?.user.id);
+	await deleteFolderRecursive(id);
 
 	return NextResponse.json({ success: true });
 }
 
-async function deleteFolderRecursive(folderId: string, userId: string) {
+async function deleteFolderRecursive(folderId: string) {
 	// Delete files in this folder (from disk and DB)
 	const filesInFolder = await db
 		.select()
 		.from(file)
-		.where(and(eq(file.folderId, folderId), eq(file.ownerId, userId)));
+		.where(eq(file.folderId, folderId));
 
 	for (const f of filesInFolder) {
 		const fullPath = path.join(process.cwd(), "uploads", f.storagePath);
@@ -62,16 +62,16 @@ async function deleteFolderRecursive(folderId: string, userId: string) {
 			/* ignore */
 		}
 	}
-	await db.delete(file).where(and(eq(file.folderId, folderId), eq(file.ownerId, userId)));
+	await db.delete(file).where(eq(file.folderId, folderId));
 
 	// Find and delete child folders recursively
 	const childFolders = await db
 		.select()
 		.from(folder)
-		.where(and(eq(folder.parentId, folderId), eq(folder.ownerId, userId)));
+		.where(eq(folder.parentId, folderId));
 
 	for (const child of childFolders) {
-		await deleteFolderRecursive(child.id, userId);
+		await deleteFolderRecursive(child.id);
 	}
 
 	// Delete this folder

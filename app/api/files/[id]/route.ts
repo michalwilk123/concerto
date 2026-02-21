@@ -1,59 +1,22 @@
 import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { file, folder } from "@/db/schema";
-import { getSessionOrNull, requireAdmin } from "@/lib/auth-helpers";
-import { rooms } from "@/lib/room-store";
+import { file } from "@/db/schema";
+import { requireGroupMember, requireGroupTeacher } from "@/lib/auth-helpers";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
-	const session = await getSessionOrNull();
-	if (!session) {
-		return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-	}
 
 	const [fileDoc] = await db.select().from(file).where(eq(file.id, id)).limit(1);
 	if (!fileDoc) {
 		return NextResponse.json({ error: "File not found" }, { status: 404 });
 	}
 
-	// Check access: owner OR meeting participant accessing meetings folder file
-	const isOwner = fileDoc.ownerId === session.user.id;
-	let hasAccess = isOwner;
-
-	if (!hasAccess && fileDoc.folderId) {
-		// Check if file is in a meetings folder
-		const [fileFolder] = await db
-			.select()
-			.from(folder)
-			.where(
-				and(
-					eq(folder.id, fileDoc.folderId),
-					eq(folder.isSystem, true),
-					eq(folder.name, "meetings"),
-				),
-			)
-			.limit(1);
-
-		if (fileFolder) {
-			// Check if requester is in a room where the file owner is the creator
-			for (const [, room] of rooms) {
-				if (room.creatorUserId === fileDoc.ownerId) {
-					const participantName = session.user.name;
-					if (room.moderators.has(participantName) || room.students.has(participantName)) {
-						hasAccess = true;
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	if (!hasAccess) {
-		return NextResponse.json({ error: "Access denied" }, { status: 403 });
-	}
+	// Require group membership to access file
+	const { error } = await requireGroupMember(fileDoc.groupId);
+	if (error) return error;
 
 	const fullPath = path.join(process.cwd(), "uploads", fileDoc.storagePath);
 
@@ -79,20 +42,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-	const { error, session } = await requireAdmin();
-	if (error) return error;
-
 	const { id } = await params;
 
-	const [fileDoc] = await db
-		.select()
-		.from(file)
-		.where(and(eq(file.id, id), eq(file.ownerId, session?.user.id)))
-		.limit(1);
-
+	const [fileDoc] = await db.select().from(file).where(eq(file.id, id)).limit(1);
 	if (!fileDoc) {
 		return NextResponse.json({ error: "File not found" }, { status: 404 });
 	}
+
+	const { error } = await requireGroupTeacher(fileDoc.groupId);
+	if (error) return error;
 
 	// Delete from disk
 	const fullPath = path.join(process.cwd(), "uploads", fileDoc.storagePath);
@@ -106,4 +64,31 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 	await db.delete(file).where(eq(file.id, id));
 
 	return NextResponse.json({ success: true });
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
+
+	const [fileDoc] = await db.select().from(file).where(eq(file.id, id)).limit(1);
+	if (!fileDoc) {
+		return NextResponse.json({ error: "File not found" }, { status: 404 });
+	}
+
+	const { error } = await requireGroupTeacher(fileDoc.groupId);
+	if (error) return error;
+
+	const body = await req.json();
+	const updates: Partial<{ isEditable: boolean }> = {};
+
+	if (typeof body.isEditable === "boolean") {
+		updates.isEditable = body.isEditable;
+	}
+
+	if (Object.keys(updates).length === 0) {
+		return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+	}
+
+	const [updated] = await db.update(file).set(updates).where(eq(file.id, id)).returning();
+
+	return NextResponse.json(updated);
 }

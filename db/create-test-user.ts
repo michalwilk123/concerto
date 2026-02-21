@@ -20,12 +20,12 @@ if (!res.user) {
 	process.exit(1);
 }
 
-// Promote to admin
-await db.update(user).set({ role: "admin" }).where(eq(user.email, TEST_EMAIL));
+// Promote to teacher
+await db.update(user).set({ role: "teacher" }).where(eq(user.email, TEST_EMAIL));
 
-console.log(`Created test admin user:`);
+console.log(`Created test teacher user:`);
 console.log(`  Email:    ${TEST_EMAIL}`);
 console.log(`  Password: ${TEST_PASSWORD}`);
 console.log(`  Name:     ${TEST_NAME}`);
-console.log(`  Role:     admin`);
+console.log(`  Role:     teacher`);
 process.exit(0);

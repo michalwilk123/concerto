@@ -3,14 +3,17 @@ services:
     build: .
     environment:
       - NODE_ENV=production
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - LIVEKIT_URL=http://livekit:7880
-      - LIVEKIT_CLIENT_URL=wss://livekit.${DOMAIN}
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=https://${DOMAIN}
       - HOSTNAME=0.0.0.0
+      - RTK_ORG_ID=${RTK_ORG_ID}
+      - RTK_API_KEY=${RTK_API_KEY}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME:-concerto-recordings}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -21,26 +24,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  livekit:
-    image: livekit/livekit-server:latest
-    command: --node-ip=${HOST_IP}
-    environment:
-      LIVEKIT_CONFIG: |
-        port: 7880
-        rtc:
-          udp_port: 7882
-          tcp_port: 7881
-          use_external_ip: true
-        keys:
-          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
-        logging:
-          level: info
-    ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "7882:7882/udp"
-    restart: unless-stopped
 
   postgres:
     image: postgres:17-alpine

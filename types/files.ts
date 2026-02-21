@@ -4,7 +4,9 @@ export interface FileDoc {
 	mimeType: string;
 	size: number;
 	storagePath: string;
-	ownerId: string;
+	groupId: string;
+	uploadedById: string;
+	isEditable: boolean;
 	folderId: string | null;
 	createdAt: string;
 }
@@ -12,7 +14,7 @@ export interface FileDoc {
 export interface FolderDoc {
 	id: string;
 	name: string;
-	ownerId: string;
+	groupId: string;
 	parentId: string | null;
 	isSystem: boolean;
 	createdAt: string;

@@ -3,8 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { useToast } from "@/components/Toast";
-import { InlineButton } from "@/components/ui/inline-button";
-import { roomApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 
 export default function LobbyPage() {
@@ -19,9 +17,8 @@ function LobbyContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const toast = useToast();
-	const joinKey = searchParams.get("key")?.toUpperCase() || "";
 	const { data: session } = useSession();
-	const isAdmin = session?.user?.role === "admin";
+	const joinKey = searchParams.get("key")?.toUpperCase() || "";
 
 	useEffect(() => {
 		if (joinKey) {
@@ -35,33 +32,6 @@ function LobbyContent() {
 			router.replace("/lobby");
 		}
 	}, [router.replace, searchParams.get, toast.warning]);
-
-	const handleCreateRoom = async () => {
-		const participantName = session?.user?.name;
-		if (!participantName) return;
-
-		try {
-			const createData = await roomApi.create({ displayName: participantName });
-			const roomKey = createData.roomKey;
-
-			const joinData = await roomApi.join({ roomKey, participantName });
-
-			sessionStorage.setItem(
-				"concerto-session",
-				JSON.stringify({
-					token: joinData.token,
-					livekitUrl: joinData.livekitUrl,
-					roomKey,
-					participantName,
-					role: joinData.role || "admin",
-				}),
-			);
-
-			router.push(`/meet?key=${roomKey}`);
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "An error occurred");
-		}
-	};
 
 	return (
 		<div
@@ -84,20 +54,10 @@ function LobbyContent() {
 						maxWidth: 360,
 					}}
 				>
-					Collaborative music education platform for universities
+					You are in the lobby. Waiting for the meeting to start.
 				</p>
 			</div>
 
-			<div style={{ display: "flex", gap: "var(--space-md)" }}>
-				{isAdmin && (
-					<InlineButton variant="primary" size="lg" onClick={handleCreateRoom}>
-						Create Room
-					</InlineButton>
-				)}
-				<InlineButton variant="secondary" size="lg" onClick={() => router.push("/meet")}>
-					Join Room
-				</InlineButton>
-			</div>
 		</div>
 	);
 }

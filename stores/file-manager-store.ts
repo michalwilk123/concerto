@@ -7,11 +7,13 @@ interface FileManagerState {
 	folders: FolderDoc[];
 	currentFolderId: string | null;
 	currentFolder: FolderDoc | null;
+	currentGroupId: string | null;
 	previewFile: FileWithUrl | null;
 	isLoading: boolean;
 	hasFetched: boolean;
 	storageUsed: number;
 
+	setCurrentGroupId: (id: string | null) => void;
 	setCurrentFolderId: (id: string | null) => void;
 	setPreviewFile: (file: FileWithUrl | null) => void;
 	fetchContents: (folderId?: string | null) => Promise<void>;
@@ -20,7 +22,6 @@ interface FileManagerState {
 	deleteFile: (id: string) => Promise<void>;
 	createFolder: (name: string, parentId?: string | null) => Promise<void>;
 	deleteFolder: (id: string) => Promise<void>;
-	navigateToFolder: (folderId: string | null) => void;
 }
 
 export const useFileManagerStore = create<FileManagerState>((set, get) => ({
@@ -28,21 +29,27 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 	folders: [],
 	currentFolderId: null,
 	currentFolder: null,
+	currentGroupId: null,
 	previewFile: null,
 	isLoading: false,
 	hasFetched: false,
 	storageUsed: 0,
+
+	setCurrentGroupId: (id) => set({ currentGroupId: id, currentFolderId: null, files: [], folders: [], hasFetched: false }),
 
 	setCurrentFolderId: (id) => set({ currentFolderId: id }),
 
 	setPreviewFile: (file) => set({ previewFile: file }),
 
 	fetchContents: async (folderId) => {
+		const groupId = get().currentGroupId;
+		if (!groupId) return;
+
 		set({ isLoading: true });
 		try {
 			const [files, folders] = await Promise.all([
-				filesApi.list(folderId),
-				foldersApi.list(folderId),
+				filesApi.list(groupId, folderId),
+				foldersApi.list(groupId, folderId),
 			]);
 
 			// Fetch current folder info for breadcrumbs
@@ -62,8 +69,11 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 	},
 
 	fetchStorage: async () => {
+		const groupId = get().currentGroupId;
+		if (!groupId) return;
+
 		try {
-			const { totalBytes } = await filesApi.getStorage();
+			const { totalBytes } = await filesApi.getStorage(groupId);
 			set({ storageUsed: totalBytes });
 		} catch {
 			// ignore
@@ -71,7 +81,10 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 	},
 
 	uploadFile: async (file, folderId) => {
-		await filesApi.upload({ file, folderId });
+		const groupId = get().currentGroupId;
+		if (!groupId) return;
+
+		await filesApi.upload({ file, groupId, folderId });
 
 		// Refresh contents and storage
 		await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
@@ -83,7 +96,10 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 	},
 
 	createFolder: async (name, parentId) => {
-		await foldersApi.create({ name, parentId: parentId ?? get().currentFolderId });
+		const groupId = get().currentGroupId;
+		if (!groupId) return;
+
+		await foldersApi.create({ name, groupId, parentId: parentId ?? get().currentFolderId });
 		await get().fetchContents(get().currentFolderId);
 	},
 
@@ -92,8 +108,4 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 		await get().fetchContents(get().currentFolderId);
 	},
 
-	navigateToFolder: (folderId) => {
-		set({ currentFolderId: folderId });
-		get().fetchContents(folderId);
-	},
 }));

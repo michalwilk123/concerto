@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getSessionOrNull } from "@/lib/auth-helpers";
-import { roomService } from "@/lib/livekit";
+import { removeParticipant } from "@/lib/realtimekit";
 import { rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
@@ -9,12 +9,12 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 	}
 
-	const { roomKey } = await request.json();
-	if (!roomKey) {
-		return NextResponse.json({ error: "Room key required" }, { status: 400 });
+	const { meetingId } = await request.json();
+	if (!meetingId) {
+		return NextResponse.json({ error: "Meeting ID required" }, { status: 400 });
 	}
 
-	const room = rooms.get(roomKey);
+	const room = rooms.get(meetingId);
 	if (!room) {
 		return NextResponse.json({ error: "Room not found" }, { status: 404 });
 	}
@@ -23,19 +23,17 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Not the room creator" }, { status: 403 });
 	}
 
-	// Kick all participants
-	const participants = await roomService.listParticipants(roomKey).catch(() => []);
-	for (const p of participants) {
-		await roomService.removeParticipant(roomKey, p.identity).catch(() => {});
+	// Kick all participants via RealtimeKit
+	if (room.rtkMeetingId) {
+		for (const [, participantId] of room.participantIds) {
+			await removeParticipant(room.rtkMeetingId, participantId).catch(() => {});
+		}
 	}
 
-	// Delete LiveKit room
-	await roomService.deleteRoom(roomKey).catch(() => {});
-
 	// Remove from in-memory store
-	rooms.delete(roomKey);
+	rooms.delete(meetingId);
 
-	console.log(`Admin left room ${roomKey}, all participants kicked and room deleted`);
+	console.log(`[admin-leave] Creator left meeting ${meetingId}, rtkMeetingId=${room.rtkMeetingId}, room deleted`);
 
 	return NextResponse.json({ success: true });
 }

@@ -1,38 +1,30 @@
 "use client";
 
-import type { Participant } from "livekit-client";
-import { Music, Users, X } from "lucide-react";
+import { Files, MessageSquare, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
 import { IconButton } from "@/components/ui/icon-button";
-import type { UseAudioRecorderReturn } from "@/hooks/useAudioRecorder";
+import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
 import { useRoomStore } from "@/stores/room-store";
-import { isModerator as isModeratorRole } from "@/types/room";
+import type { RoomParticipant } from "@/types/room";
+import { isTeacher } from "@/types/room";
 import type { SidebarTab } from "@/types/sidebar";
 import ParticipantMenu from "./ParticipantMenu";
-import SoundLibraryDrawer from "./SoundLibraryDrawer";
 export type { SidebarTab };
 
 interface SidebarProps {
-	recorder: UseAudioRecorderReturn;
-	participants: Participant[];
+	participants: RoomParticipant[];
+	groupId: string;
+	meetingFolderId?: string;
 	onClose: () => void;
 	activeTab: SidebarTab;
 	onTabChange: (tab: SidebarTab) => void;
 	isOpen: boolean;
 }
 
-export default function Sidebar({
-	recorder,
-	participants,
-	onClose,
-	activeTab,
-	onTabChange,
-	isOpen,
-}: SidebarProps) {
-	const { role, roomMode, toggleRoomMode } = useRoomStore();
-	const isModerator = isModeratorRole(role);
-	const canRecord = role === "admin" || role === "moderator" || role === "student";
+export default function Sidebar({ participants, groupId, meetingFolderId, onClose, activeTab, onTabChange, isOpen }: SidebarProps) {
+	const { role, meetingId } = useRoomStore();
 	const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
 
 	useEffect(() => {
@@ -57,14 +49,14 @@ export default function Sidebar({
 
 	const tabs: { id: SidebarTab; label: string; icon: React.ReactNode; visible: boolean }[] = [
 		{ id: "participants", label: "Participants", icon: <Users size={15} />, visible: true },
-		{ id: "sounds", label: "Sounds", icon: <Music size={15} />, visible: true },
+		{ id: "files", label: "Files", icon: <Files size={15} />, visible: true },
+		{ id: "chat", label: "Chat", icon: <MessageSquare size={15} />, visible: true },
 	];
 
 	const visibleTabs = tabs.filter((t) => t.visible);
 
 	const sidebarContent = (
 		<>
-			{/* Backdrop */}
 			<div
 				onClick={onClose}
 				style={{
@@ -82,7 +74,6 @@ export default function Sidebar({
 				}}
 			/>
 
-			{/* Sidebar - Right side */}
 			<div
 				style={{
 					position: "fixed",
@@ -162,39 +153,18 @@ export default function Sidebar({
 					}}
 				>
 					{activeTab === "participants" && <ParticipantMenu participants={participants} />}
-					{activeTab === "sounds" && (
-						<SoundLibraryDrawer recorder={recorder} canRecord={canRecord} />
+					{activeTab === "files" && (
+						<FileBrowserPanel
+							allowManage={isTeacher(role)}
+							showCreateFolderButton={false}
+							compact
+							groupId={groupId}
+							ancestors={[]}
+							initialFolderId={meetingFolderId}
+						/>
 					)}
+					{activeTab === "chat" && meetingId && <MeetChatPanel meetingId={meetingId} />}
 				</div>
-
-				{isModerator && (
-					<div
-						style={{
-							padding: "var(--space-md) var(--space-lg)",
-							borderTop: "1px solid var(--border-subtle)",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-						}}
-					>
-						<span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Room mode</span>
-						<button
-							onClick={toggleRoomMode}
-							style={{
-								padding: "var(--space-xs) var(--space-md)",
-								fontSize: "0.8rem",
-								background: roomMode === "private" ? "var(--accent-orange)" : "var(--accent-green)",
-								color: "white",
-								border: "none",
-								borderRadius: "var(--radius-sm)",
-								fontWeight: 500,
-								cursor: "pointer",
-							}}
-						>
-							{roomMode === "private" ? "Private" : "Public"}
-						</button>
-					</div>
-				)}
 			</div>
 		</>
 	);

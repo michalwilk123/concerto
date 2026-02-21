@@ -1,18 +1,24 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { file } from "@/db/schema";
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requireGroupTeacher } from "@/lib/auth-helpers";
 import { sanitizeFileName, validateFileSize } from "@/lib/file-helpers";
 
 export async function POST(req: NextRequest) {
-	const { error, session } = await requireAdmin();
-	if (error) return error;
-
 	const formData = await req.formData();
+	const groupId = formData.get("groupId") as string | null;
 	const uploadedFile = formData.get("file") as File | null;
 	const folderId = formData.get("folderId") as string | null;
+
+	if (!groupId) {
+		return NextResponse.json({ error: "groupId is required" }, { status: 400 });
+	}
+
+	const { error, session } = await requireGroupTeacher(groupId);
+	if (error) return error;
 
 	if (!uploadedFile) {
 		return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -23,9 +29,9 @@ export async function POST(req: NextRequest) {
 	}
 
 	const userId = session?.user.id;
-	const fileId = crypto.randomUUID();
+	const fileId = nanoid();
 	const safeName = sanitizeFileName(uploadedFile.name);
-	const storagePath = `${userId}/${fileId}-${safeName}`;
+	const storagePath = `${groupId}/${fileId}-${safeName}`;
 	const fullPath = path.join(process.cwd(), "uploads", storagePath);
 
 	await mkdir(path.dirname(fullPath), { recursive: true });
@@ -41,7 +47,8 @@ export async function POST(req: NextRequest) {
 			mimeType: uploadedFile.type || "application/octet-stream",
 			size: uploadedFile.size,
 			storagePath,
-			ownerId: userId,
+			groupId,
+			uploadedById: userId,
 			folderId: folderId || null,
 		})
 		.returning();

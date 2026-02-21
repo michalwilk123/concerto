@@ -1,22 +1,21 @@
-export type Role = "admin" | "moderator" | "student" | "participant";
+export type Role = "teacher" | "student";
 
-export function isModerator(role: Role): boolean {
-	return role === "admin" || role === "moderator";
+export interface RoomParticipant {
+	id: string;
+	name: string;
+	presetName?: string;
 }
 
-export function parseRoleFromMetadata(metadata?: string): Role | null {
-	if (!metadata) return null;
+export function isTeacher(role: Role): boolean {
+	return role === "teacher";
+}
 
-	try {
-		const parsed = JSON.parse(metadata);
-		const role = parsed.role;
-
-		if (role === "admin" || role === "moderator" || role === "student" || role === "participant") {
-			return role;
-		}
-
-		return null;
-	} catch {
-		return null;
+export function presetToRole(presetName?: string): Role {
+	switch (presetName) {
+		case "webinar_presenter":
+			return "teacher";
+		case "webinar_viewer":
+		default:
+			return "student";
 	}
 }

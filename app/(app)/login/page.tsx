@@ -7,23 +7,25 @@ import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
 	const router = useRouter();
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	const handleSubmit = async (e: FormEvent) => {
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError("");
 		setLoading(true);
 
-		const result = await signIn.email({ email, password });
+		const formData = new FormData(e.currentTarget);
+		const result = await signIn.email({
+			email: (formData.get("email") as string) || "",
+			password: (formData.get("password") as string) || "",
+		});
 
 		if (result.error) {
 			setError(result.error.message || "Sign in failed");
 			setLoading(false);
 		} else {
-			router.push("/lobby");
+			router.push("/dashboard");
 		}
 	};
 
@@ -79,9 +81,8 @@ export default function LoginPage() {
 						</label>
 						<input
 							id="email"
+							name="email"
 							type="email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
 							placeholder="you@example.com"
 							required
 						/>
@@ -96,9 +97,8 @@ export default function LoginPage() {
 						</label>
 						<input
 							id="password"
+							name="password"
 							type="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
 							required
 						/>
 					</div>

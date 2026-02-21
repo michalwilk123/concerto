@@ -6,11 +6,12 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { filesApi } from "@/lib/api-client";
 
 interface FileUploaderProps {
+	groupId: string;
 	folderId?: string | null;
 	onUploadComplete?: () => void;
 }
 
-export function FileUploader({ folderId, onUploadComplete }: FileUploaderProps) {
+export function FileUploader({ groupId, folderId, onUploadComplete }: FileUploaderProps) {
 	const [isDragging, setIsDragging] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	const [progress, setProgress] = useState(0);
@@ -21,7 +22,7 @@ export function FileUploader({ folderId, onUploadComplete }: FileUploaderProps) 
 			setUploading(true);
 			setProgress(30);
 			setProgress(50);
-			await filesApi.upload({ file, folderId });
+			await filesApi.upload({ file, groupId, folderId });
 			setProgress(100);
 			setTimeout(() => {
 				setProgress(0);
