@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Plus, RotateCcw, Trash2, Video } from "lucide-react";
+import { CalendarDays, Globe, Lock, Plus, RotateCcw, Trash2, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateMeetingModal } from "@/components/CreateMeetingModal";
@@ -40,7 +40,7 @@ export function MeetingsPanel({
 	headerExtra,
 }: MeetingsPanelProps) {
 	const router = useRouter();
-	const { meetings, isLoading, fetchMeetings, deleteMeeting } = useMeetingsStore();
+	const { meetings, isLoading, fetchMeetings, patchMeeting, deleteMeeting } = useMeetingsStore();
 	const { t } = useTranslation();
 	const [showCreateMeeting, setShowCreateMeeting] = useState(false);
 
@@ -119,6 +119,7 @@ export function MeetingsPanel({
 									console.error("Failed to rejoin meeting:", err);
 								}
 							}}
+							onTogglePublic={(isPublic) => patchMeeting(m.id, { isPublic })}
 							onDelete={() => deleteMeeting(m.id)}
 						/>
 					))}
@@ -133,12 +134,14 @@ function MeetingItem({
 	isSelected,
 	onSelect,
 	onRejoin,
+	onTogglePublic,
 	onDelete,
 }: {
 	meeting: Meeting;
 	isSelected?: boolean;
 	onSelect?: () => void;
 	onRejoin: () => void;
+	onTogglePublic: (isPublic: boolean) => void;
 	onDelete: () => void;
 }) {
 	const [confirmDelete, setConfirmDelete] = useState(false);
@@ -175,6 +178,23 @@ function MeetingItem({
 			}
 			actions={
 				<>
+					<IconButton
+						variant="square"
+						size="md"
+						onClick={() => onTogglePublic(!meeting.isPublic)}
+						title={meeting.isPublic ? t("meetings.makePrivate") : t("meetings.makePublic")}
+						style={{
+							width: 32,
+							height: 32,
+							border: "1px solid var(--border-default)",
+							background: "var(--bg-primary)",
+							color: meeting.isPublic ? "var(--accent-purple)" : "var(--text-tertiary)",
+							flexShrink: 0,
+						}}
+					>
+						{meeting.isPublic ? <Globe size={16} /> : <Lock size={16} />}
+					</IconButton>
+
 					<InlineButton
 						variant="secondary"
 						size="xs"

@@ -115,8 +115,20 @@ function MeetContent() {
 					return;
 				}
 				if (phase === "guestJoining") {
+					// Private meeting blocks guests — show error page, not name re-entry
+					if (message.includes("private") || message.includes("group member")) {
+						setErrorMessage(t("room.error.privateMeeting"));
+						setPhase("error");
+						return;
+					}
 					setErrorMessage(message);
 					setPhase("nameEntry");
+					return;
+				}
+				// Group membership required
+				if (message.includes("Group membership required")) {
+					setErrorMessage(t("room.error.notGroupMember"));
+					setPhase("error");
 					return;
 				}
 				setErrorMessage(message);

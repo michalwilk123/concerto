@@ -6,6 +6,7 @@ interface MeetingsState {
 	meetings: Meeting[];
 	isLoading: boolean;
 	fetchMeetings: (groupId: string) => Promise<void>;
+	patchMeeting: (id: string, data: { isPublic: boolean }) => Promise<void>;
 	deleteMeeting: (id: string) => Promise<void>;
 }
 
@@ -22,6 +23,15 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
 			console.error("Failed to fetch meetings:", error);
 		} finally {
 			set({ isLoading: false });
+		}
+	},
+
+	patchMeeting: async (id: string, data: { isPublic: boolean }) => {
+		try {
+			const updated = await meetingsApi.patch(id, data);
+			set({ meetings: get().meetings.map((m) => (m.id === id ? updated : m)) });
+		} catch (error) {
+			console.error("Failed to update meeting:", error);
 		}
 	},
 

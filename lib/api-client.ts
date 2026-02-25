@@ -9,6 +9,7 @@ import type { Role } from "@/types/room";
 export interface CreateRoomParams {
 	displayName: string;
 	groupId: string;
+	isPublic?: boolean;
 }
 
 export interface CreateRoomResponse {
@@ -529,6 +530,21 @@ export const meetingsApi = {
 		if (!response.ok) {
 			const error = await response.json();
 			throw new Error(error.error || "Failed to list meetings");
+		}
+
+		return response.json();
+	},
+
+	async patch(id: string, data: { isPublic: boolean }): Promise<Meeting> {
+		const response = await fetch(`/api/meetings/${id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(data),
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to update meeting");
 		}
 
 		return response.json();

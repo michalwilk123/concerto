@@ -73,9 +73,9 @@ export async function listParticipants(
 export function roleToPreset(role: Role): string {
 	switch (role) {
 		case "teacher":
-			return "webinar_presenter";
+			return "group_call_host";
 		default:
-			return "webinar_viewer";
+			return "group_call_participant";
 	}
 }
 

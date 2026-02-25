@@ -12,7 +12,7 @@ export function isTeacher(role: Role): boolean {
 
 export function presetToRole(presetName?: string): Role {
 	switch (presetName) {
-		case "webinar_presenter":
+		case "group_call_host":
 			return "teacher";
 		default:
 			return "student";

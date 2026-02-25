@@ -20,6 +20,15 @@ export async function POST(request: NextRequest) {
 	if (roomOrError instanceof NextResponse) return roomOrError;
 	const room = roomOrError;
 
+	// Block guests from private meetings
+	const [meetingRow] = await db.select().from(meeting).where(eq(meeting.id, meetingId)).limit(1);
+	if (meetingRow && !meetingRow.isPublic) {
+		return NextResponse.json(
+			{ error: "This meeting is private. You need to be a group member to join." },
+			{ status: 403 },
+		);
+	}
+
 	// Lazily create RTK meeting if not yet created
 	if (!room.rtkMeetingId) {
 		try {

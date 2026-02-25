@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting, meetingSession } from "@/db/schema";
 import { createRealtimeKitParticipant, determineRole, getRoomOrFail } from "@/lib/api-helpers";
-import { requireGroupMember } from "@/lib/auth-helpers";
+import { requireAuth, requireGroupMember } from "@/lib/auth-helpers";
 import { createMeeting } from "@/lib/realtimekit";
 
 export async function POST(request: NextRequest) {
@@ -21,9 +21,15 @@ export async function POST(request: NextRequest) {
 	if (roomOrError instanceof NextResponse) return roomOrError;
 	const room = roomOrError;
 
-	// Require authentication and group membership
-	const { error, session } = await requireGroupMember(room.groupId);
-	if (error) return error;
+	// Check if the meeting is public — public meetings allow any authenticated user
+	const [meetingRow] = await db.select().from(meeting).where(eq(meeting.id, meetingId)).limit(1);
+	const isPublicMeeting = meetingRow?.isPublic === true;
+
+	const authResult = isPublicMeeting
+		? await requireAuth()
+		: await requireGroupMember(room.groupId);
+	if (authResult.error) return authResult.error;
+	const session = authResult.session!;
 
 	// Cancel any pending creator disconnect timer if creator is rejoining
 	const isAuthenticatedCreator = session?.user?.id === room.creatorUserId;

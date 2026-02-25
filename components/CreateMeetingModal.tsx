@@ -26,6 +26,7 @@ export function CreateMeetingModal({
 	const { t } = useTranslation();
 	const [meetingName, setMeetingName] = useState(defaultName);
 	const [groupId, setGroupId] = useState("");
+	const [isPublic, setIsPublic] = useState(false);
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function CreateMeetingModal({
 	useEffect(() => {
 		if (open) {
 			setMeetingName(defaultName);
+			setIsPublic(false);
 		}
 	}, [open, defaultName]);
 
@@ -56,7 +58,7 @@ export function CreateMeetingModal({
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await roomApi.create({ displayName: meetingName.trim(), groupId });
+			const data = await roomApi.create({ displayName: meetingName.trim(), groupId, isPublic });
 			onCreated(data.meetingId);
 			onClose();
 		} catch (e) {
@@ -133,7 +135,29 @@ export function CreateMeetingModal({
 					</Select>
 				)}
 
-				<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+				<label
+				htmlFor="create-meeting-public"
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 8,
+					marginBottom: 20,
+					cursor: "pointer",
+				}}
+			>
+				<input
+					id="create-meeting-public"
+					type="checkbox"
+					checked={isPublic}
+					onChange={(e) => setIsPublic(e.target.checked)}
+					style={{ width: 16, height: 16, cursor: "pointer" }}
+				/>
+				<Typography as="span" variant="bodySm" tone="secondary">
+					{t("createMeeting.publicLabel")}
+				</Typography>
+			</label>
+
+			<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 					<InlineButton variant="secondary" size="sm" onClick={onClose}>
 						{t("createMeeting.cancel")}
 					</InlineButton>

@@ -8,7 +8,7 @@ import { rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
 	const body = await request.json();
-	const { displayName, groupId } = body;
+	const { displayName, groupId, isPublic = false } = body;
 
 	if (!groupId) {
 		return NextResponse.json({ error: "groupId is required" }, { status: 400 });
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 	const meetingName = `${creatorName || "Meeting"}'s meeting`;
 
 	try {
-		await db.insert(meeting).values({ id: dbMeetingId, name: meetingName, groupId });
+		await db.insert(meeting).values({ id: dbMeetingId, name: meetingName, groupId, isPublic });
 	} catch (err) {
 		console.error("[room/create] Failed to persist meeting:", err);
 		return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 });

@@ -85,6 +85,8 @@ export const defaultTranslations: Record<string, string> = {
 	"meetings.deleteTitle": "Delete meeting record",
 	"meetings.confirm": "Confirm",
 	"meetings.cancel": "Cancel",
+	"meetings.makePublic": "Make public (anyone with link can join)",
+	"meetings.makePrivate": "Make private (group members only)",
 
 	// Create meeting
 	"createMeeting.title": "Create Meeting",
@@ -95,6 +97,7 @@ export const defaultTranslations: Record<string, string> = {
 	"createMeeting.groupLabel": "Group",
 	"createMeeting.loadingGroups": "Loading groups...",
 	"createMeeting.noGroups": "No groups available. Ask an admin to create one.",
+	"createMeeting.publicLabel": "Public meeting (anyone with link can join)",
 	"createMeeting.cancel": "Cancel",
 	"createMeeting.submit": "Create Meeting",
 
@@ -116,6 +119,9 @@ export const defaultTranslations: Record<string, string> = {
 	"room.error.title": "Error",
 	"room.error.tryAgain": "Try Again",
 	"room.error.backToDashboard": "Back to Dashboard",
+	"room.error.privateMeeting":
+		"This meeting is private. You need to be a group member to join.",
+	"room.error.notGroupMember": "You are not a member of the group this meeting belongs to.",
 	"room.nameEntry.backToDashboard": "Back to Dashboard",
 	"room.nameEntry.title": "Join Room",
 	"room.nameEntry.meetingLabel": "Meeting:",

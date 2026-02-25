@@ -126,6 +126,7 @@ export const meeting = pgTable(
 			.notNull()
 			.references(() => group.id, { onDelete: "cascade" }),
 		rtkMeetingId: text("rtk_meeting_id"),
+		isPublic: boolean("is_public").notNull().default(false),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
 	},
 	(table) => [index("meeting_group_idx").on(table.groupId)],
