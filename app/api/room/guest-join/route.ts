@@ -2,8 +2,9 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting, meetingSession } from "@/db/schema";
-import { createRealtimeKitParticipant, getRoomOrFail } from "@/lib/api-helpers";
+import { createRealtimeKitParticipant, getOrRestoreRoom } from "@/lib/api-helpers";
 import { createMeeting } from "@/lib/realtimekit";
+import { rtkCreationLocks } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
 	const body = await request.json();
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const roomOrError = getRoomOrFail(meetingId);
+	const roomOrError = await getOrRestoreRoom(meetingId);
 	if (roomOrError instanceof NextResponse) return roomOrError;
 	const room = roomOrError;
 
@@ -29,27 +30,36 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	// Lazily create RTK meeting if not yet created
+	// Lazily create RTK meeting if not yet created (with lock to prevent race conditions)
 	if (!room.rtkMeetingId) {
+		let pending = rtkCreationLocks.get(meetingId);
+		if (!pending) {
+			pending = (async () => {
+				const rtkId = await createMeeting();
+				room.rtkMeetingId = rtkId;
+				await db
+					.insert(meetingSession)
+					.values({ id: rtkId, meetingId })
+					.catch((err) => {
+						console.error("[room/guest-join] Failed to persist meeting session:", err);
+					});
+				await db
+					.update(meeting)
+					.set({ rtkMeetingId: rtkId })
+					.where(eq(meeting.id, meetingId))
+					.catch((err) => {
+						console.error("[room/guest-join] Failed to update meeting rtkMeetingId:", err);
+					});
+				console.log(
+					`[room/guest-join] Lazily created RTK meeting: rtkMeetingId=${rtkId} for meetingId=${meetingId}`,
+				);
+				return rtkId;
+			})();
+			rtkCreationLocks.set(meetingId, pending);
+			pending.finally(() => rtkCreationLocks.delete(meetingId));
+		}
 		try {
-			const rtkId = await createMeeting();
-			room.rtkMeetingId = rtkId;
-			await db
-				.insert(meetingSession)
-				.values({ id: rtkId, meetingId })
-				.catch((err) => {
-					console.error("[room/guest-join] Failed to persist meeting session:", err);
-				});
-			await db
-				.update(meeting)
-				.set({ rtkMeetingId: rtkId })
-				.where(eq(meeting.id, meetingId))
-				.catch((err) => {
-					console.error("[room/guest-join] Failed to update meeting rtkMeetingId:", err);
-				});
-			console.log(
-				`[room/guest-join] Lazily created RTK meeting: rtkMeetingId=${rtkId} for meetingId=${meetingId}`,
-			);
+			await pending;
 		} catch (err) {
 			console.error("Failed to create RTK meeting:", err);
 			return NextResponse.json(

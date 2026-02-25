@@ -1,13 +1,46 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { groupMember } from "@/db/schema";
+import { groupMember, meeting } from "@/db/schema";
 import type { Role } from "@/types/room";
 import { addParticipant, roleToPreset } from "./realtimekit";
 import { type Room, rooms } from "./room-store";
 
 /**
- * Get a room by meeting ID or return a 404 error response
+ * Get a room by meeting ID, restoring it from the DB if not in memory.
+ * Returns a 404 NextResponse if the meeting doesn't exist in the DB either.
+ */
+export async function getOrRestoreRoom(meetingId: string): Promise<Room | NextResponse> {
+	const room = rooms.get(meetingId);
+	if (room) return room;
+
+	// Not in memory — try to restore from DB
+	const [meetingRow] = await db
+		.select()
+		.from(meeting)
+		.where(eq(meeting.id, meetingId))
+		.limit(1);
+
+	if (!meetingRow) {
+		return NextResponse.json({ error: "Room not found" }, { status: 404 });
+	}
+
+	const restoredRoom: Room = {
+		groupId: meetingRow.groupId,
+		creatorIdentity: "",
+		creatorUserId: "",
+		rtkMeetingId: meetingRow.rtkMeetingId,
+		participantIds: new Map(),
+	};
+	rooms.set(meetingId, restoredRoom);
+	console.log(
+		`[getOrRestoreRoom] Restored room ${meetingId} from DB (rtkMeetingId=${meetingRow.rtkMeetingId})`,
+	);
+	return restoredRoom;
+}
+
+/**
+ * @deprecated Use getOrRestoreRoom instead — this will 404 after server restart.
  */
 export function getRoomOrFail(meetingId: string): Room | NextResponse {
 	const room = rooms.get(meetingId);

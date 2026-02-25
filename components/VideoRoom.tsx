@@ -76,7 +76,7 @@ function RoomContent({
 	const hasNotifiedRef = useRef(false);
 	const lastRecordingStateRef = useRef<string | null>(null);
 
-	const currentRole: Role = presetToRole(selfPresetName) || role;
+	const currentRole: Role = selfPresetName ? presetToRole(selfPresetName) : role;
 	const isTeacherRole = isTeacher(currentRole);
 
 	const copyRoomLink = () => {
@@ -132,7 +132,7 @@ function RoomContent({
 	return (
 		<div
 			style={{
-				height: "100vh",
+				height: "100dvh",
 				display: "flex",
 				flexDirection: "column",
 				background: "var(--bg-primary)",

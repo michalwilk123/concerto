@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 		groupId,
 		creatorIdentity: creatorName,
 		creatorUserId: session?.user.id,
-		rtkMeetingId: null,
+		rtkMeetingId: existingMeeting.rtkMeetingId,
 		meetingFolderId,
 		participantIds: new Map(),
 	});

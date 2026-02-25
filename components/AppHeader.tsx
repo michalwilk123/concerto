@@ -209,6 +209,10 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
 							fontFamily: "monospace",
 							letterSpacing: "0.05em",
 							color: "var(--text-primary)",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							maxWidth: "min(200px, 30vw)",
 						}}
 					>
 						{meetingId}
