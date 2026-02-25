@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
 		}
 	}
 
+	if (!room.rtkMeetingId) {
+		return NextResponse.json({ error: "Failed to create meeting" }, { status: 502 });
+	}
+
 	const role = "student" as const;
 
 	try {

@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
 		}
 	}
 
+	if (!room.rtkMeetingId) {
+		return NextResponse.json({ error: "Failed to create meeting" }, { status: 502 });
+	}
+
 	// Derive role from group membership
 	const role = await determineRole(room.groupId, session.user.id, session.user.role);
 
