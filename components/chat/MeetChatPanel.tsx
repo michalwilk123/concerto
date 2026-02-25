@@ -4,9 +4,10 @@ import { Send } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { LoadingIndicator } from "@/components/ui/loading-state";
+import { useTranslation } from "@/hooks/useTranslation";
 import { chatApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
-import type { ChatMessage, ChatReaction } from "@/types/chat";
+import type { ChatMessage } from "@/types/chat";
 
 const ALLOWED_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
 
@@ -22,6 +23,7 @@ interface MeetChatPanelProps {
 
 export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 	const toast = useToast();
+	const { t } = useTranslation();
 	const { data: session } = useSession();
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState("");
@@ -46,7 +48,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 			})
 			.catch((error) => {
 				if (mounted) {
-					toast.error(error instanceof Error ? error.message : "Failed to load chat history");
+					toast.error(error instanceof Error ? error.message : t("chat.loadHistoryFailed"));
 				}
 			})
 			.finally(() => {
@@ -56,7 +58,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 		return () => {
 			mounted = false;
 		};
-	}, [session, meetingId, toast]);
+	}, [session, meetingId, t, toast]);
 
 	// WebSocket connection
 	useEffect(() => {
@@ -79,9 +81,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 					if (data.type === "reaction_update") {
 						// Update reactions on an existing message
 						setMessages((prev) =>
-							prev.map((m) =>
-								m.id === data.messageId ? { ...m, reactions: data.reactions } : m,
-							),
+							prev.map((m) => (m.id === data.messageId ? { ...m, reactions: data.reactions } : m)),
 						);
 						return;
 					}
@@ -121,7 +121,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 		const container = scrollRef.current;
 		if (!container) return;
 		container.scrollTop = container.scrollHeight;
-	}, [messages]);
+	}, []);
 
 	const canSend = useMemo(
 		() => !!session && input.trim().length > 0 && !isSending,
@@ -142,7 +142,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 			});
 		} catch (error) {
 			setInput(content);
-			toast.error(error instanceof Error ? error.message : "Failed to send message");
+			toast.error(error instanceof Error ? error.message : t("chat.sendFailed"));
 		} finally {
 			setIsSending(false);
 		}
@@ -151,9 +151,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 	const toggleReaction = async (messageId: string, emoji: string) => {
 		try {
 			const { reactions } = await chatApi.toggleReaction({ messageId, emoji });
-			setMessages((prev) =>
-				prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)),
-			);
+			setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
 		} catch {
 			// WS will update the state
 		}
@@ -165,7 +163,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 			<div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 12 }}>
 				{isLoadingHistory && messages.length === 0 ? (
-					<LoadingIndicator message="Loading messages..." size={24} minHeight="100%" />
+					<LoadingIndicator message={t("chat.loadingMessages")} size={24} minHeight="100%" />
 				) : messages.length === 0 ? (
 					<div
 						style={{
@@ -177,7 +175,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 							fontSize: "0.82rem",
 						}}
 					>
-						No messages yet
+						{t("chat.noMessages")}
 					</div>
 				) : (
 					messages.map((message) => {
@@ -229,8 +227,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 														"var(--bg-secondary)";
 												}}
 												onMouseOut={(e) => {
-													(e.currentTarget as HTMLButtonElement).style.background =
-														"transparent";
+													(e.currentTarget as HTMLButtonElement).style.background = "transparent";
 												}}
 											>
 												{emoji}
@@ -255,11 +252,9 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 											opacity: isMine ? 0.85 : 0.7,
 										}}
 									>
-										{isMine ? "You" : message.senderName}
+										{isMine ? t("chat.you") : message.senderName}
 									</div>
-									<div style={{ fontSize: "0.82rem", lineHeight: 1.35 }}>
-										{message.content}
-									</div>
+									<div style={{ fontSize: "0.82rem", lineHeight: 1.35 }}>{message.content}</div>
 								</div>
 
 								{/* Reaction pills */}
@@ -286,9 +281,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 													border: r.reacted
 														? "1px solid var(--accent-purple)"
 														: "1px solid var(--border-subtle)",
-													background: r.reacted
-														? "rgba(139, 92, 246, 0.15)"
-														: "var(--bg-tertiary)",
+													background: r.reacted ? "rgba(139, 92, 246, 0.15)" : "var(--bg-tertiary)",
 													cursor: "pointer",
 													fontSize: "0.72rem",
 													color: "var(--text-secondary)",
@@ -332,7 +325,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 								sendMessage();
 							}
 						}}
-						placeholder="Type a message"
+						placeholder={t("chat.typeMessage")}
 						style={{
 							flex: 1,
 							height: 36,
@@ -360,7 +353,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
 							justifyContent: "center",
 							cursor: canSend ? "pointer" : "not-allowed",
 						}}
-						aria-label="Send message"
+						aria-label={t("chat.sendMessage")}
 					>
 						<Send size={14} />
 					</button>

@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { Modal } from "@/components/ui/modal";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface ConfirmDialogProps {
 	open: boolean;
@@ -20,13 +21,16 @@ export default function ConfirmDialog({
 	open,
 	title,
 	message,
-	confirmLabel = "Confirm",
-	cancelLabel = "Cancel",
+	confirmLabel,
+	cancelLabel,
 	variant = "danger",
 	onConfirm,
 	onCancel,
 }: ConfirmDialogProps) {
+	const { t } = useTranslation();
 	const actionsRef = useRef<HTMLDivElement>(null);
+	const resolvedConfirmLabel = confirmLabel ?? t("confirmDialog.confirm");
+	const resolvedCancelLabel = cancelLabel ?? t("confirmDialog.cancel");
 
 	useEffect(() => {
 		if (!open) return;
@@ -105,7 +109,7 @@ export default function ConfirmDialog({
 					onClick={onCancel}
 					style={{ padding: "var(--space-sm) var(--space-lg)" }}
 				>
-					{cancelLabel}
+					{resolvedCancelLabel}
 				</InlineButton>
 				<InlineButton
 					variant={variant}
@@ -117,7 +121,7 @@ export default function ConfirmDialog({
 						letterSpacing: "-0.005em",
 					}}
 				>
-					{confirmLabel}
+					{resolvedConfirmLabel}
 				</InlineButton>
 			</div>
 		</Modal>

@@ -20,7 +20,11 @@ export function getRoomOrFail(meetingId: string): Room | NextResponse {
 /**
  * Determine the role of a user in a group. Returns "teacher" for admins and group teachers.
  */
-export async function determineRole(groupId: string, userId: string, userRole?: string | null): Promise<Role> {
+export async function determineRole(
+	groupId: string,
+	userId: string,
+	userRole?: string | null,
+): Promise<Role> {
 	if (userRole === "admin") return "teacher";
 
 	const [member] = await db

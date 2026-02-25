@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
 	const { meetingId, participantName } = body;
 
 	if (!meetingId || !participantName) {
-		return NextResponse.json({ error: "Meeting ID and participant name required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Meeting ID and participant name required" },
+			{ status: 400 },
+		);
 	}
 
 	const roomOrError = getRoomOrFail(meetingId);
@@ -22,13 +25,22 @@ export async function POST(request: NextRequest) {
 		try {
 			const rtkId = await createMeeting();
 			room.rtkMeetingId = rtkId;
-			await db.insert(meetingSession).values({ id: rtkId, meetingId }).catch((err) => {
-				console.error("[room/guest-join] Failed to persist meeting session:", err);
-			});
-			await db.update(meeting).set({ rtkMeetingId: rtkId }).where(eq(meeting.id, meetingId)).catch((err) => {
-				console.error("[room/guest-join] Failed to update meeting rtkMeetingId:", err);
-			});
-			console.log(`[room/guest-join] Lazily created RTK meeting: rtkMeetingId=${rtkId} for meetingId=${meetingId}`);
+			await db
+				.insert(meetingSession)
+				.values({ id: rtkId, meetingId })
+				.catch((err) => {
+					console.error("[room/guest-join] Failed to persist meeting session:", err);
+				});
+			await db
+				.update(meeting)
+				.set({ rtkMeetingId: rtkId })
+				.where(eq(meeting.id, meetingId))
+				.catch((err) => {
+					console.error("[room/guest-join] Failed to update meeting rtkMeetingId:", err);
+				});
+			console.log(
+				`[room/guest-join] Lazily created RTK meeting: rtkMeetingId=${rtkId} for meetingId=${meetingId}`,
+			);
 		} catch (err) {
 			console.error("Failed to create RTK meeting:", err);
 			return NextResponse.json(
@@ -50,7 +62,12 @@ export async function POST(request: NextRequest) {
 
 		console.log(`Guest ${participantName} joined meeting: ${meetingId} as ${role}`);
 
-		return NextResponse.json({ token, role, groupId: room.groupId, meetingFolderId: room.meetingFolderId });
+		return NextResponse.json({
+			token,
+			role,
+			groupId: room.groupId,
+			meetingFolderId: room.meetingFolderId,
+		});
 	} catch (err) {
 		console.error("Failed to join meeting as guest:", err);
 		return NextResponse.json(

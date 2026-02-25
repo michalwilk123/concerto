@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
+import { useTranslation } from "@/hooks/useTranslation";
 import { type AdminUser, adminApi, type UpdateUserParams } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 
@@ -37,6 +38,7 @@ function formatDate(dateStr: string) {
 }
 
 export function ManagePanel() {
+	const { t } = useTranslation();
 	const { data: session } = useSession();
 
 	const isAdmin = session?.user?.role === "admin";
@@ -76,11 +78,11 @@ export function ManagePanel() {
 			setUsers(res.users);
 			setTotal(res.total);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to load users");
+			setError(e instanceof Error ? e.message : t("manage.loadUsersFailed"));
 		} finally {
 			setLoading(false);
 		}
-	}, [page, limit, debouncedSearch]);
+	}, [page, limit, debouncedSearch, t]);
 
 	useEffect(() => {
 		if (isAdmin) fetchUsers();
@@ -99,7 +101,7 @@ export function ManagePanel() {
 			setEditUser(null);
 			fetchUsers();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to update user");
+			setError(e instanceof Error ? e.message : t("manage.updateUserFailed"));
 		} finally {
 			setEditSaving(false);
 		}
@@ -113,7 +115,7 @@ export function ManagePanel() {
 			setDeleteUser(null);
 			fetchUsers();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to delete user");
+			setError(e instanceof Error ? e.message : t("manage.deleteUserFailed"));
 		} finally {
 			setDeleteLoading(false);
 		}
@@ -128,7 +130,7 @@ export function ManagePanel() {
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
 					<Shield size={18} style={{ color: "var(--text-tertiary)" }} />
 					<Typography as="h2" variant="titleMd" style={{ margin: 0 }}>
-						Groups
+						{t("manage.groupsTitle")}
 					</Typography>
 				</div>
 				<GroupsManagement isAdmin={isAdmin} />
@@ -151,10 +153,10 @@ export function ManagePanel() {
 					<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
 						<Users size={18} style={{ color: "var(--text-tertiary)" }} />
 						<Typography as="h2" variant="titleMd" style={{ margin: 0 }}>
-							Users
+							{t("manage.usersTitle")}
 						</Typography>
 						<Typography as="span" variant="meta" tone="tertiary" style={{ marginLeft: 4 }}>
-							{total} user{total !== 1 ? "s" : ""} registered
+							{t("manage.usersRegistered", { total: String(total) })}
 						</Typography>
 					</div>
 
@@ -182,7 +184,7 @@ export function ManagePanel() {
 							<TextInput
 								value={search}
 								onChange={(e) => handleSearchChange(e.target.value)}
-								placeholder="Search by name or email..."
+								placeholder={t("manage.searchPlaceholder")}
 								style={{
 									width: "100%",
 									paddingLeft: 36,
@@ -209,14 +211,21 @@ export function ManagePanel() {
 					{error && <InlineErrorBanner message={error} onDismiss={() => setError(null)} />}
 
 					<DataTableShell
-						headers={["Name", "Email", "Role", "Status", "Created", "Actions"]}
+						headers={[
+							t("manage.tableName"),
+							t("manage.tableEmail"),
+							t("manage.tableRole"),
+							t("manage.tableStatus"),
+							t("manage.tableCreated"),
+							t("manage.tableActions"),
+						]}
 						columns="2fr 2.5fr 100px 110px 110px 90px"
 						isLoading={loading}
 						hasRows={users.length > 0}
 						emptyState={
 							<EmptyState
 								icon={<Users size={32} />}
-								title={debouncedSearch ? "No users match your search" : "No users found"}
+								title={debouncedSearch ? t("manage.noUsersMatch") : t("manage.noUsersFound")}
 								subtitle={undefined}
 								padding="48px 20px"
 							/>
@@ -301,7 +310,11 @@ export function ManagePanel() {
 										}}
 									/>
 									<span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-										{u.banned ? "Banned" : u.isActive ? "Active" : "Inactive"}
+										{u.banned
+											? t("manage.statusBanned")
+											: u.isActive
+												? t("manage.statusActive")
+												: t("manage.statusInactive")}
 									</span>
 								</div>
 
@@ -314,7 +327,7 @@ export function ManagePanel() {
 										variant="ghost"
 										size="xs"
 										onClick={() => openEdit(u)}
-										title="Edit user"
+										title={t("manage.editUserAction")}
 										style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
 									>
 										<Pencil size={14} />
@@ -324,7 +337,7 @@ export function ManagePanel() {
 											variant="ghost"
 											size="xs"
 											onClick={() => setDeleteUser(u)}
-											title="Delete user"
+											title={t("manage.deleteUserAction")}
 											style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
 										>
 											<Trash2 size={14} />
@@ -346,7 +359,7 @@ export function ManagePanel() {
 							}}
 						>
 							<Typography as="span" variant="meta" tone="tertiary">
-								Page {page} of {totalPages}
+								{t("manage.pageOf", { page: String(page), total: String(totalPages) })}
 							</Typography>
 							<div style={{ display: "flex", gap: 6 }}>
 								<InlineButton
@@ -355,7 +368,7 @@ export function ManagePanel() {
 									disabled={page <= 1}
 									onClick={() => setPage((p) => p - 1)}
 								>
-									Previous
+									{t("manage.previous")}
 								</InlineButton>
 								<InlineButton
 									variant="secondary"
@@ -363,7 +376,7 @@ export function ManagePanel() {
 									disabled={page >= totalPages}
 									onClick={() => setPage((p) => p + 1)}
 								>
-									Next
+									{t("manage.next")}
 								</InlineButton>
 							</div>
 						</div>
@@ -374,7 +387,7 @@ export function ManagePanel() {
 						{editUser && (
 							<div style={{ padding: 24 }}>
 								<Typography as="h2" variant="titleMd" style={{ margin: "0 0 4px 0" }}>
-									Edit User
+									{t("manage.editUserTitle")}
 								</Typography>
 								<Typography
 									as="p"
@@ -398,7 +411,7 @@ export function ManagePanel() {
 									}}
 								>
 									<Typography as="span" variant="label" tone="secondary">
-										Role
+										{t("manage.roleLabel")}
 									</Typography>
 								</label>
 								<Select
@@ -410,9 +423,9 @@ export function ManagePanel() {
 										marginBottom: 20,
 									}}
 								>
-									<option value="admin">Admin</option>
-									<option value="teacher">Teacher</option>
-									<option value="student">Student</option>
+									<option value="admin">{t("manage.roleAdmin")}</option>
+									<option value="teacher">{t("manage.roleTeacher")}</option>
+									<option value="student">{t("manage.roleStudent")}</option>
 								</Select>
 
 								<div
@@ -424,7 +437,7 @@ export function ManagePanel() {
 									}}
 								>
 									<Typography as="span" variant="bodySm" tone="secondary">
-										Active
+										{t("manage.activeLabel")}
 									</Typography>
 									<ToggleSwitch
 										checked={editForm.isActive ?? true}
@@ -441,7 +454,7 @@ export function ManagePanel() {
 									}}
 								>
 									<Typography as="span" variant="bodySm" tone="secondary">
-										Banned
+										{t("manage.bannedLabel")}
 									</Typography>
 									<ToggleSwitch
 										checked={editForm.banned ?? false}
@@ -452,7 +465,7 @@ export function ManagePanel() {
 
 								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 									<InlineButton variant="secondary" size="sm" onClick={() => setEditUser(null)}>
-										Cancel
+										{t("manage.cancel")}
 									</InlineButton>
 									<InlineButton
 										variant="accent"
@@ -460,7 +473,7 @@ export function ManagePanel() {
 										onClick={handleSaveEdit}
 										loading={editSaving}
 									>
-										Save Changes
+										{t("manage.saveChanges")}
 									</InlineButton>
 								</div>
 							</div>
@@ -472,7 +485,7 @@ export function ManagePanel() {
 						{deleteUser && (
 							<div style={{ padding: 24 }}>
 								<Typography as="h2" variant="titleMd" style={{ margin: "0 0 8px 0" }}>
-									Delete User
+									{t("manage.deleteUserTitle")}
 								</Typography>
 								<Typography
 									as="p"
@@ -480,7 +493,7 @@ export function ManagePanel() {
 									tone="secondary"
 									style={{ margin: "0 0 8px 0" }}
 								>
-									Are you sure you want to delete <strong>{deleteUser.name}</strong>?
+									{t("manage.deleteUserMessage", { name: deleteUser.name })}
 								</Typography>
 								<Typography
 									as="p"
@@ -494,11 +507,11 @@ export function ManagePanel() {
 										border: "1px solid rgba(239,68,68,0.12)",
 									}}
 								>
-									This action is permanent. All associated data will be removed.
+									{t("manage.deleteUserWarning")}
 								</Typography>
 								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 									<InlineButton variant="secondary" size="sm" onClick={() => setDeleteUser(null)}>
-										Cancel
+										{t("manage.cancel")}
 									</InlineButton>
 									<InlineButton
 										variant="danger"
@@ -506,7 +519,7 @@ export function ManagePanel() {
 										onClick={handleDelete}
 										loading={deleteLoading}
 									>
-										Delete User
+										{t("manage.deleteUserButton")}
 									</InlineButton>
 								</div>
 							</div>

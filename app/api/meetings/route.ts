@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
 import { requireGroupMember } from "@/lib/auth-helpers";

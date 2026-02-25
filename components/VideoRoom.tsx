@@ -1,6 +1,11 @@
 "use client";
 
-import { RealtimeKitProvider, useRealtimeKitClient, useRealtimeKitMeeting, useRealtimeKitSelector } from "@cloudflare/realtimekit-react";
+import {
+	RealtimeKitProvider,
+	useRealtimeKitClient,
+	useRealtimeKitMeeting,
+	useRealtimeKitSelector,
+} from "@cloudflare/realtimekit-react";
 import {
 	RtkCameraToggle,
 	RtkGrid,
@@ -11,6 +16,7 @@ import {
 	RtkScreenShareToggle,
 } from "@cloudflare/realtimekit-react-ui";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import { useRoomStore } from "@/stores/room-store";
 import type { Role, RoomParticipant } from "@/types/room";
 import { isTeacher, presetToRole } from "@/types/room";
@@ -64,6 +70,7 @@ function RoomContent({
 
 	const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab, initialize, setRole } =
 		useRoomStore();
+	const { t } = useTranslation();
 	const [roomDescription, setRoomDescription] = useState("");
 	const toast = useToast();
 	const hasNotifiedRef = useRef(false);
@@ -75,7 +82,7 @@ function RoomContent({
 	const copyRoomLink = () => {
 		const url = `${window.location.origin}/meet/${meetingId}`;
 		navigator.clipboard.writeText(url);
-		toast.success("Room link copied to clipboard");
+		toast.success(t("video.roomLinkCopied"));
 	};
 
 	useEffect(() => {
@@ -114,13 +121,13 @@ function RoomContent({
 		lastRecordingStateRef.current = recordingState;
 
 		if (recordingState === "RECORDING") {
-			toast.success("Recording started");
+			toast.success(t("video.recordingStarted"));
 		} else if (recordingState === "PAUSED") {
-			toast.warning("Recording paused");
+			toast.warning(t("video.recordingPaused"));
 		} else if (recordingState === "IDLE") {
-			toast.info("Recording stopped");
+			toast.info(t("video.recordingStopped"));
 		}
-	}, [recordingState, toast]);
+	}, [recordingState, t, toast]);
 
 	return (
 		<div
@@ -173,7 +180,7 @@ function RoomContent({
 									meeting={meeting}
 									onRtkApiError={(event) => {
 										const detail = event?.detail;
-										const message = detail?.message || "Failed to change recording state";
+										const message = detail?.message || t("video.recordingStateFailed");
 										toast.error(message);
 									}}
 								/>
@@ -181,7 +188,16 @@ function RoomContent({
 						</div>
 					</div>
 				</div>
-				<div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "12px 0", background: "var(--bg-secondary)" }}>
+				<div
+					style={{
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						gap: 8,
+						padding: "12px 0",
+						background: "var(--bg-secondary)",
+					}}
+				>
 					<RtkMicToggle meeting={meeting} size="md" />
 					<RtkCameraToggle meeting={meeting} size="md" />
 					<RtkScreenShareToggle meeting={meeting} size="md" />
@@ -202,7 +218,7 @@ function RoomContent({
 							fontWeight: 500,
 						}}
 					>
-						Leave
+						{t("video.leave")}
 					</button>
 				</div>
 			</div>
@@ -224,6 +240,7 @@ function RoomContent({
 export default function VideoRoom(props: VideoRoomProps) {
 	const [meeting, initMeeting] = useRealtimeKitClient();
 	const [hasAudioOutput, setHasAudioOutput] = useState(true);
+	const { t } = useTranslation();
 	const toast = useToast();
 
 	useEffect(() => {
@@ -242,7 +259,7 @@ export default function VideoRoom(props: VideoRoomProps) {
 					if (cancelled) return;
 					if (isMissingAudioOutputError(error)) {
 						setHasAudioOutput(false);
-						toast.warning("No speaker detected. Joined without participant audio playback.");
+						toast.warning(t("video.noSpeakerWarning"));
 						await initMeeting({
 							authToken: props.token,
 							defaults: {
@@ -265,7 +282,7 @@ export default function VideoRoom(props: VideoRoomProps) {
 				cancelled = true;
 			};
 		}
-	}, [meeting, initMeeting, props.token]);
+	}, [meeting, initMeeting, props.token, t, toast.error, toast.warning]);
 
 	useEffect(() => {
 		if (meeting) {
@@ -274,7 +291,23 @@ export default function VideoRoom(props: VideoRoomProps) {
 	}, [meeting]);
 
 	return (
-		<RealtimeKitProvider value={meeting} fallback={<div style={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center", background: "var(--bg-primary)", color: "var(--text-secondary)" }}>Connecting...</div>}>
+		<RealtimeKitProvider
+			value={meeting}
+			fallback={
+				<div
+					style={{
+						height: "100%",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						background: "var(--bg-primary)",
+						color: "var(--text-secondary)",
+					}}
+				>
+					{t("video.connecting")}
+				</div>
+			}
+		>
 			<RoomContent {...props} hasAudioOutput={hasAudioOutput} />
 		</RealtimeKitProvider>
 	);

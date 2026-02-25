@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { and, eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { folder } from "@/db/schema";
 
@@ -39,7 +39,13 @@ export async function ensureMeetingFolder(groupId: string, meetingName: string):
 	const existing = await db
 		.select({ id: folder.id })
 		.from(folder)
-		.where(and(eq(folder.groupId, groupId), eq(folder.parentId, meetingsFolderId), eq(folder.name, meetingName)))
+		.where(
+			and(
+				eq(folder.groupId, groupId),
+				eq(folder.parentId, meetingsFolderId),
+				eq(folder.name, meetingName),
+			),
+		)
 		.limit(1);
 
 	if (existing.length > 0) return existing[0].id;

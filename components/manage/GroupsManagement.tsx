@@ -10,6 +10,7 @@ import { InlineErrorBanner } from "@/components/ui/inline-error-banner";
 import { Modal } from "@/components/ui/modal";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
+import { useTranslation } from "@/hooks/useTranslation";
 import { groupsApi } from "@/lib/api-client";
 import type { Group } from "@/types/group";
 import { GroupMemberManager } from "./GroupMemberManager";
@@ -27,6 +28,7 @@ interface GroupsManagementProps {
 }
 
 export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
+	const { t } = useTranslation();
 	const [groups, setGroups] = useState<(Group & { memberCount?: number })[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -57,11 +59,11 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 			);
 			setGroups(withCounts);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to load groups");
+			setError(e instanceof Error ? e.message : t("groups.loadFailed"));
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [t]);
 
 	useEffect(() => {
 		fetchGroups();
@@ -76,7 +78,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 			setCreateName("");
 			fetchGroups();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to create group");
+			setError(e instanceof Error ? e.message : t("groups.createFailed"));
 		} finally {
 			setCreateLoading(false);
 		}
@@ -90,7 +92,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 			setDeleteGroup(null);
 			fetchGroups();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to delete group");
+			setError(e instanceof Error ? e.message : t("groups.deleteFailed"));
 		} finally {
 			setDeleteLoading(false);
 		}
@@ -113,9 +115,14 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 			{/* Toolbar */}
 			{isAdmin && (
 				<div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-					<InlineButton variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-						<Plus size={15} style={{ marginRight: 4 }} />
-						Create Group
+					<InlineButton
+						variant="primary"
+						size="sm"
+						onClick={() => setCreateOpen(true)}
+						style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+					>
+						<Plus size={15} />
+						{t("groups.createButton")}
 					</InlineButton>
 				</div>
 			)}
@@ -124,21 +131,21 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 
 			{/* Table */}
 			<DataTableShell
-				headers={["Name", "Members", "Created", "Actions"]}
-				columns="2fr 1fr 1fr 120px"
+				headers={[t("groups.tableName"), t("groups.tableMembers"), t("groups.tableCreated"), t("groups.tableActions")]}
+				columns="2fr 1fr 1fr 156px"
 				isLoading={loading}
 				hasRows={groups.length > 0}
 				emptyState={
 					<EmptyState
 						icon={<Users size={32} />}
-						title="No groups yet"
+						title={t("groups.emptyTitle")}
 						subtitle={undefined}
 						padding="48px 20px"
 					/>
 				}
 			>
 				{groups.map((g, i) => (
-					<EntityGridRow key={g.id} columns="2fr 1fr 1fr 120px" isLast={i === groups.length - 1}>
+					<EntityGridRow key={g.id} columns="2fr 1fr 1fr 156px" isLast={i === groups.length - 1}>
 						<Typography variant="bodySm" weight={500}>
 							{g.name}
 						</Typography>
@@ -153,18 +160,25 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 								variant="ghost"
 								size="xs"
 								onClick={() => setManagingGroup(g)}
-								title="Manage members"
-								style={{ padding: "4px 8px", fontSize: "0.76rem" }}
+								title={t("groups.manageMembers")}
+								style={{
+									padding: "4px 8px",
+									fontSize: "0.76rem",
+									display: "inline-flex",
+									alignItems: "center",
+									whiteSpace: "nowrap",
+									gap: 4,
+								}}
 							>
-								<Users size={14} style={{ marginRight: 4 }} />
-								Manage
+								<Users size={14} />
+								{t("groups.manage")}
 							</InlineButton>
 							{isAdmin && (
 								<InlineButton
 									variant="ghost"
 									size="xs"
 									onClick={() => setDeleteGroup(g)}
-									title="Delete group"
+									title={t("groups.deleteGroupAction")}
 									style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
 								>
 									<Trash2 size={14} />
@@ -179,7 +193,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 			<Modal open={createOpen} onClose={() => setCreateOpen(false)} maxWidth={400}>
 				<div style={{ padding: 24 }}>
 					<Typography as="h2" variant="titleMd" style={{ margin: "0 0 20px 0" }}>
-						Create Group
+						{t("groups.createTitle")}
 					</Typography>
 					<label
 						htmlFor="create-group-name"
@@ -194,20 +208,20 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 						}}
 					>
 						<Typography as="span" variant="label" tone="secondary">
-							Group Name
+							{t("groups.groupNameLabel")}
 						</Typography>
 					</label>
 					<TextInput
 						id="create-group-name"
 						value={createName}
 						onChange={(e) => setCreateName(e.target.value)}
-						placeholder="e.g. Piano Class 2026"
+						placeholder={t("groups.groupNamePlaceholder")}
 						style={{ width: "100%", marginBottom: 20, fontSize: "0.84rem" }}
 						onKeyDown={(e) => e.key === "Enter" && handleCreate()}
 					/>
 					<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 						<InlineButton variant="secondary" size="sm" onClick={() => setCreateOpen(false)}>
-							Cancel
+							{t("groups.cancel")}
 						</InlineButton>
 						<InlineButton
 							variant="primary"
@@ -216,7 +230,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 							loading={createLoading}
 							disabled={!createName.trim()}
 						>
-							Create
+							{t("groups.create")}
 						</InlineButton>
 					</div>
 				</div>
@@ -227,10 +241,10 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 				{deleteGroup && (
 					<div style={{ padding: 24 }}>
 						<Typography as="h2" variant="titleMd" style={{ margin: "0 0 8px 0" }}>
-							Delete Group
+							{t("groups.deleteTitle")}
 						</Typography>
 						<Typography as="p" variant="bodySm" tone="secondary" style={{ margin: "0 0 8px 0" }}>
-							Are you sure you want to delete <strong>{deleteGroup.name}</strong>?
+							{t("groups.deleteMessage", { name: deleteGroup.name })}
 						</Typography>
 						<Typography
 							as="p"
@@ -244,11 +258,11 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 								border: "1px solid rgba(239,68,68,0.12)",
 							}}
 						>
-							This will remove the group and all member associations.
+							{t("groups.deleteWarning")}
 						</Typography>
 						<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 							<InlineButton variant="secondary" size="sm" onClick={() => setDeleteGroup(null)}>
-								Cancel
+								{t("groups.cancel")}
 							</InlineButton>
 							<InlineButton
 								variant="danger"
@@ -256,7 +270,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 								onClick={handleDelete}
 								loading={deleteLoading}
 							>
-								Delete Group
+								{t("groups.delete")}
 							</InlineButton>
 						</div>
 					</div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionHeading } from "@/components/ui/section-heading";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { FileWithUrl } from "@/types/files";
 import { FileItem } from "./FileItem";
 
@@ -12,10 +13,12 @@ interface FileListProps {
 }
 
 export function FileList({ files, onPreview, onDelete, readOnly }: FileListProps) {
+	const { t } = useTranslation();
+
 	if (files.length === 0) {
 		return (
 			<div style={{ textAlign: "center", padding: "48px 0" }}>
-				<p style={{ color: "var(--text-tertiary)" }}>No files in this folder.</p>
+				<p style={{ color: "var(--text-tertiary)" }}>{t("fileList.empty")}</p>
 			</div>
 		);
 	}
@@ -23,7 +26,7 @@ export function FileList({ files, onPreview, onDelete, readOnly }: FileListProps
 	return (
 		<div>
 			<SectionHeading uppercase={false} style={{ fontSize: "0.84rem", marginBottom: 12 }}>
-				Files
+				{t("fileList.title")}
 			</SectionHeading>
 			<div
 				style={{

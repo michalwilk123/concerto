@@ -6,6 +6,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { InlineButton } from "@/components/ui/inline-button";
 import { Modal } from "@/components/ui/modal";
 import { TextInput } from "@/components/ui/text-input";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface CreateFolderModalProps {
 	isOpen: boolean;
@@ -14,6 +15,7 @@ interface CreateFolderModalProps {
 }
 
 export function CreateFolderModal({ isOpen, onClose, onSubmit }: CreateFolderModalProps) {
+	const { t } = useTranslation();
 	const [name, setName] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,7 +53,7 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit }: CreateFolderMod
 							color: "var(--text-primary)",
 						}}
 					>
-						Create New Folder
+						{t("createFolder.title")}
 					</h3>
 				</div>
 				<IconButton variant="square" size="xs" onClick={onClose}>
@@ -64,16 +66,16 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit }: CreateFolderMod
 					type="text"
 					value={name}
 					onChange={(e) => setName(e.target.value)}
-					placeholder="Folder name"
+					placeholder={t("createFolder.placeholder")}
 					variant="default"
 					style={{ width: "100%", boxSizing: "border-box" }}
 				/>
 				<div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
 					<InlineButton type="button" variant="secondary" onClick={onClose}>
-						Cancel
+						{t("createFolder.cancel")}
 					</InlineButton>
 					<InlineButton type="submit" variant="accent" style={{ fontWeight: 600 }}>
-						Create
+						{t("createFolder.create")}
 					</InlineButton>
 				</div>
 			</form>

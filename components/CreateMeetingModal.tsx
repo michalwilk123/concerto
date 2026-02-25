@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
+import { useTranslation } from "@/hooks/useTranslation";
 import { groupsApi, roomApi } from "@/lib/api-client";
 import type { Group } from "@/types/group";
 
@@ -22,6 +23,7 @@ export function CreateMeetingModal({
 	onCreated,
 	defaultName = "",
 }: CreateMeetingModalProps) {
+	const { t } = useTranslation();
 	const [meetingName, setMeetingName] = useState(defaultName);
 	const [groupId, setGroupId] = useState("");
 	const [groups, setGroups] = useState<Group[]>([]);
@@ -39,9 +41,9 @@ export function CreateMeetingModal({
 				setGroups(g);
 				if (g.length > 0 && !groupId) setGroupId(g[0].id);
 			})
-			.catch(() => setError("Failed to load groups"))
+			.catch(() => setError(t("createMeeting.loadGroupsFailed")))
 			.finally(() => setFetchingGroups(false));
-	}, [open, groupId]);
+	}, [open, groupId, t]);
 
 	useEffect(() => {
 		if (open) {
@@ -58,7 +60,7 @@ export function CreateMeetingModal({
 			onCreated(data.meetingId);
 			onClose();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to create meeting");
+			setError(e instanceof Error ? e.message : t("createMeeting.createFailed"));
 		} finally {
 			setLoading(false);
 		}
@@ -68,7 +70,7 @@ export function CreateMeetingModal({
 		<Modal open={open} onClose={onClose} maxWidth={420}>
 			<div style={{ padding: 24 }}>
 				<Typography as="h2" variant="titleMd" style={{ margin: "0 0 20px 0" }}>
-					Create Meeting
+					{t("createMeeting.title")}
 				</Typography>
 
 				{error && (
@@ -89,29 +91,29 @@ export function CreateMeetingModal({
 
 				<label htmlFor="create-meeting-name" style={{ display: "block", marginBottom: 6 }}>
 					<Typography as="span" variant="label" tone="secondary">
-						Meeting Name
+						{t("createMeeting.nameLabel")}
 					</Typography>
 				</label>
 				<TextInput
 					id="create-meeting-name"
 					value={meetingName}
 					onChange={(e) => setMeetingName(e.target.value)}
-					placeholder="e.g. Piano Masterclass"
+					placeholder={t("createMeeting.namePlaceholder")}
 					style={{ width: "100%", marginBottom: 16, fontSize: "0.84rem" }}
 				/>
 
 				<label htmlFor="create-meeting-group" style={{ display: "block", marginBottom: 6 }}>
 					<Typography as="span" variant="label" tone="secondary">
-						Group
+						{t("createMeeting.groupLabel")}
 					</Typography>
 				</label>
 				{fetchingGroups ? (
 					<Typography as="p" variant="bodySm" tone="tertiary" style={{ margin: "0 0 16px" }}>
-						Loading groups...
+						{t("createMeeting.loadingGroups")}
 					</Typography>
 				) : groups.length === 0 ? (
 					<Typography as="p" variant="bodySm" tone="tertiary" style={{ margin: "0 0 16px" }}>
-						No groups available. Ask an admin to create one.
+						{t("createMeeting.noGroups")}
 					</Typography>
 				) : (
 					<Select
@@ -133,7 +135,7 @@ export function CreateMeetingModal({
 
 				<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 					<InlineButton variant="secondary" size="sm" onClick={onClose}>
-						Cancel
+						{t("createMeeting.cancel")}
 					</InlineButton>
 					<InlineButton
 						variant="primary"
@@ -142,7 +144,7 @@ export function CreateMeetingModal({
 						loading={loading}
 						disabled={!meetingName.trim() || !groupId || groups.length === 0}
 					>
-						Create Meeting
+						{t("createMeeting.submit")}
 					</InlineButton>
 				</div>
 			</div>

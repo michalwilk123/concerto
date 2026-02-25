@@ -1,0 +1,324 @@
+export const defaultTranslations: Record<string, string> = {
+	// Auth
+	"auth.login.title": "Sign In",
+	"auth.login.signInFailed": "Sign in failed",
+	"auth.login.email": "Email",
+	"auth.login.emailPlaceholder": "you@example.com",
+	"auth.login.password": "Password",
+	"auth.login.signingIn": "Signing in...",
+	"auth.login.submit": "Sign In",
+	"auth.login.noAccount": "Don't have an account?",
+	"auth.login.register": "Register",
+	"auth.register.title": "Create Account",
+	"auth.register.passwordsDoNotMatch": "Passwords do not match",
+	"auth.register.registrationFailed": "Registration failed",
+	"auth.register.fullName": "Full Name",
+	"auth.register.fullNamePlaceholder": "e.g. Jan Kowalski",
+	"auth.register.email": "Email",
+	"auth.register.emailPlaceholder": "you@example.com",
+	"auth.register.password": "Password",
+	"auth.register.confirmPassword": "Confirm Password",
+	"auth.register.creatingAccount": "Creating account...",
+	"auth.register.submit": "Create Account",
+	"auth.register.alreadyHaveAccount": "Already have an account?",
+	"auth.register.signIn": "Sign In",
+
+	// Lobby
+	"lobby.kickedWarning": "You were kicked from the room",
+	"lobby.waitingMessage": "You are in the lobby. Waiting for the meeting to start.",
+
+	// Sidebar
+	"sidebar.myFiles": "My Files",
+	"sidebar.meetings": "Meetings",
+	"sidebar.recordings": "Recordings",
+	"sidebar.manage": "Manage",
+	"sidebar.translations": "Translations",
+	"sidebar.storage": "Storage",
+	"sidebar.storageUsed": "{used} of {limit} used",
+	"sidebar.participants": "Participants",
+	"sidebar.files": "Files",
+	"sidebar.chat": "Chat",
+	"sidebar.close": "Close sidebar",
+
+	// Breadcrumbs
+	"breadcrumbs.myFiles": "My Files",
+
+	// Files
+	"files.newFolder": "New Folder",
+	"files.uploadSuccess": "File uploaded successfully",
+	"files.deleteSuccess": "File deleted",
+	"files.deleteFailed": "Delete failed",
+	"files.folderDeleteSuccess": "Folder deleted",
+	"files.createFolderSuccess": 'Folder "{name}" created',
+	"files.createFolderFailed": "Failed to create folder",
+
+	// Folders and files
+	"folders.title": "Folders",
+	"folders.deleteTitle": "Delete Folder",
+	"folders.deleteMessage":
+		'Are you sure you want to delete "{name}" and all its contents? This action cannot be undone.',
+	"folders.delete": "Delete",
+	"folders.systemBadge": "system",
+	"fileList.title": "Files",
+	"fileList.empty": "No files in this folder.",
+	"fileItem.download": "Download",
+	"fileItem.delete": "Delete",
+	"fileItem.deleteTitle": "Delete File",
+	"fileItem.deleteMessage": 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+	"createFolder.title": "Create New Folder",
+	"createFolder.placeholder": "Folder name",
+	"createFolder.cancel": "Cancel",
+	"createFolder.create": "Create",
+	"uploader.uploading": "Uploading...",
+	"uploader.dropOrClick": "Drop files here or click to upload",
+	"uploader.maxFileSize": "Max 50MB per file",
+	"uploader.uploadFailed": "Upload failed",
+
+	// Meetings
+	"meetings.title": "Meetings",
+	"meetings.createButton": "Create Meeting",
+	"meetings.emptyTitle": "No meetings yet",
+	"meetings.emptySubtitle": "Create a meeting to get started.",
+	"meetings.loadingMessage": "Loading meetings...",
+	"meetings.rejoin": "Rejoin",
+	"meetings.rejoinTitle": "Rejoin meeting",
+	"meetings.deleteTitle": "Delete meeting record",
+	"meetings.confirm": "Confirm",
+	"meetings.cancel": "Cancel",
+
+	// Create meeting
+	"createMeeting.title": "Create Meeting",
+	"createMeeting.loadGroupsFailed": "Failed to load groups",
+	"createMeeting.createFailed": "Failed to create meeting",
+	"createMeeting.nameLabel": "Meeting Name",
+	"createMeeting.namePlaceholder": "e.g. Piano Masterclass",
+	"createMeeting.groupLabel": "Group",
+	"createMeeting.loadingGroups": "Loading groups...",
+	"createMeeting.noGroups": "No groups available. Ask an admin to create one.",
+	"createMeeting.cancel": "Cancel",
+	"createMeeting.submit": "Create Meeting",
+
+	// Recordings
+	"recordings.title": "Recordings",
+	"recordings.loadingMessage": "Loading recordings...",
+	"recordings.emptyTitle": "No recordings yet",
+	"recordings.emptySubtitle": "Recordings from meetings will appear here automatically.",
+	"recordings.retentionInfo": "Recordings are kept for {days} days.",
+	"recordings.daysLeft": "{days} days left",
+	"recordings.playTitle": "Play recording",
+	"recordings.downloadTitle": "Download recording",
+	"recordings.englishCaptions": "English captions",
+	"recordings.closePlayer": "Close player",
+
+	// Room and video
+	"room.joining": "Joining room...",
+	"room.error.generic": "An error occurred",
+	"room.error.title": "Error",
+	"room.error.tryAgain": "Try Again",
+	"room.error.backToDashboard": "Back to Dashboard",
+	"room.nameEntry.backToDashboard": "Back to Dashboard",
+	"room.nameEntry.title": "Join Room",
+	"room.nameEntry.meetingLabel": "Meeting:",
+	"room.nameEntry.yourName": "Your Name",
+	"room.nameEntry.namePlaceholder": "e.g. Jan Kowalski",
+	"room.nameEntry.submit": "Join",
+	"appHeader.admin": "Admin",
+	"appHeader.logout": "Logout",
+	"appHeader.signIn": "Sign In",
+	"appHeader.register": "Register",
+	"appHeader.returnToDashboard": "Return to dashboard",
+	"appHeader.copyRoomLink": "Copy room link",
+	"appHeader.addDescription": "Add a description...",
+	"appHeader.dashboard": "Dashboard",
+	"appHeader.openSidebar": "Open sidebar",
+	"appHeader.closeSidebar": "Close sidebar",
+	"appHeader.leave": "Leave",
+	"appHeader.teacher": "Teacher",
+	"appHeader.student": "Student",
+	"video.roomLinkCopied": "Room link copied to clipboard",
+	"video.recordingStarted": "Recording started",
+	"video.recordingPaused": "Recording paused",
+	"video.recordingStopped": "Recording stopped",
+	"video.recordingStateFailed": "Failed to change recording state",
+	"video.noSpeakerWarning": "No speaker detected. Joined without participant audio playback.",
+	"video.leave": "Leave",
+	"video.connecting": "Connecting...",
+
+	// Participants
+	"participants.kickedSuccess": "Kicked {name} from the room",
+	"participants.kickFailed": "Failed to kick participant",
+	"participants.teacher": "Teacher",
+	"participants.student": "Student",
+	"participants.count": "{count} participant(s) in room",
+	"participants.you": "you",
+	"participants.kick": "Kick",
+	"participants.kickTitle": "Kick participant",
+	"participants.kickMessage":
+		"Are you sure you want to remove {name} from the room? They will need to rejoin.",
+	"participants.cancel": "Cancel",
+
+	// Chat
+	"chat.loadHistoryFailed": "Failed to load chat history",
+	"chat.sendFailed": "Failed to send message",
+	"chat.loadingMessages": "Loading messages...",
+	"chat.noMessages": "No messages yet",
+	"chat.you": "You",
+	"chat.typeMessage": "Type a message",
+	"chat.sendMessage": "Send message",
+
+	// Dashboard page
+	"dashboard.meetingChat": "Meeting Chat",
+	"dashboard.selectMeeting": "Select a meeting to view its chat",
+	"dashboard.loading": "Loading...",
+	"dashboard.openChatSidebar": "Open chat sidebar",
+	"dashboard.closeChatSidebar": "Close chat sidebar",
+
+	// Manage panel
+	"manage.title": "Manage",
+	"manage.groupsTitle": "Groups",
+	"manage.usersTitle": "Users",
+	"manage.usersRegistered": "{total} user(s) registered",
+	"manage.searchPlaceholder": "Search by name or email...",
+	"manage.tableName": "Name",
+	"manage.tableEmail": "Email",
+	"manage.tableRole": "Role",
+	"manage.tableStatus": "Status",
+	"manage.tableCreated": "Created",
+	"manage.tableActions": "Actions",
+	"manage.noUsersMatch": "No users match your search",
+	"manage.noUsersFound": "No users found",
+	"manage.statusBanned": "Banned",
+	"manage.statusActive": "Active",
+	"manage.statusInactive": "Inactive",
+	"manage.editUserAction": "Edit user",
+	"manage.deleteUserAction": "Delete user",
+	"manage.pageOf": "Page {page} of {total}",
+	"manage.previous": "Previous",
+	"manage.next": "Next",
+	"manage.editUserTitle": "Edit User",
+	"manage.roleLabel": "Role",
+	"manage.roleAdmin": "Admin",
+	"manage.roleTeacher": "Teacher",
+	"manage.roleStudent": "Student",
+	"manage.activeLabel": "Active",
+	"manage.bannedLabel": "Banned",
+	"manage.cancel": "Cancel",
+	"manage.saveChanges": "Save Changes",
+	"manage.deleteUserTitle": "Delete User",
+	"manage.deleteUserMessage": "Are you sure you want to delete {name}?",
+	"manage.deleteUserWarning": "This action is permanent. All associated data will be removed.",
+	"manage.deleteUserButton": "Delete User",
+	"manage.loadUsersFailed": "Failed to load users",
+	"manage.updateUserFailed": "Failed to update user",
+	"manage.deleteUserFailed": "Failed to delete user",
+
+	// Groups management
+	"groups.createButton": "Create Group",
+	"groups.tableName": "Name",
+	"groups.tableMembers": "Members",
+	"groups.tableCreated": "Created",
+	"groups.tableActions": "Actions",
+	"groups.emptyTitle": "No groups yet",
+	"groups.manageMembers": "Manage members",
+	"groups.manage": "Manage",
+	"groups.deleteGroupAction": "Delete group",
+	"groups.createTitle": "Create Group",
+	"groups.groupNameLabel": "Group Name",
+	"groups.groupNamePlaceholder": "e.g. Piano Class 2026",
+	"groups.cancel": "Cancel",
+	"groups.create": "Create",
+	"groups.deleteTitle": "Delete Group",
+	"groups.deleteMessage": "Are you sure you want to delete {name}?",
+	"groups.deleteWarning": "This will remove the group and all member associations.",
+	"groups.delete": "Delete Group",
+	"groups.loadFailed": "Failed to load groups",
+	"groups.createFailed": "Failed to create group",
+	"groups.deleteFailed": "Failed to delete group",
+
+	// Group member manager
+	"groupMembers.membersSuffix": "— Members",
+	"groupMembers.addMember": "Add Member",
+	"groupMembers.searchPlaceholder": "Search users by name or email...",
+	"groupMembers.add": "Add",
+	"groupMembers.student": "Student",
+	"groupMembers.teacher": "Teacher",
+	"groupMembers.tableName": "Name",
+	"groupMembers.tableEmail": "Email",
+	"groupMembers.tableRole": "Role",
+	"groupMembers.emptyTitle": "No members yet",
+	"groupMembers.removeMember": "Remove member",
+	"groupMembers.loadFailed": "Failed to load members",
+	"groupMembers.addFailed": "Failed to add member",
+	"groupMembers.removeFailed": "Failed to remove member",
+
+	// Confirm dialog
+	"confirmDialog.confirm": "Confirm",
+	"confirmDialog.cancel": "Cancel",
+
+	// Preview
+	"preview.loading": "Loading...",
+	"preview.textLoadFailed": "Failed to load file content",
+	"preview.imageLoadFailed": "Failed to load image",
+	"preview.audioNotSupported": "Your browser does not support the audio element.",
+	"preview.videoNotSupported": "Your browser does not support the video element.",
+	"preview.notAvailable": "Preview not available for this file type",
+
+	// Translations panel
+	"translations.title": "Edit Concerto interface text",
+	"translations.save": "Save",
+	"translations.saving": "Saving...",
+	"translations.saveSuccess": "Translations saved",
+	"translations.saveFailed": "Failed to save translations",
+};
+
+export type TranslationKey = keyof typeof defaultTranslations;
+
+export interface TranslationSection {
+	prefix: string;
+	label: string;
+	keys: string[];
+}
+
+const sectionLabels: Record<string, string> = {
+	auth: "Auth",
+	lobby: "Lobby",
+	sidebar: "Sidebar",
+	breadcrumbs: "Breadcrumbs",
+	files: "Files",
+	folders: "Folders",
+	fileList: "File List",
+	fileItem: "File Item",
+	createFolder: "Create Folder",
+	uploader: "Uploader",
+	meetings: "Meetings",
+	createMeeting: "Create Meeting",
+	recordings: "Recordings",
+	room: "Room",
+	appHeader: "App Header",
+	video: "Video Room",
+	participants: "Participants",
+	chat: "Chat",
+	dashboard: "Dashboard",
+	manage: "Manage",
+	groups: "Groups",
+	groupMembers: "Group Members",
+	confirmDialog: "Confirm Dialog",
+	preview: "Preview",
+	translations: "Translations Panel",
+};
+
+export function getTranslationSections(): TranslationSection[] {
+	const grouped: Record<string, string[]> = {};
+
+	for (const key of Object.keys(defaultTranslations)) {
+		const prefix = key.split(".")[0];
+		if (!grouped[prefix]) grouped[prefix] = [];
+		grouped[prefix].push(key);
+	}
+
+	return Object.entries(grouped).map(([prefix, keys]) => ({
+		prefix,
+		label: sectionLabels[prefix] ?? prefix,
+		keys,
+	}));
+}

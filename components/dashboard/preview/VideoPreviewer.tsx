@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { PreviewerProps } from "./types";
 
 export function VideoPreviewer({ fileUrl }: PreviewerProps) {
+	const { t } = useTranslation();
 	const videoRef = useRef<HTMLVideoElement>(null);
 
 	useEffect(() => {
@@ -15,7 +17,7 @@ export function VideoPreviewer({ fileUrl }: PreviewerProps) {
 	return (
 		<div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
 			<video ref={videoRef} controls style={{ maxWidth: "100%", maxHeight: "70vh" }} src={fileUrl}>
-				Your browser does not support the video element.
+				{t("preview.videoNotSupported")}
 			</video>
 		</div>
 	);

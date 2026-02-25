@@ -21,7 +21,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 	if ("role" in body) {
 		if (!VALID_ROLES.includes(body.role)) {
-			return NextResponse.json({ error: "Invalid role. Must be admin, teacher, or student" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Invalid role. Must be admin, teacher, or student" },
+				{ status: 400 },
+			);
 		}
 		updates.role = body.role;
 	}

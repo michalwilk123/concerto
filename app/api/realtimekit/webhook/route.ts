@@ -15,7 +15,9 @@ function findMeetingIdByRtkId(rtkMeetingId: string): string | undefined {
 export async function POST(request: NextRequest) {
 	try {
 		const event = await request.json();
-		console.log(`[webhook] Received event: ${event.event}, rtkMeetingId: ${event.meeting?.id ?? "NONE"}`);
+		console.log(
+			`[webhook] Received event: ${event.event}, rtkMeetingId: ${event.meeting?.id ?? "NONE"}`,
+		);
 
 		const rtkMeetingId = event.meeting?.id;
 		if (!rtkMeetingId) {
@@ -63,10 +65,16 @@ export async function POST(request: NextRequest) {
 		if (event.event === "meeting.participantJoined") {
 			const participantName = event.participant?.name;
 
-			if (participantName && room.creatorIdentity === participantName && room.adminDisconnectTimer) {
+			if (
+				participantName &&
+				room.creatorIdentity === participantName &&
+				room.adminDisconnectTimer
+			) {
 				clearTimeout(room.adminDisconnectTimer);
 				room.adminDisconnectTimer = undefined;
-				console.log(`Creator ${participantName} reconnected to meeting ${meetingId}, grace period cancelled`);
+				console.log(
+					`Creator ${participantName} reconnected to meeting ${meetingId}, grace period cancelled`,
+				);
 			}
 		}
 	} catch (err) {

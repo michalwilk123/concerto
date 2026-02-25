@@ -14,6 +14,7 @@ import { useToast } from "@/components/Toast";
 import { InlineButton } from "@/components/ui/inline-button";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
 import { useFileManagerStore } from "@/stores/file-manager-store";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
 interface FileBrowserPanelProps {
@@ -35,6 +36,7 @@ export function FileBrowserPanel({
 }: FileBrowserPanelProps) {
 	const router = useRouter();
 	const toast = useToast();
+	const { t } = useTranslation();
 	const [showCreateFolder, setShowCreateFolder] = useState(false);
 	const {
 		files,
@@ -61,7 +63,14 @@ export function FileBrowserPanel({
 		}
 		setCurrentFolderId(initialFolderId);
 		fetchContents(initialFolderId);
-	}, [initialFolderId, groupId]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [
+		initialFolderId,
+		groupId,
+		currentGroupId,
+		fetchContents,
+		setCurrentFolderId,
+		setCurrentGroupId,
+	]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const handleNavigateToFolder = (folderId: string | null) => {
 		router.push(buildDashboardUrl(groupId, { folderId }));
@@ -69,33 +78,33 @@ export function FileBrowserPanel({
 
 	const handleUploadComplete = () => {
 		fetchContents(currentFolderId);
-		toast.success("File uploaded successfully");
+		toast.success(t("files.uploadSuccess"));
 	};
 
 	const handleDeleteFile = async (id: string) => {
 		try {
 			await deleteFile(id);
-			toast.success("File deleted");
+			toast.success(t("files.deleteSuccess"));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Delete failed");
+			toast.error(err instanceof Error ? err.message : t("files.deleteFailed"));
 		}
 	};
 
 	const handleDeleteFolder = async (id: string) => {
 		try {
 			await deleteFolder(id);
-			toast.success("Folder deleted");
+			toast.success(t("files.folderDeleteSuccess"));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Delete failed");
+			toast.error(err instanceof Error ? err.message : t("files.deleteFailed"));
 		}
 	};
 
 	const handleCreateFolder = async (name: string) => {
 		try {
 			await createFolder(name);
-			toast.success(`Folder "${name}" created`);
+			toast.success(t("files.createFolderSuccess", { name }));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to create folder");
+			toast.error(err instanceof Error ? err.message : t("files.createFolderFailed"));
 		}
 	};
 
@@ -123,13 +132,17 @@ export function FileBrowserPanel({
 							style={{ display: "flex", alignItems: "center", gap: 8 }}
 						>
 							<FolderPlus size={16} />
-							New Folder
+							{t("files.newFolder")}
 						</InlineButton>
 					)}
 				</div>
 
 				{allowManage && (
-					<FileUploader groupId={groupId} folderId={currentFolderId} onUploadComplete={handleUploadComplete} />
+					<FileUploader
+						groupId={groupId}
+						folderId={currentFolderId}
+						onUploadComplete={handleUploadComplete}
+					/>
 				)}
 
 				{isLoading && !hasFetched ? (

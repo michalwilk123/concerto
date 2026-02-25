@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { useTranslation } from "@/hooks/useTranslation";
 import { filesApi } from "@/lib/api-client";
 
 interface FileUploaderProps {
@@ -12,6 +13,7 @@ interface FileUploaderProps {
 }
 
 export function FileUploader({ groupId, folderId, onUploadComplete }: FileUploaderProps) {
+	const { t } = useTranslation();
 	const [isDragging, setIsDragging] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	const [progress, setProgress] = useState(0);
@@ -30,7 +32,7 @@ export function FileUploader({ groupId, folderId, onUploadComplete }: FileUpload
 				onUploadComplete?.();
 			}, 500);
 		} catch (error) {
-			console.error("Upload failed:", error);
+			console.error(t("uploader.uploadFailed"), error);
 			setUploading(false);
 			setProgress(0);
 		}
@@ -85,9 +87,9 @@ export function FileUploader({ groupId, folderId, onUploadComplete }: FileUpload
 						color: "var(--text-secondary)",
 					}}
 				>
-					{uploading ? "Uploading..." : "Drop files here or click to upload"}
+					{uploading ? t("uploader.uploading") : t("uploader.dropOrClick")}
 				</p>
-				<p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>Max 50MB per file</p>
+				<p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{t("uploader.maxFileSize")}</p>
 				{uploading && (
 					<div style={{ marginTop: 16 }}>
 						<ProgressBar value={progress / 100} color="var(--accent-purple)" height={6} />

@@ -1,5 +1,8 @@
+"use client";
+
 import { AppHeader } from "@/components/AppHeader";
 import { InlineButton } from "@/components/ui/inline-button";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface ErrorPhaseProps {
 	message: string;
@@ -8,6 +11,8 @@ interface ErrorPhaseProps {
 }
 
 export default function ErrorPhase({ message, onRetry, onBack }: ErrorPhaseProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div
 			style={{
@@ -37,7 +42,9 @@ export default function ErrorPhase({ message, onRetry, onBack }: ErrorPhaseProps
 						width: "100%",
 					}}
 				>
-					<h2 style={{ margin: "0 0 var(--space-md)", color: "var(--accent-red)" }}>Error</h2>
+					<h2 style={{ margin: "0 0 var(--space-md)", color: "var(--accent-red)" }}>
+						{t("room.error.title")}
+					</h2>
 					<p
 						style={{
 							color: "var(--text-secondary)",
@@ -54,7 +61,7 @@ export default function ErrorPhase({ message, onRetry, onBack }: ErrorPhaseProps
 							onClick={onRetry}
 							style={{ padding: "var(--space-sm) var(--space-xl)" }}
 						>
-							Try Again
+							{t("room.error.tryAgain")}
 						</InlineButton>
 						<InlineButton
 							variant="secondary"
@@ -62,7 +69,7 @@ export default function ErrorPhase({ message, onRetry, onBack }: ErrorPhaseProps
 							onClick={onBack}
 							style={{ padding: "var(--space-sm) var(--space-xl)" }}
 						>
-							Back to Dashboard
+							{t("room.error.backToDashboard")}
 						</InlineButton>
 					</div>
 				</div>

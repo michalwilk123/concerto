@@ -3,6 +3,7 @@
 import { ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
 interface BreadcrumbsProps {
@@ -12,6 +13,7 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
 	const isAtRoot = ancestors.length === 0;
+	const { t } = useTranslation();
 
 	return (
 		<div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
@@ -32,7 +34,7 @@ export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
 				}}
 			>
 				<Home size={16} />
-				<span>My Files</span>
+				<span>{t("breadcrumbs.myFiles")}</span>
 			</Link>
 			{ancestors.map((folder, index) => {
 				const isLast = index === ancestors.length - 1;
@@ -41,9 +43,7 @@ export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
 					<span key={folder.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
 						<ChevronRight size={16} style={{ color: "var(--text-tertiary)" }} />
 						{isLast ? (
-							<span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
-								{folder.name}
-							</span>
+							<span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{folder.name}</span>
 						) : (
 							<Link
 								href={buildDashboardUrl(groupId, { folderId: folder.id })}

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "@/lib/auth-client";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function LobbyPage() {
 	return (
@@ -17,6 +18,7 @@ function LobbyContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const toast = useToast();
+	const { t } = useTranslation();
 	const { data: session } = useSession();
 	const joinKey = searchParams.get("key")?.toUpperCase() || "";
 
@@ -28,10 +30,10 @@ function LobbyContent() {
 
 	useEffect(() => {
 		if (searchParams.get("kicked") === "true") {
-			toast.warning("You were kicked from the room");
+			toast.warning(t("lobby.kickedWarning"));
 			router.replace("/lobby");
 		}
-	}, [router.replace, searchParams.get, toast.warning]);
+	}, [router.replace, searchParams.get, t, toast.warning]);
 
 	return (
 		<div
@@ -54,10 +56,9 @@ function LobbyContent() {
 						maxWidth: 360,
 					}}
 				>
-					You are in the lobby. Waiting for the meeting to start.
+					{t("lobby.waitingMessage")}
 				</p>
 			</div>
-
 		</div>
 	);
 }

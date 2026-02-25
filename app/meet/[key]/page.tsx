@@ -6,6 +6,7 @@ import { LoadingIndicator } from "@/components/ui/loading-state";
 import VideoRoom from "@/components/VideoRoom";
 import { roomApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
+import { useTranslation } from "@/hooks/useTranslation";
 import { isTeacher, type Role } from "@/types/room";
 import ErrorPhase from "../ErrorPhase";
 import NameEntryPhase from "../NameEntryPhase";
@@ -20,6 +21,7 @@ export default function MeetKeyPage() {
 
 function MeetContent() {
 	const router = useRouter();
+	const { t } = useTranslation();
 	const params = useParams<{ key: string }>();
 	const searchParams = useSearchParams();
 	const { data: authSession, isPending: authPending } = useSession();
@@ -107,7 +109,7 @@ function MeetContent() {
 				setPhase("room");
 			} catch (error) {
 				if (cancelled) return;
-				const message = error instanceof Error ? error.message : "An error occurred";
+				const message = error instanceof Error ? error.message : t("room.error.generic");
 				if (phase === "joining" && autoJoinAttempt) {
 					setPhase("nameEntry");
 					return;
@@ -129,7 +131,7 @@ function MeetContent() {
 		return () => {
 			cancelled = true;
 		};
-	}, [phase, meetingId, participantName, autoJoinAttempt]);
+	}, [phase, meetingId, participantName, autoJoinAttempt, t]);
 
 	// Persist session to sessionStorage so it survives page refreshes
 	useEffect(() => {
@@ -169,13 +171,13 @@ function MeetContent() {
 	}
 
 	if (phase === "joining" || phase === "guestJoining" || phase === "init") {
-		return <LoadingIndicator fullscreen message="Joining room..." />;
+		return <LoadingIndicator fullscreen message={t("room.joining")} />;
 	}
 
 	if (phase === "error") {
 		return (
 			<ErrorPhase
-				message={errorMessage || "An error occurred"}
+				message={errorMessage || t("room.error.generic")}
 				onRetry={() => setPhase("nameEntry")}
 				onBack={() => router.push("/dashboard")}
 			/>

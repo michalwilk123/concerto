@@ -37,10 +37,7 @@ export async function GET(req: NextRequest) {
 			.orderBy(user.createdAt)
 			.limit(limit)
 			.offset(offset),
-		db
-			.select({ count: sql<number>`count(*)` })
-			.from(user)
-			.where(whereClause),
+		db.select({ count: sql<number>`count(*)` }).from(user).where(whereClause),
 	]);
 
 	return NextResponse.json({

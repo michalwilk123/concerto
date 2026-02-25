@@ -4,6 +4,7 @@ import { Download, File, Trash2 } from "lucide-react";
 import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { InlineButton } from "@/components/ui/inline-button";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { FileWithUrl } from "@/types/files";
 import { canPreview } from "./preview/PreviewRegistry";
 
@@ -21,6 +22,7 @@ function formatSize(bytes: number): string {
 }
 
 export function FileItem({ file, onPreview, onDelete, readOnly }: FileItemProps) {
+	const { t } = useTranslation();
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [hovered, setHovered] = useState(false);
 	const showPreview = canPreview(file.mimeType);
@@ -86,8 +88,8 @@ export function FileItem({ file, onPreview, onDelete, readOnly }: FileItemProps)
 							gap: 4,
 							color: "var(--text-secondary)",
 						}}
-					>
-						<Download size={12} /> Download
+						>
+						<Download size={12} /> {t("fileItem.download")}
 					</InlineButton>
 					{!readOnly && (
 						<InlineButton
@@ -99,7 +101,7 @@ export function FileItem({ file, onPreview, onDelete, readOnly }: FileItemProps)
 							}}
 							style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--accent-red)" }}
 						>
-							<Trash2 size={12} /> Delete
+							<Trash2 size={12} /> {t("fileItem.delete")}
 						</InlineButton>
 					)}
 				</div>
@@ -111,9 +113,9 @@ export function FileItem({ file, onPreview, onDelete, readOnly }: FileItemProps)
 					setShowDeleteConfirm(false);
 					onDelete(file.id);
 				}}
-				title="Delete File"
-				message={`Are you sure you want to delete "${file.name}"? This action cannot be undone.`}
-				confirmLabel="Delete"
+				title={t("fileItem.deleteTitle")}
+				message={t("fileItem.deleteMessage", { name: file.name })}
+				confirmLabel={t("fileItem.delete")}
 				variant="danger"
 			/>
 		</>

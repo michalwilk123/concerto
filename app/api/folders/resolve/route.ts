@@ -33,9 +33,7 @@ export async function POST(req: NextRequest) {
 	let parentId: string | null = null;
 
 	for (const name of path) {
-		const condition = parentId === null
-			? sql`parent_id IS NULL`
-			: sql`parent_id = ${parentId}`;
+		const condition = parentId === null ? sql`parent_id IS NULL` : sql`parent_id = ${parentId}`;
 
 		const results = await db.execute(sql`
 			SELECT id, name, group_id AS "groupId", parent_id AS "parentId",

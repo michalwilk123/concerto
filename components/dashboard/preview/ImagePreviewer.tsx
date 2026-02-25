@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { PreviewerProps } from "./types";
 
 export function ImagePreviewer({ fileUrl, fileName }: PreviewerProps) {
+	const { t } = useTranslation();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
 
@@ -20,7 +22,7 @@ export function ImagePreviewer({ fileUrl, fileName }: PreviewerProps) {
 					}}
 				/>
 			)}
-			{error && <p style={{ color: "var(--accent-red)" }}>Failed to load image</p>}
+			{error && <p style={{ color: "var(--accent-red)" }}>{t("preview.imageLoadFailed")}</p>}
 			<img
 				src={fileUrl}
 				alt={fileName}

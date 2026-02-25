@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, type Ref } from "react";
+import type { InputHTMLAttributes, Ref } from "react";
 
 const variantStyles: Record<string, React.CSSProperties> = {
 	default: {

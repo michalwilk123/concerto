@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import Spinner from "@/components/ui/spinner";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
+import { useTranslation } from "@/hooks/useTranslation";
 import { groupsApi, usersApi } from "@/lib/api-client";
 import type { Group, GroupMember } from "@/types/group";
 
@@ -28,6 +29,7 @@ interface GroupMemberManagerProps {
 }
 
 export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
+	const { t } = useTranslation();
 	const [members, setMembers] = useState<MemberWithInfo[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -49,11 +51,11 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 			const m = await groupsApi.getMembers(group.id);
 			setMembers(m);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to load members");
+			setError(e instanceof Error ? e.message : t("groupMembers.loadFailed"));
 		} finally {
 			setLoading(false);
 		}
-	}, [group.id]);
+	}, [group.id, t]);
 
 	useEffect(() => {
 		fetchMembers();
@@ -91,7 +93,7 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 			setSearchResults([]);
 			fetchMembers();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to add member");
+			setError(e instanceof Error ? e.message : t("groupMembers.addFailed"));
 		} finally {
 			setAddingUserId(null);
 		}
@@ -102,7 +104,7 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 			await groupsApi.removeMember(group.id, userId);
 			fetchMembers();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to remove member");
+			setError(e instanceof Error ? e.message : t("groupMembers.removeFailed"));
 		}
 	};
 
@@ -117,7 +119,7 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 					{group.name}
 				</Typography>
 				<Typography as="span" variant="caption" tone="tertiary">
-					— Members
+					{t("groupMembers.membersSuffix")}
 				</Typography>
 			</div>
 
@@ -139,14 +141,14 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 					tone="secondary"
 					style={{ display: "block", marginBottom: 10 }}
 				>
-					Add Member
+					{t("groupMembers.addMember")}
 				</Typography>
 				<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
 					<div style={{ position: "relative", flex: 1 }}>
 						<TextInput
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							placeholder="Search users by name or email..."
+							placeholder={t("groupMembers.searchPlaceholder")}
 							style={{ width: "100%", fontSize: "0.84rem" }}
 						/>
 						{/* Dropdown */}
@@ -205,7 +207,7 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 												style={{ padding: "4px 8px" }}
 											>
 												<Plus size={14} style={{ marginRight: 2 }} />
-												Add
+												{t("groupMembers.add")}
 											</InlineButton>
 										</div>
 									))
@@ -218,22 +220,22 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 						onChange={(e) => setAddRole(e.target.value as "teacher" | "student")}
 						style={{ background: "var(--bg-secondary)" }}
 					>
-						<option value="student">Student</option>
-						<option value="teacher">Teacher</option>
+						<option value="student">{t("groupMembers.student")}</option>
+						<option value="teacher">{t("groupMembers.teacher")}</option>
 					</Select>
 				</div>
 			</div>
 
 			{/* Members Table */}
 			<DataTableShell
-				headers={["Name", "Email", "Role", ""]}
+				headers={[t("groupMembers.tableName"), t("groupMembers.tableEmail"), t("groupMembers.tableRole"), ""]}
 				columns="2fr 2.5fr 100px 60px"
 				isLoading={loading}
 				hasRows={members.length > 0}
 				emptyState={
 					<EmptyState
 						icon={<Users size={32} />}
-						title="No members yet"
+						title={t("groupMembers.emptyTitle")}
 						subtitle={undefined}
 						padding="48px 20px"
 					/>
@@ -259,7 +261,7 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
 								variant="ghost"
 								size="xs"
 								onClick={() => handleRemoveMember(m.userId)}
-								title="Remove member"
+								title={t("groupMembers.removeMember")}
 								style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
 							>
 								<Trash2 size={14} />

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { eq, inArray } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting, meetingSession } from "@/db/schema";
 import { requireGroupMember } from "@/lib/auth-helpers";
@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
 	try {
 		console.log("[recordings] Fetching from RTK...");
 		const rtkRecordings = await listRecordings();
-		console.log("[recordings] RTK returned", rtkRecordings.length, "recordings, sample:", JSON.stringify(rtkRecordings[0] ?? null));
+		console.log(
+			"[recordings] RTK returned",
+			rtkRecordings.length,
+			"recordings, sample:",
+			JSON.stringify(rtkRecordings[0] ?? null),
+		);
 
 		// Look up meeting names from DB via meeting_session join
 		const rtkMeetingIds = [...new Set(rtkRecordings.map((r) => r.meeting_id))];
@@ -34,7 +39,9 @@ export async function GET(request: NextRequest) {
 					.from(meetingSession)
 					.innerJoin(meeting, eq(meeting.id, meetingSession.meetingId))
 					.where(inArray(meetingSession.id, rtkMeetingIds));
-				meetingMap = new Map(rows.map((r) => [r.rtkId, { id: r.rtkId, name: r.name, groupId: r.groupId }]));
+				meetingMap = new Map(
+					rows.map((r) => [r.rtkId, { id: r.rtkId, name: r.name, groupId: r.groupId }]),
+				);
 			} catch {
 				console.warn("[recordings] Could not query meeting tables, showing all recordings");
 			}
@@ -59,7 +66,9 @@ export async function GET(request: NextRequest) {
 			}));
 
 		// Sort newest first
-		recordings.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+		recordings.sort(
+			(a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime(),
+		);
 
 		return NextResponse.json(recordings);
 	} catch (err) {

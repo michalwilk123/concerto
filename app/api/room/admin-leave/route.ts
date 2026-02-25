@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
 	// Remove from in-memory store
 	rooms.delete(meetingId);
 
-	console.log(`[admin-leave] Creator left meeting ${meetingId}, rtkMeetingId=${room.rtkMeetingId}, room deleted`);
+	console.log(
+		`[admin-leave] Creator left meeting ${meetingId}, rtkMeetingId=${room.rtkMeetingId}, room deleted`,
+	);
 
 	return NextResponse.json({ success: true });
 }

@@ -1,10 +1,13 @@
 import { eq } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
 
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+	_request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> },
+) {
 	const { id } = await params;
 
 	const [row] = await db.select().from(meeting).where(eq(meeting.id, id)).limit(1);

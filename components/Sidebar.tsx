@@ -4,8 +4,9 @@ import { Files, MessageSquare, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
-import { IconButton } from "@/components/ui/icon-button";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
+import { IconButton } from "@/components/ui/icon-button";
+import { useTranslation } from "@/hooks/useTranslation";
 import { useRoomStore } from "@/stores/room-store";
 import type { RoomParticipant } from "@/types/room";
 import { isTeacher } from "@/types/room";
@@ -23,8 +24,17 @@ interface SidebarProps {
 	isOpen: boolean;
 }
 
-export default function Sidebar({ participants, groupId, meetingFolderId, onClose, activeTab, onTabChange, isOpen }: SidebarProps) {
+export default function Sidebar({
+	participants,
+	groupId,
+	meetingFolderId,
+	onClose,
+	activeTab,
+	onTabChange,
+	isOpen,
+}: SidebarProps) {
 	const { role, meetingId } = useRoomStore();
+	const { t } = useTranslation();
 	const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
 
 	useEffect(() => {
@@ -48,9 +58,9 @@ export default function Sidebar({ participants, groupId, meetingFolderId, onClos
 	}, []);
 
 	const tabs: { id: SidebarTab; label: string; icon: React.ReactNode; visible: boolean }[] = [
-		{ id: "participants", label: "Participants", icon: <Users size={15} />, visible: true },
-		{ id: "files", label: "Files", icon: <Files size={15} />, visible: true },
-		{ id: "chat", label: "Chat", icon: <MessageSquare size={15} />, visible: true },
+		{ id: "participants", label: t("sidebar.participants"), icon: <Users size={15} />, visible: true },
+		{ id: "files", label: t("sidebar.files"), icon: <Files size={15} />, visible: true },
+		{ id: "chat", label: t("sidebar.chat"), icon: <MessageSquare size={15} />, visible: true },
 	];
 
 	const visibleTabs = tabs.filter((t) => t.visible);
@@ -136,7 +146,7 @@ export default function Sidebar({ participants, groupId, meetingFolderId, onClos
 						variant="square"
 						size="sm"
 						onClick={onClose}
-						title="Close sidebar"
+						title={t("sidebar.close")}
 						style={{ borderRadius: "var(--radius-sm)" }}
 					>
 						<X size={16} />

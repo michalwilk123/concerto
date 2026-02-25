@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { PreviewerProps } from "./types";
 
 export function AudioPreviewer({ fileUrl }: PreviewerProps) {
+	const { t } = useTranslation();
 	const audioRef = useRef<HTMLAudioElement>(null);
 
 	useEffect(() => {
@@ -15,7 +17,7 @@ export function AudioPreviewer({ fileUrl }: PreviewerProps) {
 	return (
 		<div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
 			<audio ref={audioRef} controls style={{ width: "100%", maxWidth: 640 }} src={fileUrl}>
-				Your browser does not support the audio element.
+				{t("preview.audioNotSupported")}
 			</audio>
 		</div>
 	);

@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { signUp } from "@/lib/auth-client";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function RegisterPage() {
 	const router = useRouter();
+	const { t } = useTranslation();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -19,7 +21,7 @@ export default function RegisterPage() {
 		setError("");
 
 		if (password !== confirmPassword) {
-			setError("Passwords do not match");
+			setError(t("auth.register.passwordsDoNotMatch"));
 			return;
 		}
 
@@ -28,7 +30,7 @@ export default function RegisterPage() {
 		const result = await signUp.email({ email, password, name });
 
 		if (result.error) {
-			setError(result.error.message || "Registration failed");
+			setError(result.error.message || t("auth.register.registrationFailed"));
 			setLoading(false);
 		} else {
 			router.push("/dashboard");
@@ -56,7 +58,9 @@ export default function RegisterPage() {
 					maxWidth: 380,
 				}}
 			>
-				<h2 style={{ margin: "0 0 var(--space-xl)", fontSize: "1.25rem" }}>Create Account</h2>
+				<h2 style={{ margin: "0 0 var(--space-xl)", fontSize: "1.25rem" }}>
+					{t("auth.register.title")}
+				</h2>
 
 				{error && (
 					<p
@@ -83,14 +87,14 @@ export default function RegisterPage() {
 							htmlFor="name"
 							style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 						>
-							Full Name
+							{t("auth.register.fullName")}
 						</label>
 						<input
 							id="name"
 							type="text"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
-							placeholder="e.g. Jan Kowalski"
+							placeholder={t("auth.register.fullNamePlaceholder")}
 							autoComplete="name"
 							required
 						/>
@@ -101,14 +105,14 @@ export default function RegisterPage() {
 							htmlFor="email"
 							style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 						>
-							Email
+							{t("auth.register.email")}
 						</label>
 						<input
 							id="email"
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
-							placeholder="you@example.com"
+							placeholder={t("auth.register.emailPlaceholder")}
 							autoComplete="email"
 							required
 						/>
@@ -119,7 +123,7 @@ export default function RegisterPage() {
 							htmlFor="password"
 							style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 						>
-							Password
+							{t("auth.register.password")}
 						</label>
 						<input
 							id="password"
@@ -136,7 +140,7 @@ export default function RegisterPage() {
 							htmlFor="confirmPassword"
 							style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 						>
-							Confirm Password
+							{t("auth.register.confirmPassword")}
 						</label>
 						<input
 							id="confirmPassword"
@@ -156,7 +160,7 @@ export default function RegisterPage() {
 						fullWidth
 						style={{ fontWeight: 600, marginTop: "var(--space-sm)", padding: "var(--space-md)" }}
 					>
-						{loading ? "Creating account..." : "Create Account"}
+						{loading ? t("auth.register.creatingAccount") : t("auth.register.submit")}
 					</InlineButton>
 				</form>
 
@@ -169,7 +173,7 @@ export default function RegisterPage() {
 						color: "var(--text-secondary)",
 					}}
 				>
-					Already have an account? <a href="/login">Sign In</a>
+					{t("auth.register.alreadyHaveAccount")} <a href="/login">{t("auth.register.signIn")}</a>
 				</p>
 			</div>
 		</div>

@@ -27,11 +27,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
 	const { id } = await params;
 
-	const [folderDoc] = await db
-		.select()
-		.from(folder)
-		.where(eq(folder.id, id))
-		.limit(1);
+	const [folderDoc] = await db.select().from(folder).where(eq(folder.id, id)).limit(1);
 
 	if (!folderDoc) {
 		return NextResponse.json({ error: "Folder not found" }, { status: 404 });
@@ -49,10 +45,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
 async function deleteFolderRecursive(folderId: string) {
 	// Delete files in this folder (from disk and DB)
-	const filesInFolder = await db
-		.select()
-		.from(file)
-		.where(eq(file.folderId, folderId));
+	const filesInFolder = await db.select().from(file).where(eq(file.folderId, folderId));
 
 	for (const f of filesInFolder) {
 		const fullPath = path.join(process.cwd(), "uploads", f.storagePath);
@@ -65,10 +58,7 @@ async function deleteFolderRecursive(folderId: string) {
 	await db.delete(file).where(eq(file.folderId, folderId));
 
 	// Find and delete child folders recursively
-	const childFolders = await db
-		.select()
-		.from(folder)
-		.where(eq(folder.parentId, folderId));
+	const childFolders = await db.select().from(folder).where(eq(folder.parentId, folderId));
 
 	for (const child of childFolders) {
 		await deleteFolderRecursive(child.id);

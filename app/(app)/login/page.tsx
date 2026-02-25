@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { signIn } from "@/lib/auth-client";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function LoginPage() {
 	const router = useRouter();
+	const { t } = useTranslation();
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
@@ -22,7 +24,7 @@ export default function LoginPage() {
 		});
 
 		if (result.error) {
-			setError(result.error.message || "Sign in failed");
+			setError(result.error.message || t("auth.login.signInFailed"));
 			setLoading(false);
 		} else {
 			router.push("/dashboard");
@@ -50,7 +52,7 @@ export default function LoginPage() {
 					maxWidth: 380,
 				}}
 			>
-				<h2 style={{ margin: "0 0 var(--space-xl)", fontSize: "1.25rem" }}>Sign In</h2>
+				<h2 style={{ margin: "0 0 var(--space-xl)", fontSize: "1.25rem" }}>{t("auth.login.title")}</h2>
 
 				{error && (
 					<p
@@ -77,13 +79,13 @@ export default function LoginPage() {
 							htmlFor="email"
 							style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 						>
-							Email
+							{t("auth.login.email")}
 						</label>
 						<input
 							id="email"
 							name="email"
 							type="email"
-							placeholder="you@example.com"
+							placeholder={t("auth.login.emailPlaceholder")}
 							required
 						/>
 					</div>
@@ -93,14 +95,9 @@ export default function LoginPage() {
 							htmlFor="password"
 							style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 						>
-							Password
+							{t("auth.login.password")}
 						</label>
-						<input
-							id="password"
-							name="password"
-							type="password"
-							required
-						/>
+						<input id="password" name="password" type="password" required />
 					</div>
 
 					<InlineButton
@@ -111,7 +108,7 @@ export default function LoginPage() {
 						fullWidth
 						style={{ fontWeight: 600, marginTop: "var(--space-sm)", padding: "var(--space-md)" }}
 					>
-						{loading ? "Signing in..." : "Sign In"}
+						{loading ? t("auth.login.signingIn") : t("auth.login.submit")}
 					</InlineButton>
 				</form>
 
@@ -124,7 +121,7 @@ export default function LoginPage() {
 						color: "var(--text-secondary)",
 					}}
 				>
-					Don&apos;t have an account? <a href="/register">Register</a>
+					{t("auth.login.noAccount")} <a href="/register">{t("auth.login.register")}</a>
 				</p>
 			</div>
 		</div>

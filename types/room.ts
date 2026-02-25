@@ -14,7 +14,6 @@ export function presetToRole(presetName?: string): Role {
 	switch (presetName) {
 		case "webinar_presenter":
 			return "teacher";
-		case "webinar_viewer":
 		default:
 			return "student";
 	}

@@ -1,19 +1,21 @@
 "use client";
 
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
-import { MeetingsPanel } from "@/components/meetings/MeetingsPanel";
 import { ManagePanel } from "@/components/manage/ManagePanel";
+import { MeetingsPanel } from "@/components/meetings/MeetingsPanel";
 import { RecordingsPanel } from "@/components/recordings/RecordingsPanel";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
+import { TranslationsPanel } from "@/components/translations/TranslationsPanel";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import { filesApi, foldersApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
 import { useFileManagerStore } from "@/stores/file-manager-store";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
 export default function DashboardGroupPage() {
@@ -21,6 +23,7 @@ export default function DashboardGroupPage() {
 	const params = useParams<{ groupId: string }>();
 	const searchParams = useSearchParams();
 	const { data: session, isPending } = useSession();
+	const { t } = useTranslation();
 	const hasSeeded = useRef(false);
 	const [meetingsFolderName, setMeetingsFolderName] = useState<string | null>(null);
 	const [ancestors, setAncestors] = useState<FolderDoc[]>([]);
@@ -31,8 +34,6 @@ export default function DashboardGroupPage() {
 	const activeTab = (searchParams.get("tab") as DashboardTab) || "files";
 	const folderId = searchParams.get("folderId") || null;
 	const selectedMeetingId = searchParams.get("meetingId") || null;
-
-
 
 	const user = session?.user;
 	const isPrivileged = user?.role === "teacher" || user?.role === "admin";
@@ -77,7 +78,7 @@ export default function DashboardGroupPage() {
 		if (!user) return;
 		setCurrentFolderId(folderId);
 		fetchContents(folderId);
-	}, [groupId, folderId, user, setCurrentFolderId, fetchContents]);
+	}, [folderId, user, setCurrentFolderId, fetchContents]);
 
 	// Seed files for teacher/admin on first visit
 	useEffect(() => {
@@ -119,7 +120,7 @@ export default function DashboardGroupPage() {
 	);
 
 	if (isPending) {
-		return <LoadingIndicator message="Loading..." minHeight="100%" containerStyle={{ flex: 1 }} />;
+		return <LoadingIndicator message={t("dashboard.loading")} minHeight="100%" containerStyle={{ flex: 1 }} />;
 	}
 
 	if (!session) return null;
@@ -134,7 +135,11 @@ export default function DashboardGroupPage() {
 				/>
 			)}
 			<main style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-				{activeTab === "manage" ? (
+				{activeTab === "translations" ? (
+					<div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+						<TranslationsPanel />
+					</div>
+				) : activeTab === "manage" ? (
 					<div style={{ flex: 1, overflow: "auto" }}>
 						<ManagePanel />
 					</div>
@@ -151,7 +156,7 @@ export default function DashboardGroupPage() {
 											<button
 												type="button"
 												onClick={() => setChatSidebarOpen(true)}
-												title="Open chat sidebar"
+												title={t("dashboard.openChatSidebar")}
 												style={{
 													display: "flex",
 													alignItems: "center",
@@ -195,11 +200,11 @@ export default function DashboardGroupPage() {
 										justifyContent: "space-between",
 									}}
 								>
-									Meeting Chat
+									{t("dashboard.meetingChat")}
 									<button
 										type="button"
 										onClick={() => setChatSidebarOpen(false)}
-										title="Close chat sidebar"
+										title={t("dashboard.closeChatSidebar")}
 										style={{
 											display: "flex",
 											alignItems: "center",
@@ -230,7 +235,7 @@ export default function DashboardGroupPage() {
 												fontSize: "0.82rem",
 											}}
 										>
-											Select a meeting to view its chat
+											{t("dashboard.selectMeeting")}
 										</div>
 									)}
 								</div>

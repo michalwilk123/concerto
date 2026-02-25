@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { InlineButton } from "@/components/ui/inline-button";
+import { useTranslation } from "@/hooks/useTranslation";
 import { roomApi } from "@/lib/api-client";
 import { useRoomStore } from "@/stores/room-store";
 import type { Role, RoomParticipant } from "@/types/room";
@@ -16,6 +17,7 @@ interface ParticipantMenuProps {
 
 export default function ParticipantMenu({ participants }: ParticipantMenuProps) {
 	const { meetingId, participantName, role } = useRoomStore();
+	const { t } = useTranslation();
 	const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
 	const [showMenu, setShowMenu] = useState(false);
 	const [kickTarget, setKickTarget] = useState<string | null>(null);
@@ -27,11 +29,11 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
 		setKickTarget(null);
 		try {
 			await roomApi.kick({ meetingId, targetIdentity: targetName });
-			toast.success(`Kicked ${targetName} from the room`);
+			toast.success(t("participants.kickedSuccess", { name: targetName }));
 			setShowMenu(false);
 			setSelectedParticipant(null);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to kick participant");
+			toast.error(err instanceof Error ? err.message : t("participants.kickFailed"));
 		}
 	};
 
@@ -52,10 +54,9 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
 	const getRoleBadge = (participantRole: string) => {
 		switch (participantRole) {
 			case "teacher":
-				return { label: "Teacher", bg: "var(--accent-green)" };
-			case "student":
+				return { label: t("participants.teacher"), bg: "var(--accent-green)" };
 			default:
-				return { label: "Student", bg: "var(--accent-purple, #8b5cf6)" };
+				return { label: t("participants.student"), bg: "var(--accent-purple, #8b5cf6)" };
 		}
 	};
 
@@ -75,7 +76,7 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
 					fontWeight: 500,
 				}}
 			>
-				{participants.length} participant{participants.length !== 1 ? "s" : ""} in room
+				{t("participants.count", { count: String(participants.length) })}
 			</div>
 			<div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
 				{participants.map((participant) => {
@@ -106,7 +107,7 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
 									{participant.name}
 									{isSelf && (
 										<span style={{ color: "var(--text-tertiary)", marginLeft: "var(--space-xs)" }}>
-											(you)
+											({t("participants.you")})
 										</span>
 									)}
 								</span>
@@ -131,7 +132,7 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
 											onClick={() => setKickTarget(participant.name)}
 											style={{ borderRadius: "var(--radius-sm)" }}
 										>
-											Kick
+											{t("participants.kick")}
 										</InlineButton>
 									)}
 								</div>
@@ -143,10 +144,10 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
 
 			<ConfirmDialog
 				open={!!kickTarget}
-				title="Kick participant"
-				message={`Are you sure you want to remove ${kickTarget} from the room? They will need to rejoin.`}
-				confirmLabel="Kick"
-				cancelLabel="Cancel"
+				title={t("participants.kickTitle")}
+				message={t("participants.kickMessage", { name: kickTarget ?? "" })}
+				confirmLabel={t("participants.kick")}
+				cancelLabel={t("participants.cancel")}
 				variant="danger"
 				onConfirm={() => kickTarget && handleKick(kickTarget)}
 				onCancel={() => setKickTarget(null)}

@@ -12,6 +12,7 @@ import { LoadingIndicator } from "@/components/ui/loading-state";
 import { Typography } from "@/components/ui/typography";
 import { roomApi } from "@/lib/api-client";
 import { useMeetingsStore } from "@/stores/meetings-store";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { Meeting } from "@/types/meeting";
 
 interface MeetingsPanelProps {
@@ -32,9 +33,15 @@ function formatDate(iso: string): string {
 	});
 }
 
-export function MeetingsPanel({ groupId, selectedMeetingId, onSelectMeeting, headerExtra }: MeetingsPanelProps) {
+export function MeetingsPanel({
+	groupId,
+	selectedMeetingId,
+	onSelectMeeting,
+	headerExtra,
+}: MeetingsPanelProps) {
 	const router = useRouter();
 	const { meetings, isLoading, fetchMeetings, deleteMeeting } = useMeetingsStore();
+	const { t } = useTranslation();
 	const [showCreateMeeting, setShowCreateMeeting] = useState(false);
 
 	useEffect(() => {
@@ -42,7 +49,13 @@ export function MeetingsPanel({ groupId, selectedMeetingId, onSelectMeeting, hea
 	}, [groupId, fetchMeetings]);
 
 	if (isLoading) {
-		return <LoadingIndicator message="Loading meetings..." size={28} containerStyle={{ height: "60vh" }} />;
+		return (
+			<LoadingIndicator
+				message={t("meetings.loadingMessage")}
+				size={28}
+				containerStyle={{ height: "60vh" }}
+			/>
+		);
 	}
 
 	return (
@@ -62,7 +75,7 @@ export function MeetingsPanel({ groupId, selectedMeetingId, onSelectMeeting, hea
 				}}
 			>
 				<Typography as="h2" variant="titleMd">
-					Meetings
+					{t("meetings.title")}
 				</Typography>
 				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 					<InlineButton
@@ -78,7 +91,7 @@ export function MeetingsPanel({ groupId, selectedMeetingId, onSelectMeeting, hea
 						}}
 					>
 						<Plus size={16} />
-						Create Meeting
+						{t("meetings.createButton")}
 					</InlineButton>
 					{headerExtra}
 				</div>
@@ -87,8 +100,8 @@ export function MeetingsPanel({ groupId, selectedMeetingId, onSelectMeeting, hea
 			{meetings.length === 0 ? (
 				<EmptyState
 					icon={<Video size={48} />}
-					title="No meetings yet"
-					subtitle="Create a meeting to get started."
+					title={t("meetings.emptyTitle")}
+					subtitle={t("meetings.emptySubtitle")}
 				/>
 			) : (
 				<div style={{ display: "grid", gap: 8 }}>
@@ -129,6 +142,7 @@ function MeetingItem({
 	onDelete: () => void;
 }) {
 	const [confirmDelete, setConfirmDelete] = useState(false);
+	const { t } = useTranslation();
 
 	return (
 		<EntityListRow
@@ -165,7 +179,7 @@ function MeetingItem({
 						variant="secondary"
 						size="xs"
 						onClick={onRejoin}
-						title="Rejoin meeting"
+						title={t("meetings.rejoinTitle")}
 						style={{
 							display: "flex",
 							alignItems: "center",
@@ -177,7 +191,7 @@ function MeetingItem({
 						}}
 					>
 						<RotateCcw size={14} />
-						Rejoin
+						{t("meetings.rejoin")}
 					</InlineButton>
 
 					{confirmDelete ? (
@@ -194,7 +208,7 @@ function MeetingItem({
 									fontSize: "0.78rem",
 								}}
 							>
-								Confirm
+								{t("meetings.confirm")}
 							</InlineButton>
 							<InlineButton
 								variant="secondary"
@@ -206,15 +220,15 @@ function MeetingItem({
 									fontSize: "0.78rem",
 								}}
 							>
-								Cancel
+								{t("meetings.cancel")}
 							</InlineButton>
 						</>
 					) : (
-						<IconButton
-							variant="square"
-							size="md"
-							onClick={() => setConfirmDelete(true)}
-							title="Delete meeting record"
+							<IconButton
+								variant="square"
+								size="md"
+								onClick={() => setConfirmDelete(true)}
+								title={t("meetings.deleteTitle")}
 							style={{
 								width: 32,
 								height: 32,

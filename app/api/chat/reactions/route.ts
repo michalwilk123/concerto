@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { and, eq, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { chatMessage, chatReaction } from "@/db/schema";

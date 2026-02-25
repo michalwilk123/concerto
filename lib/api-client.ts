@@ -181,7 +181,9 @@ export const groupsApi = {
 		}
 	},
 
-	async getMembers(groupId: string): Promise<(GroupMember & { userName: string; userEmail: string })[]> {
+	async getMembers(
+		groupId: string,
+	): Promise<(GroupMember & { userName: string; userEmail: string })[]> {
 		const response = await fetch(`/api/groups/${groupId}/members`);
 		if (!response.ok) {
 			const error = await response.json();
@@ -190,7 +192,10 @@ export const groupsApi = {
 		return response.json();
 	},
 
-	async addMember(groupId: string, params: { userId: string; role?: "teacher" | "student" }): Promise<GroupMember> {
+	async addMember(
+		groupId: string,
+		params: { userId: string; role?: "teacher" | "student" },
+	): Promise<GroupMember> {
 		const response = await fetch(`/api/groups/${groupId}/members`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -229,7 +234,11 @@ export const filesApi = {
 		return response.json();
 	},
 
-	async upload(params: { file: File; groupId: string; folderId?: string | null }): Promise<FileDoc> {
+	async upload(params: {
+		file: File;
+		groupId: string;
+		folderId?: string | null;
+	}): Promise<FileDoc> {
 		const formData = new FormData();
 		formData.append("file", params.file);
 		formData.append("groupId", params.groupId);
@@ -325,7 +334,11 @@ export const foldersApi = {
 		return response.json();
 	},
 
-	async create(params: { name: string; groupId: string; parentId?: string | null }): Promise<FolderDoc> {
+	async create(params: {
+		name: string;
+		groupId: string;
+		parentId?: string | null;
+	}): Promise<FolderDoc> {
 		const response = await fetch("/api/folders", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -365,7 +378,10 @@ export const foldersApi = {
 		return response.json();
 	},
 
-	async resolvePath(groupId: string, path: string[]): Promise<{ folderId: string; ancestors: FolderDoc[] }> {
+	async resolvePath(
+		groupId: string,
+		path: string[],
+	): Promise<{ folderId: string; ancestors: FolderDoc[] }> {
 		const response = await fetch("/api/folders/resolve", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -409,7 +425,9 @@ export interface UpdateUserParams {
 }
 
 export const adminApi = {
-	async listUsers(params: { page?: number; limit?: number; search?: string } = {}): Promise<ListUsersResponse> {
+	async listUsers(
+		params: { page?: number; limit?: number; search?: string } = {},
+	): Promise<ListUsersResponse> {
 		const searchParams = new URLSearchParams();
 		if (params.page) searchParams.set("page", String(params.page));
 		if (params.limit) searchParams.set("limit", String(params.limit));
@@ -484,7 +502,9 @@ export const chatApi = {
 		return response.json();
 	},
 
-	async toggleReaction(params: ToggleReactionParams): Promise<{ reactions: ChatMessage["reactions"] }> {
+	async toggleReaction(
+		params: ToggleReactionParams,
+	): Promise<{ reactions: ChatMessage["reactions"] }> {
 		const response = await fetch("/api/chat/reactions", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -520,6 +540,30 @@ export const meetingsApi = {
 		if (!response.ok) {
 			const error = await response.json();
 			throw new Error(error.error || "Failed to delete meeting");
+		}
+	},
+};
+
+// Translations API Client
+export const translationsApi = {
+	async get(): Promise<Record<string, string>> {
+		const response = await fetch("/api/translations");
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to load translations");
+		}
+		return response.json();
+	},
+
+	async save(overrides: Record<string, string>): Promise<void> {
+		const response = await fetch("/api/translations", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(overrides),
+		});
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to save translations");
 		}
 	},
 };

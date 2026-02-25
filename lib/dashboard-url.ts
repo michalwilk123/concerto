@@ -1,4 +1,4 @@
-export type DashboardTab = "files" | "meetings" | "recordings" | "manage";
+export type DashboardTab = "files" | "meetings" | "recordings" | "manage" | "translations";
 
 interface BuildDashboardUrlOptions {
 	folderId?: string | null;

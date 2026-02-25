@@ -35,7 +35,8 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 	hasFetched: false,
 	storageUsed: 0,
 
-	setCurrentGroupId: (id) => set({ currentGroupId: id, currentFolderId: null, files: [], folders: [], hasFetched: false }),
+	setCurrentGroupId: (id) =>
+		set({ currentGroupId: id, currentFolderId: null, files: [], folders: [], hasFetched: false }),
 
 	setCurrentFolderId: (id) => set({ currentFolderId: id }),
 
@@ -107,5 +108,4 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
 		await foldersApi.delete(id);
 		await get().fetchContents(get().currentFolderId);
 	},
-
 }));

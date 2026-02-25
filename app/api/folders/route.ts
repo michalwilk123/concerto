@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { and, eq, isNull } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { folder } from "@/db/schema";
@@ -20,9 +20,7 @@ export async function POST(req: NextRequest) {
 	}
 
 	const trimmedName = name.trim();
-	const parentCondition = parentId
-		? eq(folder.parentId, parentId)
-		: isNull(folder.parentId);
+	const parentCondition = parentId ? eq(folder.parentId, parentId) : isNull(folder.parentId);
 
 	const existing = await db
 		.select({ id: folder.id })
@@ -31,7 +29,10 @@ export async function POST(req: NextRequest) {
 		.limit(1);
 
 	if (existing.length > 0) {
-		return NextResponse.json({ error: "A folder with this name already exists here" }, { status: 409 });
+		return NextResponse.json(
+			{ error: "A folder with this name already exists here" },
+			{ status: 409 },
+		);
 	}
 
 	const folderId = nanoid();
@@ -66,6 +67,8 @@ export async function GET(req: NextRequest) {
 		: and(eq(folder.groupId, groupId), isNull(folder.parentId));
 
 	const folders = await db.select().from(folder).where(whereClause);
-	console.log(`[folders/list] groupId=${groupId}, parentId=${parentId ?? "ROOT"} → ${folders.length} folders: ${folders.map((f) => `${f.name}(id=${f.id},system=${f.isSystem})`).join(", ") || "none"}`);
+	console.log(
+		`[folders/list] groupId=${groupId}, parentId=${parentId ?? "ROOT"} → ${folders.length} folders: ${folders.map((f) => `${f.name}(id=${f.id},system=${f.isSystem})`).join(", ") || "none"}`,
+	);
 	return NextResponse.json(folders);
 }

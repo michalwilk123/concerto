@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
 
 	const files = await db.select().from(file).where(whereClause);
 
-	console.log(`[files/list] groupId=${groupId}, folderId=${folderId ?? "ROOT"} → ${files.length} files: ${files.map((f) => `${f.name}(id=${f.id},folder=${f.folderId ?? "ROOT"})`).join(", ") || "none"}`);
+	console.log(
+		`[files/list] groupId=${groupId}, folderId=${folderId ?? "ROOT"} → ${files.length} files: ${files.map((f) => `${f.name}(id=${f.id},folder=${f.folderId ?? "ROOT"})`).join(", ") || "none"}`,
+	);
 
 	return NextResponse.json(files.map((f) => ({ ...f, url: `/api/files/${f.id}` })));
 }

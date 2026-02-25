@@ -1,8 +1,8 @@
-import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { group, groupMember, user } from "@/db/schema";
+import { group, groupMember } from "@/db/schema";
 import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
 
 export async function GET() {
@@ -37,10 +37,7 @@ export async function POST(req: NextRequest) {
 	}
 
 	const groupId = nanoid();
-	const [inserted] = await db
-		.insert(group)
-		.values({ id: groupId, name: name.trim() })
-		.returning();
+	const [inserted] = await db.insert(group).values({ id: groupId, name: name.trim() }).returning();
 
 	return NextResponse.json(inserted, { status: 201 });
 }

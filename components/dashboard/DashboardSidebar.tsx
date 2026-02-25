@@ -1,34 +1,21 @@
 "use client";
 
-import { Film, FolderOpen, HardDrive, Music, Settings } from "lucide-react";
+import { Film, FolderOpen, HardDrive, Languages, Music, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Select } from "@/components/ui/select";
-import { TextInput } from "@/components/ui/text-input";
+import { groupsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
-import { groupsApi } from "@/lib/api-client";
 import { useFileManagerStore } from "@/stores/file-manager-store";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { Group } from "@/types/group";
 
 interface DashboardSidebarProps {
 	meetingsFolderName: string | null;
 	groupId: string;
 	activeTab?: DashboardTab;
-}
-
-type SidebarLocale = "en" | "pl";
-
-const SIDEBAR_TRANSLATIONS_STORAGE_KEY = "dashboard-sidebar-translations-v1";
-
-const defaultSidebarLabels: Record<SidebarLocale, { myFiles: string }> = {
-	en: { myFiles: "My Files" },
-	pl: { myFiles: "Moje pliki" },
-};
-
-function getDefaultMyFilesLabel(locale: SidebarLocale): string {
-	return defaultSidebarLabels[locale].myFiles;
 }
 
 export function DashboardSidebar({
@@ -42,11 +29,7 @@ export function DashboardSidebar({
 	const isAdmin = session?.user?.role === "admin";
 	const { storageUsed, fetchStorage } = useFileManagerStore();
 	const [groups, setGroups] = useState<Group[]>([]);
-	const [locale, setLocale] = useState<SidebarLocale>("en");
-	const [myFilesTranslations, setMyFilesTranslations] = useState<Record<SidebarLocale, string>>({
-		en: getDefaultMyFilesLabel("en"),
-		pl: getDefaultMyFilesLabel("pl"),
-	});
+	const { t } = useTranslation();
 
 	useEffect(() => {
 		fetchStorage();
@@ -60,41 +43,10 @@ export function DashboardSidebar({
 			.catch(() => {});
 	}, [isAdmin]);
 
-	useEffect(() => {
-		const raw = localStorage.getItem(SIDEBAR_TRANSLATIONS_STORAGE_KEY);
-		if (!raw) return;
-		try {
-			const parsed = JSON.parse(raw) as Partial<Record<SidebarLocale, string>> & {
-				locale?: SidebarLocale;
-			};
-			setMyFilesTranslations({
-				en: parsed.en ?? getDefaultMyFilesLabel("en"),
-				pl: parsed.pl ?? getDefaultMyFilesLabel("pl"),
-			});
-			if (parsed.locale === "en" || parsed.locale === "pl") {
-				setLocale(parsed.locale);
-			}
-		} catch {
-			localStorage.removeItem(SIDEBAR_TRANSLATIONS_STORAGE_KEY);
-		}
-	}, []);
-
-	useEffect(() => {
-		localStorage.setItem(
-			SIDEBAR_TRANSLATIONS_STORAGE_KEY,
-			JSON.stringify({
-				locale,
-				en: myFilesTranslations.en,
-				pl: myFilesTranslations.pl,
-			}),
-		);
-	}, [locale, myFilesTranslations]);
-
 	const activeItem = activeTab || "files";
 
 	const storageLimit = 1024 * 1024 * 1024; // 1GB
 	const usedPercentage = Math.min((storageUsed / storageLimit) * 100, 100);
-	const myFilesLabel = myFilesTranslations[locale] || getDefaultMyFilesLabel(locale);
 
 	const formatSize = (bytes: number): string => {
 		if (bytes < 1024) return `${bytes} B`;
@@ -133,30 +85,38 @@ export function DashboardSidebar({
 				)}
 				<SidebarButton
 					icon={<FolderOpen size={18} />}
-					label={myFilesLabel}
+					label={t("sidebar.myFiles")}
 					active={activeItem === "files"}
 					onClick={() => router.push(buildDashboardUrl(groupId))}
 				/>
 				{isPrivileged && (
 					<SidebarButton
 						icon={<Music size={18} />}
-						label="Meetings"
+						label={t("sidebar.meetings")}
 						active={activeItem === "meetings"}
 						onClick={() => router.push(buildDashboardUrl(groupId, { tab: "meetings" }))}
 					/>
 				)}
 				<SidebarButton
 					icon={<Film size={18} />}
-					label="Recordings"
+					label={t("sidebar.recordings")}
 					active={activeItem === "recordings"}
 					onClick={() => router.push(buildDashboardUrl(groupId, { tab: "recordings" }))}
 				/>
 				{isPrivileged && (
 					<SidebarButton
 						icon={<Settings size={18} />}
-						label="Manage"
+						label={t("sidebar.manage")}
 						active={activeItem === "manage"}
 						onClick={() => router.push(buildDashboardUrl(groupId, { tab: "manage" }))}
+					/>
+				)}
+				{isAdmin && (
+					<SidebarButton
+						icon={<Languages size={18} />}
+						label={t("sidebar.translations")}
+						active={activeItem === "translations"}
+						onClick={() => router.push(buildDashboardUrl(groupId, { tab: "translations" }))}
 					/>
 				)}
 
@@ -170,63 +130,16 @@ export function DashboardSidebar({
 					<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
 						<HardDrive size={14} style={{ color: "var(--text-tertiary)" }} />
 						<span style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-secondary)" }}>
-							Storage
+							{t("sidebar.storage")}
 						</span>
 					</div>
 					<ProgressBar value={usedPercentage / 100} color="var(--accent-purple)" height={4} />
 					<p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: 4 }}>
-						{formatSize(storageUsed)} of {formatSize(storageLimit)} used
+						{t("sidebar.storageUsed", {
+							used: formatSize(storageUsed),
+							limit: formatSize(storageLimit),
+						})}
 					</p>
-				</div>
-
-				<div
-					style={{
-						margin: "0 12px 16px",
-						padding: "12px",
-						border: "1px solid var(--border-subtle)",
-						borderRadius: "var(--radius-md)",
-						background: "var(--bg-primary)",
-						display: "grid",
-						gap: 8,
-					}}
-				>
-					<span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 600 }}>
-						Translation experiment
-					</span>
-					<label
-						htmlFor="sidebar-locale"
-						style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 500 }}
-					>
-						Locale
-					</label>
-					<Select
-						id="sidebar-locale"
-						variant="compact"
-						value={locale}
-						onChange={(event) => setLocale(event.target.value as SidebarLocale)}
-					>
-						<option value="en">English (en)</option>
-						<option value="pl">Polski (pl)</option>
-					</Select>
-					<label
-						htmlFor="sidebar-my-files-translation"
-						style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 500 }}
-					>
-						My Files label
-					</label>
-					<TextInput
-						id="sidebar-my-files-translation"
-						value={myFilesTranslations[locale]}
-						onChange={(event) => {
-							const value = event.target.value;
-							setMyFilesTranslations((current) => ({
-								...current,
-								[locale]: value,
-							}));
-						}}
-						placeholder={getDefaultMyFilesLabel(locale)}
-						style={{ fontSize: "0.8rem", padding: "8px 10px" }}
-					/>
 				</div>
 			</nav>
 		</aside>

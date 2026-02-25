@@ -74,7 +74,6 @@ export function roleToPreset(role: Role): string {
 	switch (role) {
 		case "teacher":
 			return "webinar_presenter";
-		case "student":
 		default:
 			return "webinar_viewer";
 	}

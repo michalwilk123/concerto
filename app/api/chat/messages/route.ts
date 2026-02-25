@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { chatMessage, chatReaction, meeting } from "@/db/schema";
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 		reactionsByMessage.set(r.messageId, list);
 	}
 
-	const userId = session!.user.id;
+	const userId = session?.user.id;
 	const result = recent.reverse().map((m) => {
 		const raw = reactionsByMessage.get(m.id) ?? [];
 		const emojiMap = new Map<string, { userNames: string[]; reacted: boolean }>();
@@ -136,9 +136,7 @@ export async function POST(req: NextRequest) {
 	const [lastMessage] = await db
 		.select({ createdAt: chatMessage.createdAt })
 		.from(chatMessage)
-		.where(
-			and(eq(chatMessage.senderId, session!.user.id), eq(chatMessage.meetingId, meetingIdRaw)),
-		)
+		.where(and(eq(chatMessage.senderId, session?.user.id), eq(chatMessage.meetingId, meetingIdRaw)))
 		.orderBy(desc(chatMessage.createdAt))
 		.limit(1);
 
@@ -154,8 +152,8 @@ export async function POST(req: NextRequest) {
 		.values({
 			id: nanoid(),
 			content,
-			senderId: session!.user.id,
-			senderName: session!.user.name,
+			senderId: session?.user.id,
+			senderName: session?.user.name,
 			groupId: mtg.groupId,
 			meetingId: meetingIdRaw,
 		})

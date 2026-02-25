@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
 	let meetingFolderId: string | undefined;
 	try {
 		meetingFolderId = await ensureMeetingFolder(groupId, creatorName || dbMeetingId);
-		console.log(`[room/create] Meeting folder created/found: meetingFolderId=${meetingFolderId}, name="${creatorName || dbMeetingId}"`);
+		console.log(
+			`[room/create] Meeting folder created/found: meetingFolderId=${meetingFolderId}, name="${creatorName || dbMeetingId}"`,
+		);
 	} catch (err) {
 		console.error("[room/create] Failed to create meeting folder (non-blocking):", err);
 	}
@@ -46,7 +48,9 @@ export async function POST(request: NextRequest) {
 		participantIds: new Map(),
 	});
 
-	console.log(`[room/create] Room created: meetingId=${dbMeetingId}, meetingFolderId=${meetingFolderId ?? "NONE"}, creator=${creatorName}, userId=${session?.user.id}, groupId=${groupId}`);
+	console.log(
+		`[room/create] Room created: meetingId=${dbMeetingId}, meetingFolderId=${meetingFolderId ?? "NONE"}, creator=${creatorName}, userId=${session?.user.id}, groupId=${groupId}`,
+	);
 
 	return NextResponse.json({ success: true, meetingId: dbMeetingId });
 }

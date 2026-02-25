@@ -1,7 +1,10 @@
+"use client";
+
 import { ArrowLeft } from "lucide-react";
 import type { FormEvent } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { InlineButton } from "@/components/ui/inline-button";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface NameEntryPhaseProps {
 	meetingId: string;
@@ -18,6 +21,8 @@ export default function NameEntryPhase({
 	onSubmit,
 	onBack,
 }: NameEntryPhaseProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div
 			style={{
@@ -62,10 +67,12 @@ export default function NameEntryPhase({
 						}}
 					>
 						<ArrowLeft size={14} />
-						Back to Dashboard
+						{t("room.nameEntry.backToDashboard")}
 					</InlineButton>
 
-					<h2 style={{ margin: "0 0 var(--space-sm)", fontSize: "1.25rem" }}>Join Room</h2>
+					<h2 style={{ margin: "0 0 var(--space-sm)", fontSize: "1.25rem" }}>
+						{t("room.nameEntry.title")}
+					</h2>
 					<p
 						style={{
 							margin: "0 0 var(--space-xl)",
@@ -73,7 +80,7 @@ export default function NameEntryPhase({
 							color: "var(--text-secondary)",
 						}}
 					>
-						Meeting:{" "}
+						{t("room.nameEntry.meetingLabel")}{" "}
 						<code
 							style={{
 								color: "var(--text-primary)",
@@ -98,14 +105,14 @@ export default function NameEntryPhase({
 								htmlFor="participantName"
 								style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500 }}
 							>
-								Your Name
+								{t("room.nameEntry.yourName")}
 							</label>
 							<input
 								id="participantName"
 								type="text"
 								value={participantName}
 								onChange={(e) => onParticipantNameChange(e.target.value)}
-								placeholder="e.g. Jan Kowalski"
+								placeholder={t("room.nameEntry.namePlaceholder")}
 								required
 							/>
 						</div>
@@ -117,7 +124,7 @@ export default function NameEntryPhase({
 							fullWidth
 							style={{ fontWeight: 600, marginTop: "var(--space-sm)", padding: "var(--space-md)" }}
 						>
-							Join
+							{t("room.nameEntry.submit")}
 						</InlineButton>
 					</form>
 				</div>

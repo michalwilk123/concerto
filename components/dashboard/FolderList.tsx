@@ -5,6 +5,7 @@ import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
 interface FolderListProps {
@@ -15,6 +16,7 @@ interface FolderListProps {
 }
 
 export function FolderList({ folders, onNavigate, onDelete, readOnly }: FolderListProps) {
+	const { t } = useTranslation();
 	const [deleteFolder, setDeleteFolder] = useState<FolderDoc | null>(null);
 
 	if (folders.length === 0) return null;
@@ -22,7 +24,7 @@ export function FolderList({ folders, onNavigate, onDelete, readOnly }: FolderLi
 	return (
 		<div style={{ marginBottom: 24 }}>
 			<SectionHeading uppercase={false} style={{ fontSize: "0.84rem", marginBottom: 12 }}>
-				Folders
+				{t("folders.title")}
 			</SectionHeading>
 			<div
 				style={{
@@ -50,9 +52,9 @@ export function FolderList({ folders, onNavigate, onDelete, readOnly }: FolderLi
 						setDeleteFolder(null);
 					}
 				}}
-				title="Delete Folder"
-				message={`Are you sure you want to delete "${deleteFolder?.name}" and all its contents? This action cannot be undone.`}
-				confirmLabel="Delete"
+				title={t("folders.deleteTitle")}
+				message={t("folders.deleteMessage", { name: deleteFolder?.name ?? "" })}
+				confirmLabel={t("folders.delete")}
 				variant="danger"
 			/>
 		</div>
@@ -71,6 +73,7 @@ function FolderCard({
 	readOnly?: boolean;
 }) {
 	const [hovered, setHovered] = useState(false);
+	const { t } = useTranslation();
 
 	return (
 		<div
@@ -134,7 +137,7 @@ function FolderCard({
 			</div>
 			{folder.isSystem && (
 				<Badge
-					label="system"
+					label={t("folders.systemBadge")}
 					color="var(--bg-elevated)"
 					style={{
 						position: "absolute",

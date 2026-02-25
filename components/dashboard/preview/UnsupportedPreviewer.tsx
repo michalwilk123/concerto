@@ -1,8 +1,11 @@
 "use client";
 
 import type { PreviewerProps } from "./types";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function UnsupportedPreviewer({ mimeType }: PreviewerProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div
 			style={{
@@ -15,7 +18,7 @@ export function UnsupportedPreviewer({ mimeType }: PreviewerProps) {
 		>
 			<div>
 				<p style={{ color: "var(--text-secondary)", fontSize: "1.1rem", marginBottom: 8 }}>
-					Preview not available for this file type
+					{t("preview.notAvailable")}
 				</p>
 				<p style={{ color: "var(--text-tertiary)", fontSize: "0.875rem" }}>{mimeType}</p>
 			</div>
