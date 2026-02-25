@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import next from "next";
 import postgres from "postgres";
 import { WebSocketServer } from "ws";
+import { createHMAC } from "@better-auth/utils/hmac";
 
 const dev = process.env.NODE_ENV !== "production";
 const host = process.env.HOSTNAME || "0.0.0.0";
@@ -142,11 +143,22 @@ async function isAuthorizedSocket(sql, request) {
 		return false;
 	}
 
+	// Cookie is signed: "token.hmac_signature" — unsign before DB lookup
+	const dotIndex = sessionToken.lastIndexOf(".");
+	if (dotIndex < 0) return false;
+	const token = sessionToken.slice(0, dotIndex);
+	const signature = sessionToken.slice(dotIndex + 1);
+
+	const secret = process.env.BETTER_AUTH_SECRET;
+	const hmac = createHMAC("SHA-256", "base64urlnopad");
+	const valid = await hmac.verify(secret, token, signature);
+	if (!valid) return false;
+
 	const authenticated = await sql`
 		select s.user_id
 		from session s
 		join "user" u on u.id = s.user_id
-		where s.token = ${sessionToken}
+		where s.token = ${token}
 		and s.expires_at > now()
 		and coalesce(u.banned, false) = false
 		and coalesce(u.is_active, true) = true
