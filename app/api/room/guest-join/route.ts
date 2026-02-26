@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { meeting, meetingSession } from "@/db/schema";
 import { createRealtimeKitParticipant, getOrRestoreRoom } from "@/lib/api-helpers";
 import { createMeeting } from "@/lib/realtimekit";
-import { rtkCreationLocks } from "@/lib/room-store";
+import { rooms, rtkCreationLocks } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
 	const body = await request.json();
@@ -34,9 +34,13 @@ export async function POST(request: NextRequest) {
 	if (!room.rtkMeetingId) {
 		let pending = rtkCreationLocks.get(meetingId);
 		if (!pending) {
+			console.log(`[room/guest-join] Creating RTK meeting for meetingId=${meetingId}`);
 			pending = (async () => {
 				const rtkId = await createMeeting();
-				room.rtkMeetingId = rtkId;
+				// Always update the canonical Room in the Map, not the captured reference
+				const currentRoom = rooms.get(meetingId);
+				if (!currentRoom) throw new Error("Room disappeared during RTK creation");
+				currentRoom.rtkMeetingId = rtkId;
 				await db
 					.insert(meetingSession)
 					.values({ id: rtkId, meetingId })
@@ -57,6 +61,10 @@ export async function POST(request: NextRequest) {
 			})();
 			rtkCreationLocks.set(meetingId, pending);
 			pending.finally(() => rtkCreationLocks.delete(meetingId));
+		} else {
+			console.log(
+				`[room/guest-join] Reusing concurrent RTK creation lock for meetingId=${meetingId}`,
+			);
 		}
 		try {
 			await pending;
@@ -69,16 +77,22 @@ export async function POST(request: NextRequest) {
 		}
 	}
 
-	if (!room.rtkMeetingId) {
+	// Use the canonical room from the Map for participant creation
+	const currentRoom = rooms.get(meetingId) ?? room;
+
+	if (!currentRoom.rtkMeetingId) {
 		return NextResponse.json({ error: "Failed to create meeting" }, { status: 502 });
 	}
 
 	const role = "student" as const;
+	console.log(
+		`[room/guest-join] Adding participant ${participantName} to rtkMeetingId=${currentRoom.rtkMeetingId} (meetingId=${meetingId})`,
+	);
 
 	try {
 		const { token } = await createRealtimeKitParticipant({
-			room,
-			rtkMeetingId: room.rtkMeetingId,
+			room: currentRoom,
+			rtkMeetingId: currentRoom.rtkMeetingId!,
 			participantName,
 			role,
 		});
@@ -88,8 +102,8 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({
 			token,
 			role,
-			groupId: room.groupId,
-			meetingFolderId: room.meetingFolderId,
+			groupId: currentRoom.groupId,
+			meetingFolderId: currentRoom.meetingFolderId,
 		});
 	} catch (err) {
 		console.error("Failed to join meeting as guest:", err);

@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
+import { requireAdmin } from "@/lib/auth-helpers";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const TRANSLATIONS_FILE = path.join(DATA_DIR, "translations.json");
@@ -16,9 +16,6 @@ async function readOverrides(): Promise<Record<string, string>> {
 }
 
 export async function GET() {
-	const { error } = await requireAuth();
-	if (error) return error;
-
 	const overrides = await readOverrides();
 	return NextResponse.json(overrides);
 }

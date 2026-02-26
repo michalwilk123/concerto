@@ -52,15 +52,13 @@ function MeetContent() {
 				sessionStorage.removeItem("concerto-session");
 				try {
 					const session = JSON.parse(stored);
-					if (session?.token && !cancelled) {
-						setToken(session.token);
-						setRole((session.role || "student") as Role);
-						setGroupId(session.groupId ?? null);
-						setMeetingFolderId(session.meetingFolderId ?? null);
-						setParticipantName(session.participantName || "");
-						setPhase("room");
-						setInitialized(true);
-						return;
+					// Only use the stored name to skip name-entry; always re-join to get a
+					// fresh token tied to the current RTK meeting. Using the stored token
+					// directly can place the user in a stale/different RTK meeting if the
+					// meeting was restarted between sessions.
+					if (session?.meetingId === meetingId && session?.participantName && !cancelled) {
+						setParticipantName(session.participantName);
+						// Fall through to normal auth-based join below
 					}
 				} catch {
 					// Ignore invalid session payload.

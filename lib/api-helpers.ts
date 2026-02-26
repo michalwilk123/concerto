@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { groupMember, meeting } from "@/db/schema";
 import type { Role } from "@/types/room";
 import { addParticipant, roleToPreset } from "./realtimekit";
-import { type Room, rooms } from "./room-store";
+import { type Room, roomRestoreLocks, rooms } from "./room-store";
 
 /**
  * Get a room by meeting ID, restoring it from the DB if not in memory.
@@ -12,31 +12,65 @@ import { type Room, rooms } from "./room-store";
  */
 export async function getOrRestoreRoom(meetingId: string): Promise<Room | NextResponse> {
 	const room = rooms.get(meetingId);
-	if (room) return room;
-
-	// Not in memory — try to restore from DB
-	const [meetingRow] = await db
-		.select()
-		.from(meeting)
-		.where(eq(meeting.id, meetingId))
-		.limit(1);
-
-	if (!meetingRow) {
-		return NextResponse.json({ error: "Room not found" }, { status: 404 });
+	if (room) {
+		console.log(
+			`[getOrRestoreRoom] Found room ${meetingId} in memory (rtkMeetingId=${room.rtkMeetingId})`,
+		);
+		return room;
 	}
 
-	const restoredRoom: Room = {
-		groupId: meetingRow.groupId,
-		creatorIdentity: "",
-		creatorUserId: "",
-		rtkMeetingId: meetingRow.rtkMeetingId,
-		participantIds: new Map(),
-	};
-	rooms.set(meetingId, restoredRoom);
-	console.log(
-		`[getOrRestoreRoom] Restored room ${meetingId} from DB (rtkMeetingId=${meetingRow.rtkMeetingId})`,
-	);
-	return restoredRoom;
+	// Not in memory — serialize restore to prevent duplicate Room objects
+	let pending = roomRestoreLocks.get(meetingId);
+	if (!pending) {
+		pending = (async () => {
+			// Re-check: another request may have restored it while we were waiting
+			const existing = rooms.get(meetingId);
+			if (existing) {
+				console.log(
+					`[getOrRestoreRoom] Room ${meetingId} restored by concurrent request (rtkMeetingId=${existing.rtkMeetingId})`,
+				);
+				return existing;
+			}
+
+			const [meetingRow] = await db
+				.select()
+				.from(meeting)
+				.where(eq(meeting.id, meetingId))
+				.limit(1);
+
+			if (!meetingRow) {
+				return NextResponse.json({ error: "Room not found" }, { status: 404 });
+			}
+
+			// Re-check after DB await — another request may have won the race
+			const existingAfterDb = rooms.get(meetingId);
+			if (existingAfterDb) {
+				console.log(
+					`[getOrRestoreRoom] Room ${meetingId} restored by concurrent request after DB query (rtkMeetingId=${existingAfterDb.rtkMeetingId})`,
+				);
+				return existingAfterDb;
+			}
+
+			const restoredRoom: Room = {
+				groupId: meetingRow.groupId,
+				creatorIdentity: "",
+				creatorUserId: "",
+				rtkMeetingId: meetingRow.rtkMeetingId,
+				participantIds: new Map(),
+			};
+			rooms.set(meetingId, restoredRoom);
+			console.log(
+				`[getOrRestoreRoom] Restored room ${meetingId} from DB (rtkMeetingId=${meetingRow.rtkMeetingId})`,
+			);
+			return restoredRoom;
+		})();
+		roomRestoreLocks.set(meetingId, pending);
+		pending.finally(() => roomRestoreLocks.delete(meetingId));
+	} else {
+		console.log(`[getOrRestoreRoom] Waiting for concurrent restore of room ${meetingId}`);
+	}
+
+	return pending;
 }
 
 /**

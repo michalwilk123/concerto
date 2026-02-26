@@ -5,17 +5,16 @@ import { admin } from "better-auth/plugins/admin";
 import { db } from "@/db";
 
 export const auth = betterAuth({
-	database: drizzleAdapter(db, { provider: "pg" }),
-	emailAndPassword: { enabled: true, maxPasswordLength: 128 },
-	rateLimit: { window: 5, max: 20 },
-	trustedOrigins: [
-		"https://lithographical-untiled-florance.ngrok-free.dev",
-		...(process.env.TRUSTED_ORIGINS?.split(",").filter(Boolean) ?? []),
-	],
-	user: {
-		additionalFields: {
-			isActive: { type: "boolean", defaultValue: true, input: false },
-		},
-	},
-	plugins: [admin({ defaultRole: "user" }), nextCookies()],
+  database: drizzleAdapter(db, { provider: "pg" }),
+  emailAndPassword: { enabled: true, maxPasswordLength: 128 },
+  rateLimit: { window: 5, max: 20 },
+  trustedOrigins: [
+    ...(process.env.TRUSTED_ORIGINS?.split(",").filter(Boolean) ?? []),
+  ],
+  user: {
+    additionalFields: {
+      isActive: { type: "boolean", defaultValue: true, input: false },
+    },
+  },
+  plugins: [admin({ defaultRole: "user" }), nextCookies()],
 });
