@@ -5,6 +5,7 @@ export interface Room {
 	rtkMeetingId: string | null;
 	meetingFolderId?: string;
 	participantIds: Map<string, string>;
+	kickedParticipants: Set<string>;
 	adminDisconnectTimer?: ReturnType<typeof setTimeout>;
 }
 

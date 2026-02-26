@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
 		rtkMeetingId: existingMeeting.rtkMeetingId,
 		meetingFolderId,
 		participantIds: new Map(),
+		kickedParticipants: new Set(),
 	});
 
 	console.log(`[room/rejoin] Rejoined meeting: meetingId=${meetingId}, groupId=${groupId}`);

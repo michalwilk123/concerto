@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getRoomOrFail } from "@/lib/api-helpers";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { removeParticipant } from "@/lib/realtimekit";
+import { listParticipants, removeParticipant } from "@/lib/realtimekit";
 
 export async function POST(request: NextRequest) {
 	const body = await request.json();
@@ -19,13 +19,30 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Cannot kick room creator" }, { status: 403 });
 	}
 
-	const participantId = room.participantIds.get(targetIdentity);
-	if (!participantId) {
-		return NextResponse.json({ error: "Participant not found" }, { status: 404 });
-	}
-
 	if (!room.rtkMeetingId) {
 		return NextResponse.json({ error: "No active RTK session" }, { status: 400 });
+	}
+
+	// Mark as kicked first so they can't rejoin even if the RTK call takes time
+	room.kickedParticipants.add(targetIdentity);
+
+	let participantId = room.participantIds.get(targetIdentity);
+
+	// Fallback: participant may have reconnected with a new RTK ID not tracked in our map
+	if (!participantId) {
+		try {
+			const rtkParticipants = await listParticipants(room.rtkMeetingId);
+			const match = rtkParticipants.find((p) => p.name === targetIdentity);
+			if (!match) {
+				// Already gone from the meeting — kick was effective
+				console.log(`Kick requested for ${targetIdentity} but not found in RTK, already removed`);
+				return NextResponse.json({ success: true });
+			}
+			participantId = match.id;
+		} catch (err) {
+			console.error("Failed to list RTK participants for kick fallback:", err);
+			return NextResponse.json({ error: "Participant not found" }, { status: 404 });
+		}
 	}
 
 	try {

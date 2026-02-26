@@ -23,6 +23,12 @@ export async function POST(request: NextRequest) {
 
 	// Block guests from private meetings
 	const [meetingRow] = await db.select().from(meeting).where(eq(meeting.id, meetingId)).limit(1);
+
+	// Block kicked participants from rejoining
+	if (room.kickedParticipants.has(participantName)) {
+		return NextResponse.json({ error: "You have been removed from this meeting." }, { status: 403 });
+	}
+
 	if (meetingRow && !meetingRow.isPublic) {
 		return NextResponse.json(
 			{ error: "This meeting is private. You need to be a group member to join." },

@@ -57,6 +57,7 @@ export async function getOrRestoreRoom(meetingId: string): Promise<Room | NextRe
 				creatorUserId: "",
 				rtkMeetingId: meetingRow.rtkMeetingId,
 				participantIds: new Map(),
+				kickedParticipants: new Set(),
 			};
 			rooms.set(meetingId, restoredRoom);
 			console.log(

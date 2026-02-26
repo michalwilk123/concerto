@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
 		rtkMeetingId: null,
 		meetingFolderId,
 		participantIds: new Map(),
+		kickedParticipants: new Set(),
 	});
 
 	console.log(

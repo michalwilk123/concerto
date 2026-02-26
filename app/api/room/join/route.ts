@@ -96,6 +96,11 @@ export async function POST(request: NextRequest) {
 
 	// Derive role from group membership
 	const role = await determineRole(currentRoom.groupId, session.user.id, session.user.role);
+
+	// Block kicked non-teacher participants from rejoining
+	if (role !== "teacher" && currentRoom.kickedParticipants.has(participantName)) {
+		return NextResponse.json({ error: "You have been removed from this meeting." }, { status: 403 });
+	}
 	console.log(
 		`[room/join] Adding participant ${participantName} to rtkMeetingId=${currentRoom.rtkMeetingId} (meetingId=${meetingId})`,
 	);
