@@ -18,6 +18,7 @@ type AppHeaderProps =
       meetingId: string;
       roomDescription: string;
       onRoomDescriptionChange: (v: string) => void;
+      onRoomDescriptionBlur: () => void;
       participantName: string;
       participantRole: Role;
       canEditDescription: boolean;
@@ -151,6 +152,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
     meetingId,
     roomDescription,
     onRoomDescriptionChange,
+    onRoomDescriptionBlur,
     participantName,
     participantRole,
     canEditDescription,
@@ -240,6 +242,12 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           variant="transparent"
           value={roomDescription}
           onChange={(e) => onRoomDescriptionChange(e.target.value)}
+          onBlur={onRoomDescriptionBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.currentTarget.blur();
+            }
+          }}
           placeholder={canEditDescription ? t("appHeader.addDescription") : ""}
           readOnly={!canEditDescription}
           style={{

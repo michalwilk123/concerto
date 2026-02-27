@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
-import { requireGroupTeacher } from "@/lib/auth-helpers";
+import { requireAdmin, requireGroupTeacher } from "@/lib/auth-helpers";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,11 +23,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  const { error } = await requireGroupTeacher(row.groupId);
-  if (error) return error;
-
   const body = await request.json();
-  const { isPublic, requiresApproval } = body;
+  const { isPublic, requiresApproval, name } = body;
 
   if (isPublic !== undefined && typeof isPublic !== "boolean") {
     return NextResponse.json({ error: "isPublic must be a boolean" }, { status: 400 });
@@ -35,13 +32,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (requiresApproval !== undefined && typeof requiresApproval !== "boolean") {
     return NextResponse.json({ error: "requiresApproval must be a boolean" }, { status: 400 });
   }
-  if (isPublic === undefined && requiresApproval === undefined) {
+  if (name !== undefined && (typeof name !== "string" || !name.trim())) {
+    return NextResponse.json({ error: "name must be a non-empty string" }, { status: 400 });
+  }
+  if (isPublic === undefined && requiresApproval === undefined && name === undefined) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  const updateData: Record<string, boolean> = {};
+  const { error } = await requireGroupTeacher(row.groupId);
+  if (error) return error;
+  if (name !== undefined) {
+    const { error: adminError } = await requireAdmin();
+    if (adminError) return adminError;
+  }
+
+  const updateData: Record<string, boolean | string> = {};
   if (isPublic !== undefined) updateData.isPublic = isPublic;
   if (requiresApproval !== undefined) updateData.requiresApproval = requiresApproval;
+  if (name !== undefined) updateData.name = name.trim();
 
   const [updated] = await db.update(meeting).set(updateData).where(eq(meeting.id, id)).returning();
 

@@ -619,7 +619,7 @@ export const meetingsApi = {
 
   async patch(
     id: string,
-    data: { isPublic?: boolean; requiresApproval?: boolean },
+    data: { name?: string; isPublic?: boolean; requiresApproval?: boolean },
   ): Promise<Meeting> {
     const response = await fetch(`/api/meetings/${id}`, {
       method: "PATCH",

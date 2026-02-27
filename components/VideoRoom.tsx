@@ -8,15 +8,21 @@ import {
 } from "@cloudflare/realtimekit-react";
 import {
   RtkCameraToggle,
+  RtkDialogManager,
   RtkGrid,
   RtkMicToggle,
+  RtkNotifications,
   RtkParticipantsAudio,
   RtkRecordingIndicator,
   RtkRecordingToggle,
   RtkScreenShareToggle,
+  RtkSettingsToggle,
+  RtkUiProvider,
 } from "@cloudflare/realtimekit-react-ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
+import { meetingsApi } from "@/lib/api-client";
+import { useSession } from "@/lib/auth-client";
 import { useRoomStore } from "@/stores/room-store";
 import type { Role, RoomParticipant } from "@/types/room";
 import { isTeacher, presetToRole } from "@/types/room";
@@ -73,13 +79,16 @@ function RoomContent({
   const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab, initialize, setRole } =
     useRoomStore();
   const { t } = useTranslation();
+  const { data: session } = useSession();
   const [roomDescription, setRoomDescription] = useState("");
+  const [lastSavedRoomDescription, setLastSavedRoomDescription] = useState("");
   const toast = useToast();
   const hasNotifiedRef = useRef(false);
   const lastRecordingStateRef = useRef<string | null>(null);
 
   const currentRole: Role = selfPresetName ? presetToRole(selfPresetName) : role;
   const isTeacherRole = isTeacher(currentRole);
+  const isAdmin = session?.user.role === "admin";
 
   const copyRoomLink = () => {
     const url = `${window.location.origin}/meet/${meetingId}`;
@@ -92,8 +101,46 @@ function RoomContent({
   }, [meetingId, participantName, role, initialize]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const meetingData = await meetingsApi.get(meetingId);
+        if (cancelled) return;
+        setRoomDescription(meetingData.name);
+        setLastSavedRoomDescription(meetingData.name);
+      } catch {
+        if (cancelled) return;
+        setRoomDescription(meetingId);
+        setLastSavedRoomDescription(meetingId);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [meetingId]);
+
+  useEffect(() => {
     setRole(currentRole);
   }, [currentRole, setRole]);
+
+  const persistMeetingName = async () => {
+    if (!isAdmin) return;
+    const nextName = roomDescription.trim();
+    if (!nextName) {
+      setRoomDescription(lastSavedRoomDescription);
+      return;
+    }
+    if (nextName === lastSavedRoomDescription) return;
+
+    try {
+      const updated = await meetingsApi.patch(meetingId, { name: nextName });
+      setRoomDescription(updated.name);
+      setLastSavedRoomDescription(updated.name);
+    } catch {
+      setRoomDescription(lastSavedRoomDescription);
+      toast.error(t("meetings.updateFailed"));
+    }
+  };
 
   // Watch for kicked/ended/disconnected states
   useEffect(() => {
@@ -147,7 +194,8 @@ function RoomContent({
         onRoomDescriptionChange={setRoomDescription}
         participantName={participantName}
         participantRole={currentRole}
-        canEditDescription={isTeacherRole}
+        canEditDescription={isAdmin}
+        onRoomDescriptionBlur={persistMeetingName}
         sidebarOpen={sidebarOpen}
         onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
         onLeave={onLeave}
@@ -195,7 +243,8 @@ function RoomContent({
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: 8,
+            gap: 10,
+            flexWrap: "wrap",
             padding: "12px 0",
             background: "var(--bg-secondary)",
           }}
@@ -203,6 +252,7 @@ function RoomContent({
           <RtkMicToggle meeting={meeting} size="md" />
           <RtkCameraToggle meeting={meeting} size="md" />
           <RtkScreenShareToggle meeting={meeting} size="md" />
+          <RtkSettingsToggle />
           <button
             type="button"
             onClick={() => {
@@ -255,6 +305,8 @@ function RoomContent({
         onTabChange={setActiveTab}
         isOpen={sidebarOpen}
       />
+      <RtkNotifications />
+      <RtkDialogManager />
       {hasAudioOutput ? <RtkParticipantsAudio meeting={meeting} /> : null}
     </div>
   );
@@ -331,7 +383,9 @@ export default function VideoRoom(props: VideoRoomProps) {
         </div>
       }
     >
-      <RoomContent {...props} hasAudioOutput={hasAudioOutput} />
+      <RtkUiProvider meeting={meeting}>
+        <RoomContent {...props} hasAudioOutput={hasAudioOutput} />
+      </RtkUiProvider>
     </RealtimeKitProvider>
   );
 }
