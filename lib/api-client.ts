@@ -7,594 +7,679 @@ import type { Role } from "@/types/room";
 
 // Request/Response types
 export interface CreateRoomParams {
-	displayName: string;
-	groupId: string;
-	isPublic?: boolean;
+  displayName: string;
+  groupId: string;
+  isPublic?: boolean;
+  requiresApproval?: boolean;
 }
 
 export interface CreateRoomResponse {
-	success: boolean;
-	meetingId: string;
+  success: boolean;
+  meetingId: string;
 }
 
 export interface RejoinRoomParams {
-	meetingId: string;
-	groupId: string;
+  meetingId: string;
+  groupId: string;
 }
 
 export interface JoinRoomParams {
-	meetingId: string;
-	participantName: string;
+  meetingId: string;
+  participantName: string;
 }
 
+export type JoinStatus =
+  | "joined"
+  | "waiting_for_host"
+  | "waiting_for_approval"
+  | "approved"
+  | "rejected"
+  | "host_present";
+
 export interface JoinRoomResponse {
-	token?: string;
-	role?: Role;
-	groupId?: string;
-	meetingFolderId?: string;
+  status?: JoinStatus;
+  token?: string;
+  role?: Role;
+  groupId?: string;
+  meetingFolderId?: string;
+}
+
+export interface WaitingParticipant {
+  participantName: string;
+  joinedAt: number;
 }
 
 export interface KickParams {
-	meetingId: string;
-	targetIdentity: string;
+  meetingId: string;
+  targetIdentity: string;
 }
 
 // API Client
 export const roomApi = {
-	async create(params: CreateRoomParams): Promise<CreateRoomResponse> {
-		const response = await fetch("/api/room/create", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async create(params: CreateRoomParams): Promise<CreateRoomResponse> {
+    const response = await fetch("/api/room/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to create room");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create room");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async join(params: JoinRoomParams): Promise<JoinRoomResponse> {
-		const response = await fetch("/api/room/join", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async join(params: JoinRoomParams): Promise<JoinRoomResponse> {
+    const response = await fetch("/api/room/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to join room");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to join room");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async kick(params: KickParams): Promise<void> {
-		const response = await fetch("/api/room/kick", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async kick(params: KickParams): Promise<void> {
+    const response = await fetch("/api/room/kick", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to kick participant");
-		}
-	},
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to kick participant");
+    }
+  },
 
-	async guestJoin(params: JoinRoomParams): Promise<JoinRoomResponse> {
-		const response = await fetch("/api/room/guest-join", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async guestJoin(params: JoinRoomParams): Promise<JoinRoomResponse> {
+    const response = await fetch("/api/room/guest-join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to join room as guest");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to join room as guest");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async rejoin(params: RejoinRoomParams): Promise<CreateRoomResponse> {
-		const response = await fetch("/api/room/rejoin", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async rejoin(params: RejoinRoomParams): Promise<CreateRoomResponse> {
+    const response = await fetch("/api/room/rejoin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to rejoin room");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to rejoin room");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async adminLeave(params: { meetingId: string }): Promise<void> {
-		const response = await fetch("/api/room/admin-leave", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async endMeeting(params: { meetingId: string }): Promise<void> {
+    const response = await fetch("/api/room/admin-leave", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to leave room");
-		}
-	},
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to end meeting");
+    }
+  },
+
+  async pollStatus(params: {
+    meetingId: string;
+    participantName: string;
+  }): Promise<JoinRoomResponse> {
+    const response = await fetch("/api/room/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to poll status");
+    }
+
+    return response.json();
+  },
+
+  async approveParticipant(params: { meetingId: string; participantName: string }): Promise<void> {
+    const response = await fetch("/api/room/waiting/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to approve participant");
+    }
+  },
+
+  async rejectParticipant(params: { meetingId: string; participantName: string }): Promise<void> {
+    const response = await fetch("/api/room/waiting/reject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to reject participant");
+    }
+  },
+
+  async listWaiting(meetingId: string): Promise<{ waiting: WaitingParticipant[] }> {
+    const response = await fetch(
+      `/api/room/waiting/list?meetingId=${encodeURIComponent(meetingId)}`,
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list waiting participants");
+    }
+
+    return response.json();
+  },
 };
 
 // Groups API Client
 export const groupsApi = {
-	async list(): Promise<Group[]> {
-		const response = await fetch("/api/groups");
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list groups");
-		}
-		return response.json();
-	},
+  async list(): Promise<Group[]> {
+    const response = await fetch("/api/groups");
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list groups");
+    }
+    return response.json();
+  },
 
-	async create(params: { name: string }): Promise<Group> {
-		const response = await fetch("/api/groups", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to create group");
-		}
-		return response.json();
-	},
+  async create(params: { name: string }): Promise<Group> {
+    const response = await fetch("/api/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create group");
+    }
+    return response.json();
+  },
 
-	async get(id: string): Promise<Group> {
-		const response = await fetch(`/api/groups/${id}`);
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to get group");
-		}
-		return response.json();
-	},
+  async get(id: string): Promise<Group> {
+    const response = await fetch(`/api/groups/${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get group");
+    }
+    return response.json();
+  },
 
-	async update(id: string, params: { name: string }): Promise<Group> {
-		const response = await fetch(`/api/groups/${id}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to update group");
-		}
-		return response.json();
-	},
+  async update(id: string, params: { name: string }): Promise<Group> {
+    const response = await fetch(`/api/groups/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update group");
+    }
+    return response.json();
+  },
 
-	async delete(id: string): Promise<void> {
-		const response = await fetch(`/api/groups/${id}`, { method: "DELETE" });
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to delete group");
-		}
-	},
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/groups/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete group");
+    }
+  },
 
-	async getMembers(
-		groupId: string,
-	): Promise<(GroupMember & { userName: string; userEmail: string })[]> {
-		const response = await fetch(`/api/groups/${groupId}/members`);
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list members");
-		}
-		return response.json();
-	},
+  async getMembers(
+    groupId: string,
+  ): Promise<(GroupMember & { userName: string; userEmail: string })[]> {
+    const response = await fetch(`/api/groups/${groupId}/members`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list members");
+    }
+    return response.json();
+  },
 
-	async addMember(
-		groupId: string,
-		params: { userId: string; role?: "teacher" | "student" },
-	): Promise<GroupMember> {
-		const response = await fetch(`/api/groups/${groupId}/members`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to add member");
-		}
-		return response.json();
-	},
+  async addMember(
+    groupId: string,
+    params: { userId: string; role?: "teacher" | "student" },
+  ): Promise<GroupMember> {
+    const response = await fetch(`/api/groups/${groupId}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to add member");
+    }
+    return response.json();
+  },
 
-	async removeMember(groupId: string, userId: string): Promise<void> {
-		const response = await fetch(`/api/groups/${groupId}/members?userId=${userId}`, {
-			method: "DELETE",
-		});
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to remove member");
-		}
-	},
+  async removeMember(groupId: string, userId: string): Promise<void> {
+    const response = await fetch(`/api/groups/${groupId}/members?userId=${userId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to remove member");
+    }
+  },
 };
 
 // Files API Client
 export const filesApi = {
-	async list(groupId: string, folderId?: string | null): Promise<FileWithUrl[]> {
-		const params = new URLSearchParams({ groupId });
-		if (folderId) params.set("folderId", folderId);
-		const response = await fetch(`/api/files?${params}`);
+  async list(groupId: string, folderId?: string | null): Promise<FileWithUrl[]> {
+    const params = new URLSearchParams({ groupId });
+    if (folderId) params.set("folderId", folderId);
+    const response = await fetch(`/api/files?${params}`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list files");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list files");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async upload(params: {
-		file: File;
-		groupId: string;
-		folderId?: string | null;
-	}): Promise<FileDoc> {
-		const formData = new FormData();
-		formData.append("file", params.file);
-		formData.append("groupId", params.groupId);
-		if (params.folderId) formData.append("folderId", params.folderId);
+  async upload(params: {
+    file: File;
+    groupId: string;
+    folderId?: string | null;
+  }): Promise<FileDoc> {
+    const formData = new FormData();
+    formData.append("file", params.file);
+    formData.append("groupId", params.groupId);
+    if (params.folderId) formData.append("folderId", params.folderId);
 
-		const response = await fetch("/api/files/upload", {
-			method: "POST",
-			body: formData,
-		});
+    const response = await fetch("/api/files/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Upload failed");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Upload failed");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async delete(id: string): Promise<void> {
-		const response = await fetch(`/api/files/${id}`, { method: "DELETE" });
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/files/${id}`, { method: "DELETE" });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Delete failed");
-		}
-	},
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Delete failed");
+    }
+  },
 
-	async toggleEditable(id: string, isEditable: boolean): Promise<FileDoc> {
-		const response = await fetch(`/api/files/${id}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ isEditable }),
-		});
+  async toggleEditable(id: string, isEditable: boolean): Promise<FileDoc> {
+    const response = await fetch(`/api/files/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isEditable }),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to update file");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update file");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async getStorage(groupId: string): Promise<{ totalBytes: number }> {
-		const response = await fetch(`/api/files/storage?groupId=${groupId}`);
+  async getStorage(groupId: string): Promise<{ totalBytes: number }> {
+    const response = await fetch(`/api/files/storage?groupId=${groupId}`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to get storage info");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get storage info");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async seed(groupId: string): Promise<{ meetingsFolderId?: string }> {
-		const response = await fetch("/api/files/seed", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ groupId }),
-		});
+  async seed(groupId: string): Promise<{ meetingsFolderId?: string }> {
+    const response = await fetch("/api/files/seed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupId }),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to seed files");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to seed files");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 };
 
 // Folders API Client
 export const foldersApi = {
-	async list(groupId: string, parentId?: string | null): Promise<FolderDoc[]> {
-		const params = new URLSearchParams({ groupId });
-		if (parentId) params.set("parentId", parentId);
-		const response = await fetch(`/api/folders?${params}`);
+  async list(groupId: string, parentId?: string | null): Promise<FolderDoc[]> {
+    const params = new URLSearchParams({ groupId });
+    if (parentId) params.set("parentId", parentId);
+    const response = await fetch(`/api/folders?${params}`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list folders");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list folders");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async get(id: string): Promise<FolderDoc> {
-		const response = await fetch(`/api/folders/${id}`);
+  async get(id: string): Promise<FolderDoc> {
+    const response = await fetch(`/api/folders/${id}`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to get folder");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get folder");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async create(params: {
-		name: string;
-		groupId: string;
-		parentId?: string | null;
-	}): Promise<FolderDoc> {
-		const response = await fetch("/api/folders", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async create(params: {
+    name: string;
+    groupId: string;
+    parentId?: string | null;
+  }): Promise<FolderDoc> {
+    const response = await fetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to create folder");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create folder");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async delete(id: string): Promise<void> {
-		const response = await fetch(`/api/folders/${id}`, { method: "DELETE" });
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/folders/${id}`, { method: "DELETE" });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Delete failed");
-		}
-	},
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Delete failed");
+    }
+  },
 
-	async findMeetingsFolder(groupId: string): Promise<FolderDoc | null> {
-		const folders = await foldersApi.list(groupId, null);
-		return folders.find((f) => f.isSystem && f.name === "meetings") ?? null;
-	},
+  async findMeetingsFolder(groupId: string): Promise<FolderDoc | null> {
+    const folders = await foldersApi.list(groupId, null);
+    return folders.find((f) => f.isSystem && f.name === "meetings") ?? null;
+  },
 
-	async getAncestors(id: string): Promise<FolderDoc[]> {
-		const response = await fetch(`/api/folders/${id}/ancestors`);
+  async getAncestors(id: string): Promise<FolderDoc[]> {
+    const response = await fetch(`/api/folders/${id}/ancestors`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to get folder ancestors");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get folder ancestors");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async resolvePath(
-		groupId: string,
-		path: string[],
-	): Promise<{ folderId: string; ancestors: FolderDoc[] }> {
-		const response = await fetch("/api/folders/resolve", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ groupId, path }),
-		});
+  async resolvePath(
+    groupId: string,
+    path: string[],
+  ): Promise<{ folderId: string; ancestors: FolderDoc[] }> {
+    const response = await fetch("/api/folders/resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupId, path }),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to resolve folder path");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to resolve folder path");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 };
 
 // Admin API Client
 export interface AdminUser {
-	id: string;
-	name: string;
-	email: string;
-	role: string | null;
-	banned: boolean | null;
-	banReason: string | null;
-	isActive: boolean;
-	createdAt: string;
-	image: string | null;
+  id: string;
+  name: string;
+  email: string;
+  role: string | null;
+  banned: boolean | null;
+  banReason: string | null;
+  isActive: boolean;
+  createdAt: string;
+  image: string | null;
 }
 
 export interface ListUsersResponse {
-	users: AdminUser[];
-	total: number;
-	page: number;
-	limit: number;
+  users: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface UpdateUserParams {
-	role?: string;
-	isActive?: boolean;
-	banned?: boolean;
-	banReason?: string | null;
+  role?: string;
+  isActive?: boolean;
+  banned?: boolean;
+  banReason?: string | null;
 }
 
 export const adminApi = {
-	async listUsers(
-		params: { page?: number; limit?: number; search?: string } = {},
-	): Promise<ListUsersResponse> {
-		const searchParams = new URLSearchParams();
-		if (params.page) searchParams.set("page", String(params.page));
-		if (params.limit) searchParams.set("limit", String(params.limit));
-		if (params.search) searchParams.set("search", params.search);
-		const response = await fetch(`/api/admin/users?${searchParams}`);
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list users");
-		}
-		return response.json();
-	},
+  async listUsers(
+    params: { page?: number; limit?: number; search?: string } = {},
+  ): Promise<ListUsersResponse> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set("page", String(params.page));
+    if (params.limit) searchParams.set("limit", String(params.limit));
+    if (params.search) searchParams.set("search", params.search);
+    const response = await fetch(`/api/admin/users?${searchParams}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list users");
+    }
+    return response.json();
+  },
 
-	async updateUser(id: string, data: UpdateUserParams): Promise<AdminUser> {
-		const response = await fetch(`/api/admin/users/${id}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data),
-		});
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to update user");
-		}
-		return response.json();
-	},
+  async updateUser(id: string, data: UpdateUserParams): Promise<AdminUser> {
+    const response = await fetch(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update user");
+    }
+    return response.json();
+  },
 
-	async deleteUser(id: string): Promise<void> {
-		const response = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to delete user");
-		}
-	},
+  async deleteUser(id: string): Promise<void> {
+    const response = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete user");
+    }
+  },
 };
 
 // Users API Client (lightweight search for teachers + admins)
 export const usersApi = {
-	async search(query: string): Promise<{ id: string; name: string; email: string }[]> {
-		const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to search users");
-		}
-		return response.json();
-	},
+  async search(query: string): Promise<{ id: string; name: string; email: string }[]> {
+    const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to search users");
+    }
+    return response.json();
+  },
 };
 
 export const chatApi = {
-	async list(meetingId: string, limit = 100): Promise<ChatMessage[]> {
-		const params = new URLSearchParams({ meetingId, limit: String(limit) });
-		const response = await fetch(`/api/chat/messages?${params}`);
+  async list(meetingId: string, limit = 100): Promise<ChatMessage[]> {
+    const params = new URLSearchParams({ meetingId, limit: String(limit) });
+    const response = await fetch(`/api/chat/messages?${params}`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to load chat messages");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to load chat messages");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async create(params: CreateChatMessageParams): Promise<ChatMessage> {
-		const response = await fetch("/api/chat/messages", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async create(params: CreateChatMessageParams): Promise<ChatMessage> {
+    const response = await fetch("/api/chat/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to send chat message");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to send chat message");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 
-	async toggleReaction(
-		params: ToggleReactionParams,
-	): Promise<{ reactions: ChatMessage["reactions"] }> {
-		const response = await fetch("/api/chat/reactions", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(params),
-		});
+  async toggleReaction(
+    params: ToggleReactionParams,
+  ): Promise<{ reactions: ChatMessage["reactions"] }> {
+    const response = await fetch("/api/chat/reactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to toggle reaction");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to toggle reaction");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 };
 
 // Meetings API Client
 export const meetingsApi = {
-	async list(groupId: string): Promise<Meeting[]> {
-		const params = new URLSearchParams({ groupId });
-		const response = await fetch(`/api/meetings?${params}`);
+  async get(id: string): Promise<Meeting> {
+    const response = await fetch(`/api/meetings/${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get meeting");
+    }
+    return response.json();
+  },
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list meetings");
-		}
+  async list(groupId: string): Promise<Meeting[]> {
+    const params = new URLSearchParams({ groupId });
+    const response = await fetch(`/api/meetings?${params}`);
 
-		return response.json();
-	},
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list meetings");
+    }
 
-	async patch(id: string, data: { isPublic: boolean }): Promise<Meeting> {
-		const response = await fetch(`/api/meetings/${id}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data),
-		});
+    return response.json();
+  },
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to update meeting");
-		}
+  async patch(
+    id: string,
+    data: { isPublic?: boolean; requiresApproval?: boolean },
+  ): Promise<Meeting> {
+    const response = await fetch(`/api/meetings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-		return response.json();
-	},
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update meeting");
+    }
 
-	async delete(id: string): Promise<void> {
-		const response = await fetch(`/api/meetings/${id}`, { method: "DELETE" });
+    return response.json();
+  },
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to delete meeting");
-		}
-	},
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/meetings/${id}`, { method: "DELETE" });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete meeting");
+    }
+  },
 };
 
 // Translations API Client
 export const translationsApi = {
-	async get(): Promise<Record<string, string>> {
-		const response = await fetch("/api/translations");
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to load translations");
-		}
-		return response.json();
-	},
+  async get(): Promise<Record<string, string>> {
+    const response = await fetch("/api/translations");
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to load translations");
+    }
+    return response.json();
+  },
 
-	async save(overrides: Record<string, string>): Promise<void> {
-		const response = await fetch("/api/translations", {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(overrides),
-		});
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to save translations");
-		}
-	},
+  async save(overrides: Record<string, string>): Promise<void> {
+    const response = await fetch("/api/translations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(overrides),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to save translations");
+    }
+  },
 };
 
 // Recordings API Client
 export const recordingsApi = {
-	async list(groupId: string): Promise<Recording[]> {
-		const params = new URLSearchParams({ groupId });
-		const response = await fetch(`/api/recordings?${params}`);
+  async list(groupId: string): Promise<Recording[]> {
+    const params = new URLSearchParams({ groupId });
+    const response = await fetch(`/api/recordings?${params}`);
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || "Failed to list recordings");
-		}
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list recordings");
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 };

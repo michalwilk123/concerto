@@ -8,24 +8,24 @@ const spinKeyframes = `
 `;
 
 interface SpinnerProps {
-	size?: number;
-	className?: string;
+  size?: number;
+  className?: string;
 }
 
 export default function Spinner({ size = 48 }: SpinnerProps) {
-	return (
-		<>
-			<style>{spinKeyframes}</style>
-			<div
-				style={{
-					width: size,
-					height: size,
-					border: "3px solid var(--border-default)",
-					borderTop: "3px solid var(--accent-blue)",
-					borderRadius: "50%",
-					animation: "spin 1s linear infinite",
-				}}
-			/>
-		</>
-	);
+  return (
+    <>
+      <style>{spinKeyframes}</style>
+      <div
+        style={{
+          width: size,
+          height: size,
+          border: "3px solid var(--border-default)",
+          borderTop: "3px solid var(--accent-blue)",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+        }}
+      />
+    </>
+  );
 }

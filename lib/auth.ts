@@ -8,9 +8,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
   emailAndPassword: { enabled: true, maxPasswordLength: 128 },
   rateLimit: { window: 5, max: 20 },
-  trustedOrigins: [
-    ...(process.env.TRUSTED_ORIGINS?.split(",").filter(Boolean) ?? []),
-  ],
+  trustedOrigins: [...(process.env.TRUSTED_ORIGINS?.split(",").filter(Boolean) ?? [])],
   user: {
     additionalFields: {
       isActive: { type: "boolean", defaultValue: true, input: false },

@@ -8,16 +8,16 @@ const TEST_PASSWORD = "test1234";
 const TEST_NAME = "Test User";
 
 const res = await auth.api.signUpEmail({
-	body: {
-		email: TEST_EMAIL,
-		password: TEST_PASSWORD,
-		name: TEST_NAME,
-	},
+  body: {
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+    name: TEST_NAME,
+  },
 });
 
 if (!res.user) {
-	console.error("Failed to create test user");
-	process.exit(1);
+  console.error("Failed to create test user");
+  process.exit(1);
 }
 
 // Promote to teacher

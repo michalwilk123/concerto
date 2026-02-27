@@ -8,23 +8,23 @@ import { folder } from "@/db/schema";
  * Returns the meetings folder ID.
  */
 export async function ensureMeetingsFolder(groupId: string): Promise<string> {
-	const existing = await db
-		.select({ id: folder.id })
-		.from(folder)
-		.where(and(eq(folder.groupId, groupId), eq(folder.isSystem, true), eq(folder.name, "meetings")))
-		.limit(1);
+  const existing = await db
+    .select({ id: folder.id })
+    .from(folder)
+    .where(and(eq(folder.groupId, groupId), eq(folder.isSystem, true), eq(folder.name, "meetings")))
+    .limit(1);
 
-	if (existing.length > 0) return existing[0].id;
+  if (existing.length > 0) return existing[0].id;
 
-	const id = nanoid();
-	await db.insert(folder).values({
-		id,
-		name: "meetings",
-		groupId,
-		parentId: null,
-		isSystem: true,
-	});
-	return id;
+  const id = nanoid();
+  await db.insert(folder).values({
+    id,
+    name: "meetings",
+    groupId,
+    parentId: null,
+    isSystem: true,
+  });
+  return id;
 }
 
 /**
@@ -33,47 +33,47 @@ export async function ensureMeetingsFolder(groupId: string): Promise<string> {
  * Returns the meeting subfolder ID.
  */
 export async function ensureMeetingFolder(groupId: string, meetingName: string): Promise<string> {
-	const meetingsFolderId = await ensureMeetingsFolder(groupId);
+  const meetingsFolderId = await ensureMeetingsFolder(groupId);
 
-	// Check if a subfolder for this meeting already exists
-	const existing = await db
-		.select({ id: folder.id })
-		.from(folder)
-		.where(
-			and(
-				eq(folder.groupId, groupId),
-				eq(folder.parentId, meetingsFolderId),
-				eq(folder.name, meetingName),
-			),
-		)
-		.limit(1);
+  // Check if a subfolder for this meeting already exists
+  const existing = await db
+    .select({ id: folder.id })
+    .from(folder)
+    .where(
+      and(
+        eq(folder.groupId, groupId),
+        eq(folder.parentId, meetingsFolderId),
+        eq(folder.name, meetingName),
+      ),
+    )
+    .limit(1);
 
-	if (existing.length > 0) return existing[0].id;
+  if (existing.length > 0) return existing[0].id;
 
-	const id = nanoid();
-	await db.insert(folder).values({
-		id,
-		name: meetingName,
-		groupId,
-		parentId: meetingsFolderId,
-		isSystem: false,
-	});
-	return id;
+  const id = nanoid();
+  await db.insert(folder).values({
+    id,
+    name: meetingName,
+    groupId,
+    parentId: meetingsFolderId,
+    isSystem: false,
+  });
+  return id;
 }
 
 export function formatFileSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 export function sanitizeFileName(name: string): string {
-	return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 export function validateFileSize(size: number): boolean {
-	return size <= MAX_FILE_SIZE;
+  return size <= MAX_FILE_SIZE;
 }

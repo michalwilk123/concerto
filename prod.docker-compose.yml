@@ -1,4 +1,14 @@
 services:
+  migrate:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+    command: ["bun", "run", "db:migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build: .
     environment:
@@ -13,6 +23,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "bun -e 'await fetch(\"http://localhost:3000/api/health\").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))'"]

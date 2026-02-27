@@ -7,27 +7,27 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const TRANSLATIONS_FILE = path.join(DATA_DIR, "translations.json");
 
 async function readOverrides(): Promise<Record<string, string>> {
-	try {
-		const raw = await readFile(TRANSLATIONS_FILE, "utf-8");
-		return JSON.parse(raw) as Record<string, string>;
-	} catch {
-		return {};
-	}
+  try {
+    const raw = await readFile(TRANSLATIONS_FILE, "utf-8");
+    return JSON.parse(raw) as Record<string, string>;
+  } catch {
+    return {};
+  }
 }
 
 export async function GET() {
-	const overrides = await readOverrides();
-	return NextResponse.json(overrides);
+  const overrides = await readOverrides();
+  return NextResponse.json(overrides);
 }
 
 export async function PUT(req: Request) {
-	const { error } = await requireAdmin();
-	if (error) return error;
+  const { error } = await requireAdmin();
+  if (error) return error;
 
-	const body = (await req.json()) as Record<string, string>;
+  const body = (await req.json()) as Record<string, string>;
 
-	await mkdir(DATA_DIR, { recursive: true });
-	await writeFile(TRANSLATIONS_FILE, JSON.stringify(body, null, 2), "utf-8");
+  await mkdir(DATA_DIR, { recursive: true });
+  await writeFile(TRANSLATIONS_FILE, JSON.stringify(body, null, 2), "utf-8");
 
-	return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true });
 }

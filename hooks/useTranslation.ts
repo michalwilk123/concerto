@@ -10,56 +10,56 @@ let fetchPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notifyListeners() {
-	for (const cb of listeners) cb();
+  for (const cb of listeners) cb();
 }
 
 export function invalidateTranslationCache() {
-	cachedOverrides = null;
-	fetchPromise = null;
-	notifyListeners();
+  cachedOverrides = null;
+  fetchPromise = null;
+  notifyListeners();
 }
 
 function ensureFetched() {
-	if (cachedOverrides !== null) return;
-	if (fetchPromise) return;
+  if (cachedOverrides !== null) return;
+  if (fetchPromise) return;
 
-	fetchPromise = translationsApi
-		.get()
-		.then((data) => {
-			cachedOverrides = data;
-			notifyListeners();
-		})
-		.catch(() => {
-			cachedOverrides = {};
-			notifyListeners();
-		});
+  fetchPromise = translationsApi
+    .get()
+    .then((data) => {
+      cachedOverrides = data;
+      notifyListeners();
+    })
+    .catch(() => {
+      cachedOverrides = {};
+      notifyListeners();
+    });
 }
 
 export function useTranslation() {
-	const [, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
-	useEffect(() => {
-		const cb = () => setTick((n) => n + 1);
-		listeners.add(cb);
-		ensureFetched();
-		return () => {
-			listeners.delete(cb);
-		};
-	}, []);
+  useEffect(() => {
+    const cb = () => setTick((n) => n + 1);
+    listeners.add(cb);
+    ensureFetched();
+    return () => {
+      listeners.delete(cb);
+    };
+  }, []);
 
-	// Trigger fetch on first render too
-	ensureFetched();
+  // Trigger fetch on first render too
+  ensureFetched();
 
-	function t(key: string, params?: Record<string, string>): string {
-		const overrides = cachedOverrides ?? {};
-		let value = overrides[key] ?? defaultTranslations[key] ?? key;
-		if (params) {
-			for (const [k, v] of Object.entries(params)) {
-				value = value.replace(`{${k}}`, v);
-			}
-		}
-		return value;
-	}
+  function t(key: string, params?: Record<string, string>): string {
+    const overrides = cachedOverrides ?? {};
+    let value = overrides[key] ?? defaultTranslations[key] ?? key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        value = value.replace(`{${k}}`, v);
+      }
+    }
+    return value;
+  }
 
-	return { t };
+  return { t };
 }

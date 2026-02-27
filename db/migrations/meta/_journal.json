@@ -15,6 +15,13 @@
       "when": 1772061155678,
       "tag": "0001_lethal_dakota_north",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772185112963,
+      "tag": "0002_nasty_killraven",
+      "breakpoints": true
     }
   ]
 }

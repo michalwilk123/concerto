@@ -17,7 +17,7 @@ services:
     volumes:
       - .:/app
       - app_node_modules:/app/node_modules
-    command: sh -c "bun install && bun run dev -- --hostname 0.0.0.0"
+    command: sh -c "bun install && bun run dev -- --hostname 0.0.0.0 --turbopack"
     ports:
       - "3000:3000"
     environment:

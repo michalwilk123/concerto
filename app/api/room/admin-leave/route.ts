@@ -1,41 +1,56 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getSessionOrNull } from "@/lib/auth-helpers";
-import { removeParticipant } from "@/lib/realtimekit";
+import { getOrRestoreRoom } from "@/lib/api-helpers";
+import { requireGroupTeacher } from "@/lib/auth-helpers";
+import { kickAllActiveSessionParticipants } from "@/lib/realtimekit";
 import { rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
-	const session = await getSessionOrNull();
-	if (!session) {
-		return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-	}
+  const { meetingId } = await request.json();
+  console.log(`[admin-leave] Request meetingId=${meetingId}`);
+  if (!meetingId) {
+    return NextResponse.json({ error: "Meeting ID required" }, { status: 400 });
+  }
 
-	const { meetingId } = await request.json();
-	if (!meetingId) {
-		return NextResponse.json({ error: "Meeting ID required" }, { status: 400 });
-	}
+  const roomOrError = await getOrRestoreRoom(meetingId);
+  if (roomOrError instanceof NextResponse) return roomOrError;
 
-	const room = rooms.get(meetingId);
-	if (!room) {
-		return NextResponse.json({ error: "Room not found" }, { status: 404 });
-	}
+  const currentRoom = rooms.get(meetingId) ?? roomOrError;
 
-	if (room.creatorUserId !== session.user.id) {
-		return NextResponse.json({ error: "Not the room creator" }, { status: 403 });
-	}
+  // Any group teacher can end the meeting
+  const { error } = await requireGroupTeacher(currentRoom.groupId);
+  if (error) return error;
 
-	// Kick all participants via RealtimeKit
-	if (room.rtkMeetingId) {
-		for (const [, participantId] of room.participantIds) {
-			await removeParticipant(room.rtkMeetingId, participantId).catch(() => {});
-		}
-	}
+  // Cancel any pending grace timer
+  if (currentRoom.allTeachersLeftTimer) {
+    clearTimeout(currentRoom.allTeachersLeftTimer);
+    currentRoom.allTeachersLeftTimer = undefined;
+  }
 
-	// Remove from in-memory store
-	rooms.delete(meetingId);
+  // Kick all participants via RealtimeKit
+  if (currentRoom.rtkMeetingId) {
+    console.log(
+      `[admin-leave] Kicking all active-session participants for rtkMeetingId=${currentRoom.rtkMeetingId}`,
+    );
+    try {
+      await kickAllActiveSessionParticipants(currentRoom.rtkMeetingId);
+      console.log(`[admin-leave] kick-all succeeded for rtkMeetingId=${currentRoom.rtkMeetingId}`);
+    } catch (err) {
+      console.error("[admin-leave] kick-all failed:", err);
+      return NextResponse.json(
+        {
+          error: err instanceof Error ? err.message : "Failed to end meeting",
+        },
+        { status: 500 },
+      );
+    }
+  }
 
-	console.log(
-		`[admin-leave] Creator left meeting ${meetingId}, rtkMeetingId=${room.rtkMeetingId}, room deleted`,
-	);
+  // Remove from in-memory store
+  rooms.delete(meetingId);
 
-	return NextResponse.json({ success: true });
+  console.log(
+    `[admin-leave] Meeting ${meetingId} ended by teacher, rtkMeetingId=${currentRoom.rtkMeetingId}`,
+  );
+
+  return NextResponse.json({ success: true });
 }

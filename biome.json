@@ -1,32 +1,33 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.0/schema.json",
-	"assist": {
-		"enabled": true
-	},
-	"formatter": {
-		"enabled": true,
-		"indentStyle": "tab",
-		"lineWidth": 100
-	},
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"recommended": true
-		}
-	},
-	"css": {
-		"parser": {
-			"cssModules": true,
-			"tailwindDirectives": true
-		}
-	},
-	"javascript": {
-		"formatter": {
-			"quoteStyle": "double",
-			"semicolons": "always"
-		}
-	},
-	"files": {
-		"includes": ["**", "!!**/node_modules", "!!**/.next", "!!**/public", "!!**/bun.lock"]
-	}
+  "$schema": "https://biomejs.dev/schemas/2.4.0/schema.json",
+  "assist": {
+    "enabled": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  },
+  "files": {
+    "includes": ["**", "!!**/node_modules", "!!**/.next", "!!**/public", "!!**/bun.lock"]
+  }
 }

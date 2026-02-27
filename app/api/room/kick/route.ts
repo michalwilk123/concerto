@@ -1,57 +1,69 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getRoomOrFail } from "@/lib/api-helpers";
+import { getOrRestoreRoom } from "@/lib/api-helpers";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { listParticipants, removeParticipant } from "@/lib/realtimekit";
+import {
+  kickActiveSessionParticipants,
+  listParticipants,
+} from "@/lib/realtimekit";
+import { rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
-	const body = await request.json();
-	const { meetingId, targetIdentity } = body;
+  const body = await request.json();
+  const { meetingId, targetIdentity } = body;
+  console.log(`[room/kick] Request meetingId=${meetingId}, targetIdentity=${targetIdentity}`);
 
-	const roomOrError = getRoomOrFail(meetingId);
-	if (roomOrError instanceof NextResponse) return roomOrError;
-	const room = roomOrError;
+  const roomOrError = await getOrRestoreRoom(meetingId);
+  if (roomOrError instanceof NextResponse) return roomOrError;
 
-	// Require group teacher to kick
-	const { error } = await requireGroupTeacher(room.groupId);
-	if (error) return error;
+  const currentRoom = rooms.get(meetingId) ?? roomOrError;
 
-	if (targetIdentity === room.creatorIdentity) {
-		return NextResponse.json({ error: "Cannot kick room creator" }, { status: 403 });
-	}
+  // Require group teacher to kick
+  const { error } = await requireGroupTeacher(currentRoom.groupId);
+  if (error) return error;
 
-	if (!room.rtkMeetingId) {
-		return NextResponse.json({ error: "No active RTK session" }, { status: 400 });
-	}
+  if (!currentRoom.rtkMeetingId) {
+    return NextResponse.json({ error: "No active RTK session" }, { status: 400 });
+  }
 
-	// Mark as kicked first so they can't rejoin even if the RTK call takes time
-	room.kickedParticipants.add(targetIdentity);
+  let participantEntry = currentRoom.participants.get(targetIdentity);
+  let participantId = participantEntry?.rtkId;
 
-	let participantId = room.participantIds.get(targetIdentity);
+  // Fallback: participant may have reconnected with a new RTK ID not tracked in our map
+  if (!participantId) {
+    try {
+      const rtkParticipants = await listParticipants(currentRoom.rtkMeetingId);
+      const match = rtkParticipants.find((p) => p.name === targetIdentity);
+      if (!match) {
+        // Already gone from the meeting — kick was effective
+        console.log(`Kick requested for ${targetIdentity} but not found in RTK, already removed`);
+        return NextResponse.json({ success: true });
+      }
+      participantId = match.id;
+    } catch (err) {
+      console.error("Failed to list RTK participants for kick fallback:", err);
+      return NextResponse.json({ error: "Participant not found" }, { status: 404 });
+    }
+  }
 
-	// Fallback: participant may have reconnected with a new RTK ID not tracked in our map
-	if (!participantId) {
-		try {
-			const rtkParticipants = await listParticipants(room.rtkMeetingId);
-			const match = rtkParticipants.find((p) => p.name === targetIdentity);
-			if (!match) {
-				// Already gone from the meeting — kick was effective
-				console.log(`Kick requested for ${targetIdentity} but not found in RTK, already removed`);
-				return NextResponse.json({ success: true });
-			}
-			participantId = match.id;
-		} catch (err) {
-			console.error("Failed to list RTK participants for kick fallback:", err);
-			return NextResponse.json({ error: "Participant not found" }, { status: 404 });
-		}
-	}
-
-	try {
-		await removeParticipant(room.rtkMeetingId, participantId);
-		room.participantIds.delete(targetIdentity);
-		console.log(`Kicked ${targetIdentity} from meeting ${meetingId}`);
-		return NextResponse.json({ success: true });
-	} catch (error) {
-		console.error("Failed to kick participant:", error);
-		return NextResponse.json({ error: "Failed to kick participant" }, { status: 500 });
-	}
+  try {
+    console.log(
+      `[room/kick] Kicking via active-session: rtkMeetingId=${currentRoom.rtkMeetingId}, participantId=${participantId}`,
+    );
+    await kickActiveSessionParticipants({
+      meetingId: currentRoom.rtkMeetingId,
+      participantIds: [participantId],
+    });
+    currentRoom.participants.delete(targetIdentity);
+    currentRoom.connectedTeachers.delete(targetIdentity);
+    console.log(`Kicked ${targetIdentity} from meeting ${meetingId}`);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Failed to kick participant:", err);
+    return NextResponse.json(
+      {
+        error: err instanceof Error ? err.message : "Failed to kick participant",
+      },
+      { status: 500 },
+    );
+  }
 }
