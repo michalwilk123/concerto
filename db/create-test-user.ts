@@ -21,7 +21,7 @@ if (!res.user) {
 }
 
 // Promote to teacher
-await db.update(user).set({ role: "teacher" }).where(eq(user.email, TEST_EMAIL));
+await db.update(user).set({ role: "teacher", isActive: true }).where(eq(user.email, TEST_EMAIL));
 
 console.log(`Created test teacher user:`);
 console.log(`  Email:    ${TEST_EMAIL}`);

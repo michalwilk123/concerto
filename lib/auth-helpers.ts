@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { groupMember } from "@/db/schema";
 import { auth } from "./auth";
 
+const INACTIVE_ACCOUNT_MESSAGE = "Account is awaiting activation";
+
 export async function getSessionOrNull() {
   try {
     const h = await headers();
@@ -25,6 +27,13 @@ export async function requireAuth() {
     };
   }
 
+  if (!session.user.isActive) {
+    return {
+      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
+      session: null,
+    };
+  }
+
   return { error: null, session };
 }
 
@@ -34,6 +43,13 @@ export async function requireAdmin() {
   if (!session) {
     return {
       error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
+      session: null,
+    };
+  }
+
+  if (!session.user.isActive) {
+    return {
+      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
       session: null,
     };
   }
@@ -54,6 +70,13 @@ export async function requireGroupTeacher(groupId: string) {
   if (!session) {
     return {
       error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
+      session: null,
+    };
+  }
+
+  if (!session.user.isActive) {
+    return {
+      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
       session: null,
     };
   }
@@ -85,6 +108,13 @@ export async function requireGroupMember(groupId: string) {
   if (!session) {
     return {
       error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
+      session: null,
+    };
+  }
+
+  if (!session.user.isActive) {
+    return {
+      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
       session: null,
     };
   }

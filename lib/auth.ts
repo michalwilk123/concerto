@@ -11,7 +11,7 @@ export const auth = betterAuth({
   trustedOrigins: [...(process.env.TRUSTED_ORIGINS?.split(",").filter(Boolean) ?? [])],
   user: {
     additionalFields: {
-      isActive: { type: "boolean", defaultValue: true, input: false },
+      isActive: { type: "boolean", defaultValue: false, input: false },
     },
   },
   plugins: [admin({ defaultRole: "user" }), nextCookies()],

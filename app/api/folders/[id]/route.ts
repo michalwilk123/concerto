@@ -4,14 +4,12 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { folder } from "@/db/schema";
-import { getSessionOrNull, requireAdmin } from "@/lib/auth-helpers";
+import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSessionOrNull();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const { error } = await requireAuth();
+  if (error) return error;
 
   const [folderDoc] = await db.select().from(folder).where(eq(folder.id, id)).limit(1);
   if (!folderDoc) {

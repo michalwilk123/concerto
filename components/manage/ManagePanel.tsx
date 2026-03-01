@@ -89,8 +89,9 @@ export function ManagePanel() {
   }, [fetchUsers, isAdmin]);
 
   const openEdit = (u: AdminUser) => {
+    const currentRole = u.role === "teacher" || u.role === "student" ? u.role : "student";
     setEditUser(u);
-    setEditForm({ role: u.role || "student", isActive: u.isActive, banned: u.banned || false });
+    setEditForm({ role: currentRole });
   };
 
   const handleSaveEdit = async () => {
@@ -420,48 +421,12 @@ export function ManagePanel() {
                   onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
                   style={{
                     width: "100%",
-                    marginBottom: 20,
-                  }}
-                >
-                  <option value="admin">{t("manage.roleAdmin")}</option>
-                  <option value="teacher">{t("manage.roleTeacher")}</option>
-                  <option value="student">{t("manage.roleStudent")}</option>
-                </Select>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 14,
-                  }}
-                >
-                  <Typography as="span" variant="bodySm" tone="secondary">
-                    {t("manage.activeLabel")}
-                  </Typography>
-                  <ToggleSwitch
-                    checked={editForm.isActive ?? true}
-                    onChange={(v) => setEditForm((f) => ({ ...f, isActive: v }))}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
                     marginBottom: 24,
                   }}
                 >
-                  <Typography as="span" variant="bodySm" tone="secondary">
-                    {t("manage.bannedLabel")}
-                  </Typography>
-                  <ToggleSwitch
-                    checked={editForm.banned ?? false}
-                    onChange={(v) => setEditForm((f) => ({ ...f, banned: v }))}
-                    color="#ef4444"
-                  />
-                </div>
+                  <option value="teacher">{t("manage.roleTeacher")}</option>
+                  <option value="student">{t("manage.roleStudent")}</option>
+                </Select>
 
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <InlineButton variant="secondary" size="sm" onClick={() => setEditUser(null)}>
@@ -473,7 +438,7 @@ export function ManagePanel() {
                     onClick={handleSaveEdit}
                     loading={editSaving}
                   >
-                    {t("manage.saveChanges")}
+                    {t("manage.confirm")}
                   </InlineButton>
                 </div>
               </div>
@@ -528,46 +493,5 @@ export function ManagePanel() {
         </section>
       )}
     </div>
-  );
-}
-
-function ToggleSwitch({
-  checked,
-  onChange,
-  color = "#22c55e",
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  color?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      style={{
-        width: 40,
-        height: 22,
-        borderRadius: 11,
-        border: "none",
-        padding: 2,
-        cursor: "pointer",
-        background: checked ? color : "var(--bg-tertiary)",
-        transition: "background 0.2s",
-        display: "flex",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          background: "white",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-          transform: checked ? "translateX(18px)" : "translateX(0)",
-          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
-      />
-    </button>
   );
 }

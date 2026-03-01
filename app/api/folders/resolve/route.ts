@@ -1,17 +1,15 @@
 import { sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { getSessionOrNull } from "@/lib/auth-helpers";
+import { requireAuth } from "@/lib/auth-helpers";
 
 /**
  * Resolve a path of folder names (e.g. ["meetings", "2024-01-15"]) to a folder ID + ancestors.
  * Each name is unique within its parent directory.
  */
 export async function POST(req: NextRequest) {
-  const session = await getSessionOrNull();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const { error } = await requireAuth();
+  if (error) return error;
 
   const body = await req.json();
   const { groupId, path } = body as { groupId: string; path: string[] };

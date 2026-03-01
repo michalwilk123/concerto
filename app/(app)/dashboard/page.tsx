@@ -12,11 +12,16 @@ export default function DashboardRedirectPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const { t } = useTranslation();
+  const isUserActive = (session?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
 
   useEffect(() => {
     if (isPending) return;
     if (!session) {
       router.push("/login");
+      return;
+    }
+    if (!isUserActive) {
+      router.push("/waiting-approval");
       return;
     }
 
@@ -28,7 +33,7 @@ export default function DashboardRedirectPage() {
         }
       })
       .catch(() => {});
-  }, [isPending, session, router]);
+  }, [isPending, session, router, isUserActive]);
 
   return (
     <LoadingIndicator

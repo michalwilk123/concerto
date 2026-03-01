@@ -51,6 +51,9 @@ export async function GET(req: NextRequest) {
   let userId: string | null = null;
 
   if (currentSession) {
+    if (!currentSession.user.isActive) {
+      return NextResponse.json({ error: "Account is awaiting activation" }, { status: 403 });
+    }
     if (mtg.isPublic) {
       userId = currentSession.user.id;
     } else {

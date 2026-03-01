@@ -36,12 +36,12 @@ export function DashboardSidebar({
   }, [fetchStorage, groupId]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!session) return;
     groupsApi
       .list()
       .then(setGroups)
       .catch(() => {});
-  }, [isAdmin]);
+  }, [session]);
 
   const activeItem = activeTab || "files";
 
@@ -68,12 +68,13 @@ export function DashboardSidebar({
       }}
     >
       <nav style={{ flex: 1, padding: "0 8px" }}>
-        {isAdmin && groups.length > 1 && (
+        {groups.length > 1 && (
           <div style={{ padding: "0 4px", marginBottom: 12 }}>
             <Select
               value={groupId}
               onChange={(e) => router.push(buildDashboardUrl(e.target.value))}
               variant="compact"
+              style={{ width: "100%" }}
             >
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>

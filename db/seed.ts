@@ -12,7 +12,7 @@ if (!email) {
 // Promote user to admin
 const [updated] = await db
   .update(user)
-  .set({ role: "admin" })
+  .set({ role: "admin", isActive: true })
   .where(eq(user.email, email))
   .returning({ id: user.id, email: user.email, role: user.role });
 

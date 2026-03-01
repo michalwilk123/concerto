@@ -36,14 +36,19 @@ export default function DashboardGroupPage() {
   const selectedMeetingId = searchParams.get("meetingId") || null;
 
   const user = session?.user;
+  const isUserActive = (session?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
   const isPrivileged = user?.role === "teacher" || user?.role === "admin";
 
   // Redirect unauthenticated users
   useEffect(() => {
     if (!isPending && !session) {
       router.push("/login");
+      return;
     }
-  }, [isPending, session, router]);
+    if (!isPending && session && !isUserActive) {
+      router.push("/waiting-approval");
+    }
+  }, [isPending, session, router, isUserActive]);
 
   // Sync groupId to store
   useEffect(() => {
@@ -126,17 +131,15 @@ export default function DashboardGroupPage() {
     );
   }
 
-  if (!session) return null;
+  if (!session || !isUserActive) return null;
 
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden", background: "var(--bg-primary)" }}>
-      {isPrivileged && (
-        <DashboardSidebar
-          meetingsFolderName={meetingsFolderName}
-          groupId={groupId}
-          activeTab={activeTab}
-        />
-      )}
+      <DashboardSidebar
+        meetingsFolderName={meetingsFolderName}
+        groupId={groupId}
+        activeTab={activeTab}
+      />
       <main style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {activeTab === "translations" ? (
           <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>

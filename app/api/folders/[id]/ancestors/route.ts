@@ -1,14 +1,12 @@
 import { sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { getSessionOrNull } from "@/lib/auth-helpers";
+import { requireAuth } from "@/lib/auth-helpers";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSessionOrNull();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const { error } = await requireAuth();
+  if (error) return error;
 
   const ancestors = await db.execute(sql`
 		WITH RECURSIVE chain AS (

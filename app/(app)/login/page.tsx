@@ -1,16 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
-import { signIn } from "@/lib/auth-client";
+import { authClient, signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const showPendingMessage = searchParams.get("pendingActivation") === "1";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -24,9 +26,21 @@ export default function LoginPage() {
     });
 
     if (result.error) {
-      setError(result.error.message || t("auth.login.signInFailed"));
+      const message = result.error.message || t("auth.login.signInFailed");
+      setError(
+        message.toLowerCase().includes("awaiting activation")
+          ? t("auth.login.waitingActivation")
+          : message,
+      );
       setLoading(false);
     } else {
+      const session = await authClient.getSession();
+      const isUserActive =
+        (session.data?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
+      if (session.data?.user && !isUserActive) {
+        router.push("/waiting-approval");
+        return;
+      }
       router.push("/dashboard");
     }
   };
@@ -55,6 +69,18 @@ export default function LoginPage() {
         <h2 style={{ margin: "0 0 var(--space-xl)", fontSize: "1.25rem" }}>
           {t("auth.login.title")}
         </h2>
+
+        {showPendingMessage && (
+          <p
+            style={{
+              color: "var(--text-secondary)",
+              fontSize: "0.85rem",
+              margin: "0 0 var(--space-lg)",
+            }}
+          >
+            {t("auth.login.waitingActivation")}
+          </p>
+        )}
 
         {error && (
           <p

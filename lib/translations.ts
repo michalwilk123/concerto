@@ -9,6 +9,7 @@ export const defaultTranslations: Record<string, string> = {
   "auth.login.submit": "Sign In",
   "auth.login.noAccount": "Don't have an account?",
   "auth.login.register": "Register",
+  "auth.login.waitingActivation": "Your account is waiting for admin approval.",
   "auth.register.title": "Create Account",
   "auth.register.passwordsDoNotMatch": "Passwords do not match",
   "auth.register.registrationFailed": "Registration failed",
@@ -22,6 +23,9 @@ export const defaultTranslations: Record<string, string> = {
   "auth.register.submit": "Create Account",
   "auth.register.alreadyHaveAccount": "Already have an account?",
   "auth.register.signIn": "Sign In",
+  "auth.waitingApproval.title": "Waiting for approval",
+  "auth.waitingApproval.message":
+    "Your account has been created and is pending activation. Please wait for an administrator to approve access.",
 
   // Lobby
   "lobby.kickedWarning": "You were kicked from the room",
@@ -233,6 +237,7 @@ export const defaultTranslations: Record<string, string> = {
   "manage.activeLabel": "Active",
   "manage.bannedLabel": "Banned",
   "manage.cancel": "Cancel",
+  "manage.confirm": "Confirm",
   "manage.saveChanges": "Save Changes",
   "manage.deleteUserTitle": "Delete User",
   "manage.deleteUserMessage": "Are you sure you want to delete {name}?",

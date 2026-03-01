@@ -32,9 +32,10 @@ export default function RegisterPage() {
     if (result.error) {
       setError(result.error.message || t("auth.register.registrationFailed"));
       setLoading(false);
-    } else {
-      router.push("/dashboard");
+      return;
     }
+
+    router.push("/waiting-approval");
   };
 
   return (
