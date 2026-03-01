@@ -19,8 +19,9 @@ services:
       - HOSTNAME=0.0.0.0
       - RTK_ORG_ID=${RTK_ORG_ID}
       - RTK_API_KEY=${RTK_API_KEY}
-      # RTK_ACCOUNT_ID, RTK_APP_ID, CLOUDFLARE_API_TOKEN are intentionally NOT set here
-      # so that Next.js can read them from .env.local (mounted via volumes: - .:/app)
+      - RTK_ACCOUNT_ID=${RTK_ACCOUNT_ID}
+      - RTK_APP_ID=${RTK_APP_ID}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
       - TRUSTED_ORIGINS=${TRUSTED_ORIGINS}
     depends_on:
       postgres:
