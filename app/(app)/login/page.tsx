@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useState, Suspense } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { authClient, signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
@@ -153,5 +153,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

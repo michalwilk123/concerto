@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, Users } from "lucide-react";
+import { Pencil, Plus, Trash2, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -39,6 +39,10 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
 
   const [deleteGroup, setDeleteGroup] = useState<Group | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [editGroup, setEditGroup] = useState<Group | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
 
   const [managingGroup, setManagingGroup] = useState<Group | null>(null);
 
@@ -98,6 +102,21 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
     }
   };
 
+  const handleRename = async () => {
+    if (!editGroup || !editName.trim()) return;
+    setEditLoading(true);
+    try {
+      await groupsApi.update(editGroup.id, { name: editName.trim() });
+      setEditGroup(null);
+      setEditName("");
+      fetchGroups();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("groups.updateFailed"));
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   if (managingGroup) {
     return (
       <GroupMemberManager
@@ -137,7 +156,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
           t("groups.tableCreated"),
           t("groups.tableActions"),
         ]}
-        columns="2fr 1fr 1fr 156px"
+        columns="2fr 1fr 1fr 190px"
         isLoading={loading}
         hasRows={groups.length > 0}
         emptyState={
@@ -150,7 +169,7 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
         }
       >
         {groups.map((g, i) => (
-          <EntityGridRow key={g.id} columns="2fr 1fr 1fr 156px" isLast={i === groups.length - 1}>
+          <EntityGridRow key={g.id} columns="2fr 1fr 1fr 190px" isLast={i === groups.length - 1}>
             <Typography variant="bodySm" weight={500}>
               {g.name}
             </Typography>
@@ -179,15 +198,29 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
                 {t("groups.manage")}
               </InlineButton>
               {isAdmin && (
-                <InlineButton
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => setDeleteGroup(g)}
-                  title={t("groups.deleteGroupAction")}
-                  style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-                >
-                  <Trash2 size={14} />
-                </InlineButton>
+                <>
+                  <InlineButton
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => {
+                      setEditGroup(g);
+                      setEditName(g.name);
+                    }}
+                    title={t("groups.renameGroupAction")}
+                    style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
+                  >
+                    <Pencil size={14} />
+                  </InlineButton>
+                  <InlineButton
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setDeleteGroup(g)}
+                    title={t("groups.deleteGroupAction")}
+                    style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
+                  >
+                    <Trash2 size={14} />
+                  </InlineButton>
+                </>
               )}
             </div>
           </EntityGridRow>
@@ -239,6 +272,69 @@ export function GroupsManagement({ isAdmin }: GroupsManagementProps) {
             </InlineButton>
           </div>
         </div>
+      </Modal>
+
+      {/* Rename Modal */}
+      <Modal
+        open={!!editGroup}
+        onClose={() => {
+          setEditGroup(null);
+          setEditName("");
+        }}
+        maxWidth={400}
+      >
+        {editGroup && (
+          <div style={{ padding: 24 }}>
+            <Typography as="h2" variant="titleMd" style={{ margin: "0 0 20px 0" }}>
+              {t("groups.renameTitle")}
+            </Typography>
+            <label
+              htmlFor="edit-group-name"
+              style={{
+                display: "block",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+                marginBottom: 6,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+              }}
+            >
+              <Typography as="span" variant="label" tone="secondary">
+                {t("groups.groupNameLabel")}
+              </Typography>
+            </label>
+            <TextInput
+              id="edit-group-name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder={t("groups.groupNamePlaceholder")}
+              style={{ width: "100%", marginBottom: 20, fontSize: "0.84rem" }}
+              onKeyDown={(e) => e.key === "Enter" && handleRename()}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <InlineButton
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setEditGroup(null);
+                  setEditName("");
+                }}
+              >
+                {t("groups.cancel")}
+              </InlineButton>
+              <InlineButton
+                variant="primary"
+                size="sm"
+                onClick={handleRename}
+                loading={editLoading}
+                disabled={!editName.trim() || editName.trim() === editGroup.name}
+              >
+                {t("groups.rename")}
+              </InlineButton>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Delete Modal */}
