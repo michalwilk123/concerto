@@ -17,7 +17,7 @@ interface FileManagerState {
   setCurrentFolderId: (id: string | null) => void;
   setPreviewFile: (file: FileWithUrl | null) => void;
   fetchContents: (folderId?: string | null) => Promise<void>;
-  fetchStorage: () => Promise<void>;
+  fetchStorage: (groupId?: string) => Promise<void>;
   uploadFile: (file: File, folderId?: string | null) => Promise<void>;
   deleteFile: (id: string) => Promise<void>;
   createFolder: (name: string, parentId?: string | null) => Promise<void>;
@@ -69,8 +69,8 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     }
   },
 
-  fetchStorage: async () => {
-    const groupId = get().currentGroupId;
+  fetchStorage: async (explicitGroupId?: string) => {
+    const groupId = explicitGroupId ?? get().currentGroupId;
     if (!groupId) return;
 
     try {
@@ -100,8 +100,9 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     const groupId = get().currentGroupId;
     if (!groupId) return;
 
-    await foldersApi.create({ name, groupId, parentId: parentId ?? get().currentFolderId });
-    await get().fetchContents(get().currentFolderId);
+    const effectiveParentId = parentId !== undefined ? parentId : get().currentFolderId;
+    await foldersApi.create({ name, groupId, parentId: effectiveParentId });
+    await get().fetchContents(effectiveParentId);
   },
 
   deleteFolder: async (id) => {

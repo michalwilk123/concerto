@@ -1,18 +1,9 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { file } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { ensureMeetingsFolder, sanitizeFileName } from "@/lib/file-helpers";
 
-const SEED_FILES = [
-  { name: "Lenna.png", mimeType: "image/png" },
-  { name: "wilhelm.wav", mimeType: "audio/wav" },
-  { name: "zen_of_python.txt", mimeType: "text/plain" },
-];
+const SEED_FILES = ["Lenna.png", "wilhelm.wav", "zen_of_python.txt"];
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -22,51 +13,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "groupId is required" }, { status: 400 });
   }
 
-  const { error, session } = await requireGroupTeacher(groupId);
+  const { error } = await requireGroupTeacher(groupId);
   if (error) return error;
 
-  const userId = session?.user.id;
+  const seedDir = path.join(process.cwd(), "uploads", groupId);
 
-  // Ensure meetings folder exists (shared helper)
-  const meetingsFolderId = await ensureMeetingsFolder(groupId);
-
-  // Check if seed files already exist for this group
-  const existingFiles = await db.select().from(file).where(eq(file.groupId, groupId)).limit(1);
-
-  if (existingFiles.length > 0) {
-    return NextResponse.json({ message: "Already seeded", meetingsFolderId });
+  // Check if already seeded by looking for first seed file on disk
+  try {
+    await stat(path.join(seedDir, SEED_FILES[0]));
+    return NextResponse.json({ message: "Already seeded" });
+  } catch {
+    // Not found, proceed with seeding
   }
 
-  // Copy seed files
-  const uploadDir = path.join(process.cwd(), "uploads", groupId);
-  await mkdir(uploadDir, { recursive: true });
+  await mkdir(seedDir, { recursive: true });
 
-  for (const seedFile of SEED_FILES) {
-    const seedPath = path.join(process.cwd(), "public", "seed-files", seedFile.name);
+  for (const filename of SEED_FILES) {
+    const srcPath = path.join(process.cwd(), "public", "seed-files", filename);
+    const destPath = path.join(seedDir, filename);
     try {
-      const buffer = await readFile(seedPath);
-      const fileId = nanoid();
-      const safeName = sanitizeFileName(seedFile.name);
-      const storagePath = `${groupId}/${fileId}-${safeName}`;
-      const fullPath = path.join(process.cwd(), "uploads", storagePath);
-
-      await writeFile(fullPath, buffer);
-
-      const fileStats = await stat(seedPath);
-      await db.insert(file).values({
-        id: fileId,
-        name: seedFile.name,
-        mimeType: seedFile.mimeType,
-        size: fileStats.size,
-        storagePath,
-        groupId,
-        uploadedById: userId,
-        folderId: null,
-      });
+      const buffer = await readFile(srcPath);
+      await writeFile(destPath, buffer);
     } catch (err) {
-      console.error(`Failed to seed ${seedFile.name}:`, err);
+      console.error(`Failed to seed ${filename}:`, err);
     }
   }
 
-  return NextResponse.json({ message: "Seeded successfully", meetingsFolderId });
+  return NextResponse.json({ message: "Seeded successfully" });
 }

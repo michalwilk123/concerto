@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { useToast } from "@/components/Toast";
-import { useSession } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function LobbyPage() {
@@ -19,8 +18,8 @@ function LobbyContent() {
   const searchParams = useSearchParams();
   const toast = useToast();
   const { t } = useTranslation();
-  const { data: session } = useSession();
   const joinKey = searchParams.get("key")?.toUpperCase() || "";
+  const kicked = searchParams.get("kicked") === "true";
 
   useEffect(() => {
     if (joinKey) {
@@ -29,11 +28,11 @@ function LobbyContent() {
   }, [joinKey, router]);
 
   useEffect(() => {
-    if (searchParams.get("kicked") === "true") {
+    if (kicked) {
       toast.warning(t("lobby.kickedWarning"));
       router.replace("/lobby");
     }
-  }, [router.replace, searchParams.get, t, toast.warning]);
+  }, [kicked, router, t, toast]);
 
   return (
     <div

@@ -32,8 +32,8 @@ export function DashboardSidebar({
   const { t } = useTranslation();
 
   useEffect(() => {
-    fetchStorage();
-  }, [fetchStorage]);
+    fetchStorage(groupId);
+  }, [fetchStorage, groupId]);
 
   useEffect(() => {
     if (!isAdmin) return;

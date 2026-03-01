@@ -3,7 +3,6 @@ import type { Role } from "@/types/room";
 export interface Room {
   groupId: string;
   rtkMeetingId: string | null;
-  meetingFolderId?: string;
   // participantName -> { rtkId, customParticipantId, role }
   participants: Map<string, { rtkId: string; customParticipantId: string; role: Role }>;
   // teacher names currently connected (confirmed by webhook)
@@ -15,7 +14,7 @@ export interface Room {
   // approved but not yet picked up by polling: name -> join data
   approvedTokens: Map<
     string,
-    { token: string; role: Role; groupId: string; meetingFolderId?: string }
+    { token: string; role: Role; groupId: string }
   >;
   // rejected participants (for current session)
   rejectedParticipants: Set<string>;

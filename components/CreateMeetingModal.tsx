@@ -35,17 +35,29 @@ export function CreateMeetingModal({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
+
     setError(null);
     setFetchingGroups(true);
+
     groupsApi
       .list()
       .then((g) => {
+        if (cancelled) return;
         setGroups(g);
-        if (g.length > 0 && !groupId) setGroupId(g[0].id);
+        setGroupId((prev) => prev || g[0]?.id || "");
       })
-      .catch(() => setError(t("createMeeting.loadGroupsFailed")))
-      .finally(() => setFetchingGroups(false));
-  }, [open, groupId, t]);
+      .catch(() => {
+        if (!cancelled) setError(t("createMeeting.loadGroupsFailed"));
+      })
+      .finally(() => {
+        if (!cancelled) setFetchingGroups(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, t]);
 
   useEffect(() => {
     if (open) {
@@ -60,7 +72,12 @@ export function CreateMeetingModal({
     setLoading(true);
     setError(null);
     try {
-      const data = await roomApi.create({ displayName: meetingName.trim(), groupId, isPublic, requiresApproval });
+      const data = await roomApi.create({
+        displayName: meetingName.trim(),
+        groupId,
+        isPublic,
+        requiresApproval,
+      });
       onCreated(data.meetingId);
       onClose();
     } catch (e) {

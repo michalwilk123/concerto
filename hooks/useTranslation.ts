@@ -47,9 +47,6 @@ export function useTranslation() {
     };
   }, []);
 
-  // Trigger fetch on first render too
-  ensureFetched();
-
   function t(key: string, params?: Record<string, string>): string {
     const overrides = cachedOverrides ?? {};
     let value = overrides[key] ?? defaultTranslations[key] ?? key;

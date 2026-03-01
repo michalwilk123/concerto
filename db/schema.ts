@@ -1,4 +1,4 @@
-import { bigint, boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -94,27 +94,6 @@ export const folder = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("folder_group_parent_idx").on(table.groupId, table.parentId)],
-);
-
-export const file = pgTable(
-  "file",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    mimeType: text("mime_type").notNull(),
-    size: bigint("size", { mode: "number" }).notNull(),
-    storagePath: text("storage_path").notNull(),
-    groupId: text("group_id")
-      .notNull()
-      .references(() => group.id, { onDelete: "cascade" }),
-    uploadedById: text("uploaded_by_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    isEditable: boolean("is_editable").notNull().default(false),
-    folderId: text("folder_id").references(() => folder.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (table) => [index("file_group_folder_idx").on(table.groupId, table.folderId)],
 );
 
 export const meeting = pgTable(

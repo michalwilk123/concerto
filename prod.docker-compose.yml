@@ -19,6 +19,8 @@ services:
       - HOSTNAME=0.0.0.0
       - RTK_ORG_ID=${RTK_ORG_ID}
       - RTK_API_KEY=${RTK_API_KEY}
+      # RTK_ACCOUNT_ID, RTK_APP_ID, CLOUDFLARE_API_TOKEN are intentionally NOT set here
+      # so that Next.js can read them from .env.local (mounted via volumes: - .:/app)
       - TRUSTED_ORIGINS=${TRUSTED_ORIGINS}
     depends_on:
       postgres:
@@ -27,7 +29,11 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "bun -e 'await fetch(\"http://localhost:3000/api/health\").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))'"]
+      test:
+        [
+          "CMD-SHELL",
+          'bun -e ''await fetch("http://localhost:3000/api/health").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))''',
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

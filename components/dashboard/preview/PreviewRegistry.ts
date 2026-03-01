@@ -1,5 +1,6 @@
 import { AudioPreviewer } from "./AudioPreviewer";
 import { ImagePreviewer } from "./ImagePreviewer";
+import { PdfPreviewer } from "./PdfPreviewer";
 import { TextPreviewer } from "./TextPreviewer";
 import type { PreviewerComponent } from "./types";
 import { UnsupportedPreviewer } from "./UnsupportedPreviewer";
@@ -15,6 +16,7 @@ const registry: PreviewerRegistryEntry[] = [
   { pattern: /^audio\//, component: AudioPreviewer },
   { pattern: /^video\//, component: VideoPreviewer },
   { pattern: /^text\//, component: TextPreviewer },
+  { pattern: "application/pdf", component: PdfPreviewer },
   { pattern: "application/json", component: TextPreviewer },
   { pattern: "application/javascript", component: TextPreviewer },
   { pattern: "application/typescript", component: TextPreviewer },

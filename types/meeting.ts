@@ -4,5 +4,6 @@ export interface Meeting {
   groupId: string;
   isPublic: boolean;
   requiresApproval: boolean;
+  folderId: string | null;
   createdAt: string;
 }

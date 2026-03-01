@@ -6,6 +6,7 @@ import { createRealtimeKitParticipant, determineRole, getOrRestoreRoom } from "@
 import { requireAuth, requireGroupMember } from "@/lib/auth-helpers";
 import { createMeeting } from "@/lib/realtimekit";
 import { rooms, rtkCreationLocks } from "@/lib/room-store";
+import { meetingRoomService } from "@/lib/services/meeting-room";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -85,46 +86,39 @@ export async function POST(request: NextRequest) {
   // Derive role from group membership
   const role = await determineRole(currentRoom.groupId, session.user.id, session.user.role);
 
-  // Host-required gate: students can't join without a teacher present
-  if (role !== "teacher" && currentRoom.connectedTeachers.size === 0) {
-    console.log(`[room/join] ${participantName} waiting for host in meeting ${meetingId}`);
-    return NextResponse.json({ status: "waiting_for_host" });
-  }
-
-  // Approval gate: if meeting requires approval, put non-teachers in waiting room
-  if (role !== "teacher" && meetingRow?.requiresApproval) {
-    // Don't add duplicates
-    if (!currentRoom.waitingRoom.has(participantName)) {
-      currentRoom.waitingRoom.set(participantName, {
-        participantName,
-        joinedAt: Date.now(),
-        userId: session.user.id,
-      });
-      console.log(`[room/join] ${participantName} added to waiting room for meeting ${meetingId}`);
-    }
-    return NextResponse.json({ status: "waiting_for_approval" });
-  }
-
-  console.log(
-    `[room/join] Adding participant ${participantName} to rtkMeetingId=${currentRoom.rtkMeetingId} (meetingId=${meetingId})`,
-  );
-
   try {
-    const { token } = await createRealtimeKitParticipant({
+    const joinResult = await meetingRoomService.joinMeeting({
       room: currentRoom,
-      rtkMeetingId: currentRoom.rtkMeetingId!,
       participantName,
       role,
+      requiresApproval: meetingRow?.requiresApproval === true,
+      userId: session.user.id,
+      createParticipant: async () => {
+        console.log(
+          `[room/join] Adding participant ${participantName} to rtkMeetingId=${currentRoom.rtkMeetingId} (meetingId=${meetingId})`,
+        );
+        const { token } = await createRealtimeKitParticipant({
+          room: currentRoom,
+          rtkMeetingId: currentRoom.rtkMeetingId!,
+          participantName,
+          role,
+        });
+        return { token };
+      },
     });
+
+    if (joinResult.status === "waiting_for_host" || joinResult.status === "waiting_for_approval") {
+      console.log(`[room/join] ${participantName} status=${joinResult.status} in meeting ${meetingId}`);
+      return NextResponse.json({ status: joinResult.status });
+    }
 
     console.log(`Participant ${participantName} joined meeting: ${meetingId} as ${role}`);
 
     return NextResponse.json({
       status: "joined",
-      token,
+      token: joinResult.token,
       role,
       groupId: currentRoom.groupId,
-      meetingFolderId: currentRoom.meetingFolderId,
     });
   } catch (err) {
     console.error("Failed to join meeting:", err);

@@ -35,13 +35,9 @@ export async function POST(request: NextRequest) {
       await kickAllActiveSessionParticipants(currentRoom.rtkMeetingId);
       console.log(`[admin-leave] kick-all succeeded for rtkMeetingId=${currentRoom.rtkMeetingId}`);
     } catch (err) {
-      console.error("[admin-leave] kick-all failed:", err);
-      return NextResponse.json(
-        {
-          error: err instanceof Error ? err.message : "Failed to end meeting",
-        },
-        { status: 500 },
-      );
+      // Log but don't abort — still clean up server state below.
+      // Participants' WebRTC sessions will time out on their own.
+      console.error("[admin-leave] kick-all failed (participants may linger briefly):", err);
     }
   }
 

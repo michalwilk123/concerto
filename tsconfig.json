@@ -23,5 +23,5 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "frontend", "subs"]
+  "exclude": ["node_modules", "frontend", "subs", "realtimekit-web-examples"]
 }

@@ -11,18 +11,26 @@ export function TextPreviewer({ fileUrl }: PreviewerProps) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     setLoading(true);
     setError(false);
-    fetch(fileUrl)
+
+    fetch(fileUrl, { signal: controller.signal })
       .then((res) => res.text())
       .then((text) => {
         setContent(text);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setError(true);
         setLoading(false);
       });
+
+    return () => {
+      controller.abort();
+    };
   }, [fileUrl]);
 
   if (loading) return <p style={{ color: "var(--text-secondary)" }}>{t("preview.loading")}</p>;

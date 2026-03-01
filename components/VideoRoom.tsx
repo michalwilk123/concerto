@@ -8,16 +8,14 @@ import {
 } from "@cloudflare/realtimekit-react";
 import {
   RtkCameraToggle,
-  RtkDialogManager,
+  RtkDialog,
   RtkGrid,
   RtkMicToggle,
-  RtkNotifications,
   RtkParticipantsAudio,
   RtkRecordingIndicator,
   RtkRecordingToggle,
   RtkScreenShareToggle,
-  RtkSettingsToggle,
-  RtkUiProvider,
+  RtkSettings,
 } from "@cloudflare/realtimekit-react-ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -36,7 +34,6 @@ interface VideoRoomProps {
   participantName: string;
   role: Role;
   groupId: string;
-  meetingFolderId?: string;
   onLeave: () => void;
   onEndMeeting: () => Promise<void> | void;
   onRoomStateChange: (roomState: string) => void;
@@ -62,8 +59,6 @@ function RoomContent({
   meetingId,
   participantName,
   role,
-  groupId,
-  meetingFolderId,
   onLeave,
   onEndMeeting,
   onRoomStateChange,
@@ -82,6 +77,7 @@ function RoomContent({
   const { data: session } = useSession();
   const [roomDescription, setRoomDescription] = useState("");
   const [lastSavedRoomDescription, setLastSavedRoomDescription] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const toast = useToast();
   const hasNotifiedRef = useRef(false);
   const lastRecordingStateRef = useRef<string | null>(null);
@@ -144,8 +140,10 @@ function RoomContent({
 
   // Watch for kicked/ended/disconnected states
   useEffect(() => {
+    console.log("[RTK][RoomContent] roomState changed:", roomState);
     if (roomState && roomState !== "init" && roomState !== "joined" && !hasNotifiedRef.current) {
       hasNotifiedRef.current = true;
+      console.log("[RTK][RoomContent] notifying parent about roomState:", roomState);
       onRoomStateChange(roomState);
     }
   }, [roomState, onRoomStateChange]);
@@ -198,7 +196,6 @@ function RoomContent({
         onRoomDescriptionBlur={persistMeetingName}
         sidebarOpen={sidebarOpen}
         onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-        onLeave={onLeave}
         onCopyLink={copyRoomLink}
       />
 
@@ -252,12 +249,31 @@ function RoomContent({
           <RtkMicToggle meeting={meeting} size="md" />
           <RtkCameraToggle meeting={meeting} size="md" />
           <RtkScreenShareToggle meeting={meeting} size="md" />
-          <RtkSettingsToggle />
           <button
             type="button"
-            onClick={() => {
-              meeting.leaveRoom();
-              onLeave();
+            onClick={() => setSettingsOpen(true)}
+            style={{
+              background: "var(--bg-secondary)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-color)",
+              borderRadius: 8,
+              padding: "8px 16px",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+            }}
+          >
+            {t("video.settings")}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (isTeacherRole) {
+                await onEndMeeting();
+              } else {
+                meeting.leaveRoom();
+                onLeave();
+              }
             }}
             style={{
               background: "#e53935",
@@ -273,40 +289,18 @@ function RoomContent({
             {t("video.leave")}
           </button>
         </div>
-        {isTeacherRole && (
-          <button
-            type="button"
-            onClick={async () => {
-              meeting.leaveRoom();
-              await onEndMeeting();
-            }}
-            style={{
-              background: "#7f0000",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              padding: "8px 16px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-            }}
-          >
-            {t("video.endMeeting")}
-          </button>
-        )}
       </div>
 
       <Sidebar
         participants={sidebarParticipants}
-        groupId={groupId}
-        meetingFolderId={meetingFolderId}
         onClose={() => setSidebarOpen(false)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         isOpen={sidebarOpen}
       />
-      <RtkNotifications />
-      <RtkDialogManager />
+      <RtkDialog open={settingsOpen} onRtkDialogClose={() => setSettingsOpen(false)}>
+        <RtkSettings meeting={meeting} />
+      </RtkDialog>
       {hasAudioOutput ? <RtkParticipantsAudio meeting={meeting} /> : null}
     </div>
   );
@@ -323,28 +317,35 @@ export default function VideoRoom(props: VideoRoomProps) {
       let cancelled = false;
       const run = async () => {
         try {
+          console.log("[RTK][VideoRoom] initMeeting start", {
+            meetingId: props.meetingId,
+            tokenLength: props.token?.length ?? 0,
+            defaults: { audio: false, video: false },
+          });
           await initMeeting({
             authToken: props.token,
             defaults: {
-              audio: true,
-              video: true,
+              audio: false,
+              video: false,
             },
           });
+          console.log("[RTK][VideoRoom] initMeeting success (audio=false, video=false)");
         } catch (error) {
           if (cancelled) return;
           if (isMissingAudioOutputError(error)) {
             setHasAudioOutput(false);
-            toast.warning(t("video.noSpeakerWarning"));
+            console.log("[RTK][VideoRoom] no audio output device, retrying without audio output");
             await initMeeting({
               authToken: props.token,
               defaults: {
                 audio: false,
-                video: true,
+                video: false,
               },
             }).catch((retryError) => {
               console.error("RealtimeKit retry init failed:", retryError);
               toast.error(getErrorMessage(retryError));
             });
+            console.log("[RTK][VideoRoom] initMeeting retry completed");
             return;
           }
 
@@ -360,9 +361,59 @@ export default function VideoRoom(props: VideoRoomProps) {
   }, [meeting, initMeeting, props.token, t, toast.error, toast.warning]);
 
   useEffect(() => {
-    if (meeting) {
+    if (!meeting) return;
+
+    console.log("[RTK][VideoRoom] meeting instance ready", {
+      selfId: meeting.self.id,
+      roomJoined: meeting.self.roomJoined,
+      roomState: meeting.self.roomState,
+    });
+
+    const onRoomJoined = () => {
+      console.log("[RTK][VideoRoom] event: roomJoined", {
+        roomState: meeting.self.roomState,
+        roomJoined: meeting.self.roomJoined,
+      });
+    };
+
+    const onWaitlisted = () => {
+      console.log("[RTK][VideoRoom] event: waitlisted", {
+        roomState: meeting.self.roomState,
+      });
+    };
+
+    const onRoomLeft = (payload: unknown) => {
+      console.log("[RTK][VideoRoom] event: roomLeft", payload);
+    };
+
+    const onMediaPermissionUpdate = (payload: unknown) => {
+      console.log("[RTK][VideoRoom] event: mediaPermissionUpdate", payload);
+    };
+
+    const onSocketConnectionUpdate = (payload: unknown) => {
+      console.log("[RTK][VideoRoom] event: socketConnectionUpdate", payload);
+    };
+
+    meeting.self.addListener("roomJoined", onRoomJoined);
+    meeting.self.addListener("waitlisted", onWaitlisted);
+    meeting.self.addListener("roomLeft", onRoomLeft);
+    meeting.self.addListener("mediaPermissionUpdate", onMediaPermissionUpdate);
+    meeting.meta.addListener("socketConnectionUpdate", onSocketConnectionUpdate);
+
+    if (!meeting.self.roomJoined) {
+      console.log("[RTK][VideoRoom] calling meeting.joinRoom()");
       meeting.joinRoom();
+    } else {
+      console.log("[RTK][VideoRoom] joinRoom skipped because already joined");
     }
+
+    return () => {
+      meeting.self.removeListener("roomJoined", onRoomJoined);
+      meeting.self.removeListener("waitlisted", onWaitlisted);
+      meeting.self.removeListener("roomLeft", onRoomLeft);
+      meeting.self.removeListener("mediaPermissionUpdate", onMediaPermissionUpdate);
+      meeting.meta.removeListener("socketConnectionUpdate", onSocketConnectionUpdate);
+    };
   }, [meeting]);
 
   return (
@@ -383,9 +434,7 @@ export default function VideoRoom(props: VideoRoomProps) {
         </div>
       }
     >
-      <RtkUiProvider meeting={meeting}>
-        <RoomContent {...props} hasAudioOutput={hasAudioOutput} />
-      </RtkUiProvider>
+      <RoomContent {...props} hasAudioOutput={hasAudioOutput} />
     </RealtimeKitProvider>
   );
 }

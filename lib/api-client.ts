@@ -1,5 +1,5 @@
 import type { ChatMessage, CreateChatMessageParams, ToggleReactionParams } from "@/types/chat";
-import type { FileDoc, FileWithUrl, FolderDoc } from "@/types/files";
+import type { FileWithUrl, FolderDoc } from "@/types/files";
 import type { Group, GroupMember } from "@/types/group";
 import type { Meeting } from "@/types/meeting";
 import type { Recording } from "@/types/recording";
@@ -41,7 +41,6 @@ export interface JoinRoomResponse {
   token?: string;
   role?: Role;
   groupId?: string;
-  meetingFolderId?: string;
 }
 
 export interface WaitingParticipant {
@@ -312,7 +311,7 @@ export const filesApi = {
     file: File;
     groupId: string;
     folderId?: string | null;
-  }): Promise<FileDoc> {
+  }): Promise<FileWithUrl> {
     const formData = new FormData();
     formData.append("file", params.file);
     formData.append("groupId", params.groupId);
@@ -332,27 +331,12 @@ export const filesApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`/api/files/${id}`, { method: "DELETE" });
+    const response = await fetch(`/api/files?id=${encodeURIComponent(id)}`, { method: "DELETE" });
 
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Delete failed");
     }
-  },
-
-  async toggleEditable(id: string, isEditable: boolean): Promise<FileDoc> {
-    const response = await fetch(`/api/files/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isEditable }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to update file");
-    }
-
-    return response.json();
   },
 
   async getStorage(groupId: string): Promise<{ totalBytes: number }> {
@@ -366,7 +350,7 @@ export const filesApi = {
     return response.json();
   },
 
-  async seed(groupId: string): Promise<{ meetingsFolderId?: string }> {
+  async seed(groupId: string): Promise<{ message: string }> {
     const response = await fetch("/api/files/seed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -378,6 +362,34 @@ export const filesApi = {
       throw new Error(error.error || "Failed to seed files");
     }
 
+    return response.json();
+  },
+};
+
+export const meetingFilesApi = {
+  async list(meetingId: string): Promise<FileWithUrl[]> {
+    const params = new URLSearchParams({ meetingId });
+    const response = await fetch(`/api/meeting-files?${params}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list meeting files");
+    }
+    return response.json();
+  },
+
+  async upload(params: { meetingId: string; file: File }): Promise<FileWithUrl> {
+    const formData = new FormData();
+    formData.append("meetingId", params.meetingId);
+    formData.append("file", params.file);
+
+    const response = await fetch("/api/meeting-files", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Upload failed");
+    }
     return response.json();
   },
 };
@@ -549,8 +561,15 @@ export const usersApi = {
 };
 
 export const chatApi = {
-  async list(meetingId: string, limit = 100): Promise<ChatMessage[]> {
+  async list(
+    meetingId: string,
+    limit = 100,
+    options?: { participantName?: string },
+  ): Promise<ChatMessage[]> {
     const params = new URLSearchParams({ meetingId, limit: String(limit) });
+    if (options?.participantName) {
+      params.set("participantName", options.participantName);
+    }
     const response = await fetch(`/api/chat/messages?${params}`);
 
     if (!response.ok) {

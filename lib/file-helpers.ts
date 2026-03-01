@@ -1,64 +1,33 @@
-import { and, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
-import { db } from "@/db";
-import { folder } from "@/db/schema";
-
-/**
- * Ensures the system "meetings" folder exists for a group, creating it if needed.
- * Returns the meetings folder ID.
- */
-export async function ensureMeetingsFolder(groupId: string): Promise<string> {
-  const existing = await db
-    .select({ id: folder.id })
-    .from(folder)
-    .where(and(eq(folder.groupId, groupId), eq(folder.isSystem, true), eq(folder.name, "meetings")))
-    .limit(1);
-
-  if (existing.length > 0) return existing[0].id;
-
-  const id = nanoid();
-  await db.insert(folder).values({
-    id,
-    name: "meetings",
-    groupId,
-    parentId: null,
-    isSystem: true,
-  });
-  return id;
-}
-
-/**
- * Ensures a meeting subfolder exists inside the group's meetings folder.
- * Creates the meetings folder + meeting subfolder if they don't exist.
- * Returns the meeting subfolder ID.
- */
-export async function ensureMeetingFolder(groupId: string, meetingName: string): Promise<string> {
-  const meetingsFolderId = await ensureMeetingsFolder(groupId);
-
-  // Check if a subfolder for this meeting already exists
-  const existing = await db
-    .select({ id: folder.id })
-    .from(folder)
-    .where(
-      and(
-        eq(folder.groupId, groupId),
-        eq(folder.parentId, meetingsFolderId),
-        eq(folder.name, meetingName),
-      ),
-    )
-    .limit(1);
-
-  if (existing.length > 0) return existing[0].id;
-
-  const id = nanoid();
-  await db.insert(folder).values({
-    id,
-    name: meetingName,
-    groupId,
-    parentId: meetingsFolderId,
-    isSystem: false,
-  });
-  return id;
+export function getMimeFromExtension(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+    pdf: "application/pdf",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    ogg: "audio/ogg",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    txt: "text/plain",
+    md: "text/markdown",
+    csv: "text/csv",
+    json: "application/json",
+    js: "application/javascript",
+    ts: "application/typescript",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    zip: "application/zip",
+  };
+  return map[ext] ?? "application/octet-stream";
 }
 
 export function formatFileSize(bytes: number): string {

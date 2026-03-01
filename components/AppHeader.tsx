@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, LogOut, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Link, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
@@ -24,7 +24,6 @@ type AppHeaderProps =
       canEditDescription: boolean;
       sidebarOpen: boolean;
       onSidebarToggle: () => void;
-      onLeave: () => void;
       onCopyLink: () => void;
     };
 
@@ -158,7 +157,6 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
     canEditDescription,
     sidebarOpen,
     onSidebarToggle,
-    onLeave,
     onCopyLink,
   } = props;
 
@@ -179,10 +177,6 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
       }}
     >
       <a
-        onClick={(e) => {
-          e.preventDefault();
-          onLeave();
-        }}
         href="/dashboard"
         title={t("appHeader.returnToDashboard")}
         style={{
@@ -316,28 +310,6 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           {sidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
         </button>
 
-        <InlineButton
-          variant="ghost"
-          size="sm"
-          onClick={onLeave}
-          style={{
-            padding: "var(--space-xs) var(--space-md)",
-            border: "1px solid var(--accent-red)",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--accent-red)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-xs)",
-            fontSize: "0.8rem",
-            fontWeight: 500,
-            transition: "background 0.15s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.1)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
-          <LogOut size={14} />
-          {t("appHeader.leave")}
-        </InlineButton>
       </div>
     </header>
   );

@@ -47,11 +47,16 @@ export const defaultTranslations: Record<string, string> = {
   // Files
   "files.newFolder": "New Folder",
   "files.uploadSuccess": "File uploaded successfully",
+  "files.uploadFailed": "Upload failed",
   "files.deleteSuccess": "File deleted",
   "files.deleteFailed": "Delete failed",
   "files.folderDeleteSuccess": "Folder deleted",
   "files.createFolderSuccess": 'Folder "{name}" created',
   "files.createFolderFailed": "Failed to create folder",
+  "files.empty": "No files yet",
+  "files.uploadHint": "Drop files here or click to upload",
+  "files.uploading": "Uploading...",
+  "files.delete": "Delete",
 
   // Folders and files
   "folders.title": "Folders",
@@ -157,6 +162,7 @@ export const defaultTranslations: Record<string, string> = {
   "video.recordingStopped": "Recording stopped",
   "video.recordingStateFailed": "Failed to change recording state",
   "video.noSpeakerWarning": "No speaker detected. Joined without participant audio playback.",
+  "video.settings": "Settings",
   "video.leave": "Leave",
   "video.endMeeting": "End Meeting",
   "video.connecting": "Connecting...",
@@ -185,6 +191,7 @@ export const defaultTranslations: Record<string, string> = {
   "chat.sendFailed": "Failed to send message",
   "chat.loadingMessages": "Loading messages...",
   "chat.noMessages": "No messages yet",
+  "chat.readOnlyGuest": "Guests can view chat but cannot send messages or reactions.",
   "chat.you": "You",
   "chat.typeMessage": "Type a message",
   "chat.sendMessage": "Send message",

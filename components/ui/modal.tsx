@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   open: boolean;
@@ -11,6 +12,11 @@ interface ModalProps {
 
 export function Modal({ open, onClose, children, maxWidth = 400 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -30,9 +36,9 @@ export function Modal({ open, onClose, children, maxWidth = 400 }: ModalProps) {
     [onClose],
   );
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       onClick={handleBackdropClick}
       style={{
@@ -81,6 +87,7 @@ export function Modal({ open, onClose, children, maxWidth = 400 }: ModalProps) {
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

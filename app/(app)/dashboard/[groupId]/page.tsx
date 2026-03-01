@@ -87,10 +87,7 @@ export default function DashboardGroupPage() {
 
     filesApi
       .seed(groupId)
-      .then((data) => {
-        if (data.meetingsFolderId) {
-          setMeetingsFolderName("meetings");
-        }
+      .then(() => {
         fetchContents(folderId);
       })
       .catch(() => {});
@@ -256,6 +253,7 @@ export default function DashboardGroupPage() {
                   allowManage={isPrivileged}
                   showCreateFolderButton={isPrivileged}
                   groupId={groupId}
+                  folderId={folderId}
                   ancestors={ancestors}
                 />
               ) : (

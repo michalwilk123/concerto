@@ -1,8 +1,30 @@
-import { eq, sum } from "drizzle-orm";
+import { readdir, stat } from "node:fs/promises";
+import path from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { file } from "@/db/schema";
 import { requireGroupMember } from "@/lib/auth-helpers";
+
+async function dirSize(dirPath: string): Promise<number> {
+  let total = 0;
+  try {
+    const entries = await readdir(dirPath);
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry);
+      try {
+        const s = await stat(fullPath);
+        if (s.isFile()) {
+          total += s.size;
+        } else if (s.isDirectory()) {
+          total += await dirSize(fullPath);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // directory doesn't exist yet
+  }
+  return total;
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -15,10 +37,8 @@ export async function GET(req: NextRequest) {
   const { error } = await requireGroupMember(groupId);
   if (error) return error;
 
-  const [result] = await db
-    .select({ totalBytes: sum(file.size) })
-    .from(file)
-    .where(eq(file.groupId, groupId));
+  const uploadDir = path.join(process.cwd(), "uploads", groupId);
+  const totalBytes = await dirSize(uploadDir);
 
-  return NextResponse.json({ totalBytes: Number(result?.totalBytes ?? 0) });
+  return NextResponse.json({ totalBytes });
 }

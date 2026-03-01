@@ -19,9 +19,10 @@ function getChatSocketUrl() {
 
 interface MeetChatPanelProps {
   meetingId: string;
+  participantName?: string;
 }
 
-export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
+export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps) {
   const toast = useToast();
   const { t } = useTranslation();
   const { data: session } = useSession();
@@ -34,15 +35,16 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
   const reconnectTimeoutRef = useRef<number | null>(null);
 
   const userId = session?.user.id ?? null;
+  const isReadOnly = !session;
 
   // Load history
   useEffect(() => {
-    if (!session || !meetingId) return;
+    if (!meetingId) return;
     let mounted = true;
     setIsLoadingHistory(true);
 
     chatApi
-      .list(meetingId, 100)
+      .list(meetingId, 100, { participantName })
       .then((history) => {
         if (mounted) setMessages(history);
       })
@@ -58,11 +60,11 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
     return () => {
       mounted = false;
     };
-  }, [session, meetingId, t, toast]);
+  }, [meetingId, participantName, t, toast]);
 
   // WebSocket connection
   useEffect(() => {
-    if (!session || !meetingId) return;
+    if (!meetingId) return;
     let active = true;
     let ws: WebSocket | null = null;
 
@@ -114,18 +116,18 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
       }
       ws?.close();
     };
-  }, [session, meetingId]);
+  }, [meetingId]);
 
   // Auto-scroll
   useEffect(() => {
     const container = scrollRef.current;
-    if (!container) return;
+    if (!container || messages.length === 0) return;
     container.scrollTop = container.scrollHeight;
-  }, []);
+  }, [messages.length]);
 
   const canSend = useMemo(
-    () => !!session && input.trim().length > 0 && !isSending,
-    [session, input, isSending],
+    () => !isReadOnly && input.trim().length > 0 && !isSending,
+    [isReadOnly, input, isSending],
   );
 
   const sendMessage = async () => {
@@ -149,6 +151,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
   };
 
   const toggleReaction = async (messageId: string, emoji: string) => {
+    if (isReadOnly) return;
     try {
       const { reactions } = await chatApi.toggleReaction({ messageId, emoji });
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
@@ -157,10 +160,17 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
     }
   };
 
-  if (!session) return null;
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        minWidth: 0,
+        width: "100%",
+      }}
+    >
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 12 }}>
         {isLoadingHistory && messages.length === 0 ? (
           <LoadingIndicator message={t("chat.loadingMessages")} size={24} minHeight="100%" />
@@ -195,7 +205,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
                 onMouseLeave={() => setHoveredMessageId(null)}
               >
                 {/* Emoji picker on hover */}
-                {isHovered && (
+                {isHovered && !isReadOnly && (
                   <div
                     style={{
                       display: "flex",
@@ -272,6 +282,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
                         key={r.emoji}
                         type="button"
                         onClick={() => toggleReaction(message.id, r.emoji)}
+                        disabled={isReadOnly}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -282,7 +293,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
                             ? "1px solid var(--accent-purple)"
                             : "1px solid var(--border-subtle)",
                           background: r.reacted ? "rgba(139, 92, 246, 0.15)" : "var(--bg-tertiary)",
-                          cursor: "pointer",
+                          cursor: isReadOnly ? "default" : "pointer",
                           fontSize: "0.72rem",
                           color: "var(--text-secondary)",
                           lineHeight: 1,
@@ -315,6 +326,11 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
       </div>
 
       <div style={{ borderTop: "1px solid var(--border-subtle)", padding: 10 }}>
+        {isReadOnly && (
+          <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginBottom: 8 }}>
+            {t("chat.readOnlyGuest")}
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <input
             value={input}
@@ -326,6 +342,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
               }
             }}
             placeholder={t("chat.typeMessage")}
+            disabled={isReadOnly}
             style={{
               flex: 1,
               height: 36,
@@ -335,6 +352,7 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
               borderRadius: "var(--radius-md)",
               color: "var(--text-primary)",
               fontSize: "0.82rem",
+              opacity: isReadOnly ? 0.7 : 1,
             }}
           />
           <button
@@ -344,6 +362,8 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
             style={{
               width: 36,
               height: 36,
+              minWidth: 36,
+              padding: 0,
               border: "none",
               borderRadius: "var(--radius-md)",
               background: canSend ? "var(--accent-purple)" : "var(--bg-tertiary)",
@@ -351,11 +371,12 @@ export function MeetChatPanel({ meetingId }: MeetChatPanelProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              lineHeight: 0,
               cursor: canSend ? "pointer" : "not-allowed",
             }}
             aria-label={t("chat.sendMessage")}
           >
-            <Send size={14} />
+            <Send size={18} style={{ width: 18, height: 18, display: "block", flexShrink: 0 }} />
           </button>
         </div>
       </div>

@@ -18,6 +18,12 @@ function authHeader(): string {
 }
 
 async function rtkFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const method = (options.method || "GET").toUpperCase();
+  const bodyStr = typeof options.body === "string" ? options.body : "";
+  let parsedBody: unknown = bodyStr;
+  try { parsedBody = bodyStr ? JSON.parse(bodyStr) : undefined; } catch { parsedBody = bodyStr; }
+  console.log(`[RTK v2] ${method} ${path}`, parsedBody ?? "");
+
   const res = await fetch(`${RTK_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -26,11 +32,12 @@ async function rtkFetch(path: string, options: RequestInit = {}): Promise<Respon
       ...options.headers,
     },
   });
+  const text = await res.text().catch(() => "");
+  console.log(`[RTK v2] ${method} ${path} → ${res.status} ${res.statusText}`, text.slice(0, 1000));
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
     throw new Error(`RealtimeKit API error ${res.status}: ${text}`);
   }
-  return res;
+  return new Response(text, { status: res.status, statusText: res.statusText, headers: res.headers });
 }
 
 function assertActiveSessionConfig(): void {
@@ -43,6 +50,11 @@ function assertActiveSessionConfig(): void {
 
 async function cfFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const method = options.method || "GET";
+  const bodyStr = typeof options.body === "string" ? options.body : "";
+  let parsedBody: unknown = bodyStr;
+  try { parsedBody = bodyStr ? JSON.parse(bodyStr) : undefined; } catch { parsedBody = bodyStr; }
+  console.log(`[RTK CF v4] ${method} ${path}`, parsedBody ?? "");
+
   const res = await fetch(`${CF_API_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -52,6 +64,7 @@ async function cfFetch(path: string, options: RequestInit = {}): Promise<Respons
     },
   });
   const raw = await res.text().catch(() => "");
+  console.log(`[RTK CF v4] ${method} ${path} → ${res.status} ${res.statusText}`, raw.slice(0, 1000));
 
   let parsed: unknown = null;
   if (raw) {

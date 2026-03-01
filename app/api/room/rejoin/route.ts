@@ -3,7 +3,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { ensureMeetingFolder } from "@/lib/file-helpers";
 import { rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
@@ -34,20 +33,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, meetingId });
   }
 
-  const creatorName = session?.user.name;
-
-  // Auto-create folder hierarchy
-  let meetingFolderId: string | undefined;
-  try {
-    meetingFolderId = await ensureMeetingFolder(groupId, creatorName || meetingId);
-  } catch (err) {
-    console.error("[room/rejoin] Failed to create meeting folder (non-blocking):", err);
-  }
-
   rooms.set(meetingId, {
     groupId,
     rtkMeetingId: existingMeeting.rtkMeetingId,
-    meetingFolderId,
     participants: new Map(),
     connectedTeachers: new Set(),
     waitingRoom: new Map(),

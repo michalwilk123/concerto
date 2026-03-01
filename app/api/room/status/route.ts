@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
       token: approvedData.token,
       role: approvedData.role,
       groupId: approvedData.groupId,
-      meetingFolderId: approvedData.meetingFolderId,
     });
   }
 

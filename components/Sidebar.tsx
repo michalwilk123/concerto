@@ -1,10 +1,10 @@
 "use client";
 
-import { Files, MessageSquare, Users, UserCheck, X } from "lucide-react";
+import { Files, MessageSquare, UserCheck, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
-import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
+import { MeetingFilesPanel } from "@/components/files/MeetingFilesPanel";
 import { IconButton } from "@/components/ui/icon-button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { roomApi, type WaitingParticipant } from "@/lib/api-client";
@@ -18,8 +18,6 @@ export type { SidebarTab };
 
 interface SidebarProps {
   participants: RoomParticipant[];
-  groupId: string;
-  meetingFolderId?: string;
   onClose: () => void;
   activeTab: SidebarTab;
   onTabChange: (tab: SidebarTab) => void;
@@ -28,14 +26,12 @@ interface SidebarProps {
 
 export default function Sidebar({
   participants,
-  groupId,
-  meetingFolderId,
   onClose,
   activeTab,
   onTabChange,
   isOpen,
 }: SidebarProps) {
-  const { role, meetingId } = useRoomStore();
+  const { role, meetingId, participantName } = useRoomStore();
   const { t } = useTranslation();
   const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
   const [waiting, setWaiting] = useState<WaitingParticipant[]>([]);
@@ -89,15 +85,15 @@ export default function Sidebar({
     {
       id: "participants",
       label: t("sidebar.participants"),
-      icon: <Users size={15} />,
+      icon: <Users size={16} />,
       visible: true,
     },
-    { id: "files", label: t("sidebar.files"), icon: <Files size={15} />, visible: true },
-    { id: "chat", label: t("sidebar.chat"), icon: <MessageSquare size={15} />, visible: true },
+    { id: "files", label: t("sidebar.files"), icon: <Files size={16} />, visible: true },
+    { id: "chat", label: t("sidebar.chat"), icon: <MessageSquare size={16} />, visible: true },
     {
       id: "waitingRoom",
       label: t("sidebar.waitingRoom"),
-      icon: <UserCheck size={15} />,
+      icon: <UserCheck size={16} />,
       visible: isTeacher(role),
     },
   ];
@@ -145,11 +141,12 @@ export default function Sidebar({
             display: "flex",
             alignItems: "center",
             borderBottom: "1px solid var(--border-subtle)",
-            padding: "0 var(--space-sm)",
+            padding: "0",
             gap: 0,
+            position: "relative",
           }}
         >
-          <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <div style={{ display: "flex", flex: 1, overflow: "hidden", paddingRight: 44 }}>
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -169,7 +166,7 @@ export default function Sidebar({
                       : "2px solid transparent",
                   borderRadius: 0,
                   color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-secondary)",
-                  fontSize: "0.8rem",
+                  fontSize: "0.82rem",
                   fontWeight: activeTab === tab.id ? 600 : 400,
                   cursor: "pointer",
                   transition: "color 0.15s ease, border-color 0.15s ease",
@@ -209,7 +206,12 @@ export default function Sidebar({
             size="sm"
             onClick={onClose}
             title={t("sidebar.close")}
-            style={{ borderRadius: "var(--radius-sm)" }}
+            style={{
+              borderRadius: "var(--radius-sm)",
+              position: "absolute",
+              top: 6,
+              right: 6,
+            }}
           >
             <X size={16} />
           </IconButton>
@@ -218,24 +220,27 @@ export default function Sidebar({
         <div
           style={{
             flex: 1,
-            overflow: "auto",
+            overflow: "hidden",
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
           }}
         >
           {activeTab === "participants" && <ParticipantMenu participants={participants} />}
-          {activeTab === "files" && (
-            <FileBrowserPanel
-              allowManage={isTeacher(role)}
-              showCreateFolderButton={false}
-              compact
-              groupId={groupId}
-              ancestors={[]}
-              initialFolderId={meetingFolderId}
-            />
+          {activeTab === "files" && meetingId && (
+            <MeetingFilesPanel meetingId={meetingId} allowManage={isTeacher(role)} />
           )}
-          {activeTab === "chat" && meetingId && <MeetChatPanel meetingId={meetingId} />}
+          {meetingId && (
+            <div
+              style={{
+                display: activeTab === "chat" ? "flex" : "none",
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <MeetChatPanel meetingId={meetingId} participantName={participantName} />
+            </div>
+          )}
           {activeTab === "waitingRoom" && meetingId && (
             <WaitingRoomPanel
               meetingId={meetingId}

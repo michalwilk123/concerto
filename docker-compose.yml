@@ -23,6 +23,8 @@ services:
     environment:
       RTK_ORG_ID: "${RTK_ORG_ID:-}"
       RTK_API_KEY: "${RTK_API_KEY:-}"
+      # RTK_ACCOUNT_ID, RTK_APP_ID, CLOUDFLARE_API_TOKEN are intentionally NOT set here
+      # so that Next.js can read them from .env.local (mounted via volumes: - .:/app)
       DATABASE_URL: "postgresql://concerto:concerto@postgres:5432/concerto"
       BETTER_AUTH_SECRET: "dev-secret-change-in-production"
       BETTER_AUTH_URL: "http://localhost:3000"

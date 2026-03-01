@@ -1,9 +1,9 @@
+import { and, eq, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { meeting } from "@/db/schema";
+import { folder, meeting } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { ensureMeetingFolder } from "@/lib/file-helpers";
 import { rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
@@ -30,21 +30,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 });
   }
 
-  // Auto-create folder hierarchy: meetings/{meetingName}/
-  let meetingFolderId: string | undefined;
+  // Auto-create a dashboard folder for this meeting
   try {
-    meetingFolderId = await ensureMeetingFolder(groupId, creatorName || dbMeetingId);
-    console.log(
-      `[room/create] Meeting folder created/found: meetingFolderId=${meetingFolderId}, name="${creatorName || dbMeetingId}"`,
-    );
+    // Find or create the "meetings" system folder for this group
+    let [meetingsFolder] = await db
+      .select()
+      .from(folder)
+      .where(
+        and(
+          eq(folder.groupId, groupId),
+          eq(folder.isSystem, true),
+          eq(folder.name, "meetings"),
+          isNull(folder.parentId),
+        ),
+      )
+      .limit(1);
+
+    if (!meetingsFolder) {
+      const [created] = await db
+        .insert(folder)
+        .values({ id: nanoid(), name: "meetings", groupId, parentId: null, isSystem: true })
+        .returning();
+      meetingsFolder = created;
+    }
+
+    // Create subfolder for this meeting using meetingId as folder id
+    await db.insert(folder).values({
+      id: dbMeetingId,
+      name: meetingName,
+      groupId,
+      parentId: meetingsFolder.id,
+      isSystem: false,
+    });
   } catch (err) {
-    console.error("[room/create] Failed to create meeting folder (non-blocking):", err);
+    console.error("[room/create] Failed to create meeting folder:", err);
+    // Non-fatal — meeting still works without the folder
   }
 
   rooms.set(dbMeetingId, {
     groupId,
     rtkMeetingId: null,
-    meetingFolderId,
     participants: new Map(),
     connectedTeachers: new Set(),
     waitingRoom: new Map(),
@@ -53,7 +78,7 @@ export async function POST(request: NextRequest) {
   });
 
   console.log(
-    `[room/create] Room created: meetingId=${dbMeetingId}, meetingFolderId=${meetingFolderId ?? "NONE"}, creator=${creatorName}, groupId=${groupId}`,
+    `[room/create] Room created: meetingId=${dbMeetingId}, creator=${creatorName}, groupId=${groupId}`,
   );
 
   return NextResponse.json({ success: true, meetingId: dbMeetingId });

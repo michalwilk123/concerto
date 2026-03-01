@@ -59,7 +59,17 @@ export default function WaitingRoomPanel({
   };
 
   return (
-    <div style={{ padding: "var(--space-md)", display: "flex", flexDirection: "column", gap: 12 }}>
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        padding: "var(--space-md)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Typography as="h3" variant="titleSm">
           {t("sidebar.waitingRoom")}

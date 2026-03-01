@@ -43,7 +43,6 @@ function MeetContent() {
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [meetingFolderId, setMeetingFolderId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoJoinAttempt, setAutoJoinAttempt] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -122,7 +121,6 @@ function MeetContent() {
         setToken(result.token ?? null);
         setRole((result.role || "student") as Role);
         setGroupId(result.groupId ?? null);
-        setMeetingFolderId(result.meetingFolderId ?? null);
         setErrorMessage(null);
         setPhase("room");
       } catch (error) {
@@ -184,7 +182,6 @@ function MeetContent() {
           setToken(result.token ?? null);
           setRole((result.role || "student") as Role);
           setGroupId(result.groupId ?? null);
-          setMeetingFolderId(result.meetingFolderId ?? null);
           setPhase("room");
         } else if (result.status === "rejected") {
           setErrorMessage(t("room.error.rejected"));
@@ -212,12 +209,12 @@ function MeetContent() {
     const save = () => {
       sessionStorage.setItem(
         "concerto-session",
-        JSON.stringify({ token, meetingId, participantName, role, groupId, meetingFolderId }),
+        JSON.stringify({ token, meetingId, participantName, role, groupId }),
       );
     };
     window.addEventListener("beforeunload", save);
     return () => window.removeEventListener("beforeunload", save);
-  }, [phase, token, meetingId, participantName, role, groupId, meetingFolderId]);
+  }, [phase, token, meetingId, participantName, role, groupId]);
 
   if (phase === "room" && token && role && groupId) {
     return (
@@ -227,7 +224,6 @@ function MeetContent() {
         participantName={participantName}
         role={role}
         groupId={groupId}
-        meetingFolderId={meetingFolderId ?? undefined}
         onLeave={() => {
           window.location.href = "/lobby";
         }}

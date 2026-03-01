@@ -3,10 +3,7 @@ export interface FileDoc {
   name: string;
   mimeType: string;
   size: number;
-  storagePath: string;
   groupId: string;
-  uploadedById: string;
-  isEditable: boolean;
   folderId: string | null;
   createdAt: string;
 }
@@ -17,6 +14,7 @@ export interface FolderDoc {
   groupId: string;
   parentId: string | null;
   isSystem: boolean;
+  meetingId: string | null;
   createdAt: string;
 }
 

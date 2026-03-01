@@ -3,7 +3,8 @@ import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { chatMessage, chatReaction, meeting } from "@/db/schema";
-import { requireGroupMember } from "@/lib/auth-helpers";
+import { getOrRestoreRoom } from "@/lib/api-helpers";
+import { getSessionOrNull, requireAuth, requireGroupMember } from "@/lib/auth-helpers";
 import type { ChatMessage, ChatReaction } from "@/types/chat";
 
 const CHAT_NOTIFY_CHANNEL = "chat_messages";
@@ -30,13 +31,14 @@ function toChatMessage(
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const meetingId = searchParams.get("meetingId");
+  const participantName = searchParams.get("participantName");
   if (!meetingId) {
     return NextResponse.json({ error: "meetingId is required" }, { status: 400 });
   }
 
   // Look up meeting to get groupId for auth
   const [mtg] = await db
-    .select({ groupId: meeting.groupId })
+    .select({ groupId: meeting.groupId, isPublic: meeting.isPublic })
     .from(meeting)
     .where(eq(meeting.id, meetingId))
     .limit(1);
@@ -45,8 +47,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  const { error, session } = await requireGroupMember(mtg.groupId);
-  if (error) return error;
+  const currentSession = await getSessionOrNull();
+  let userId: string | null = null;
+
+  if (currentSession) {
+    if (mtg.isPublic) {
+      userId = currentSession.user.id;
+    } else {
+      const { error, session } = await requireGroupMember(mtg.groupId);
+      if (error) return error;
+      userId = session?.user.id ?? null;
+    }
+  } else {
+    if (!mtg.isPublic) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    if (!participantName) {
+      return NextResponse.json(
+        { error: "participantName is required for guests" },
+        { status: 400 },
+      );
+    }
+
+    const roomOrError = await getOrRestoreRoom(meetingId);
+    if (roomOrError instanceof NextResponse) return roomOrError;
+    if (!roomOrError.participants.has(participantName)) {
+      return NextResponse.json({ error: "Guest is not in this meeting" }, { status: 403 });
+    }
+  }
 
   const rawLimit = Number(searchParams.get("limit") ?? DEFAULT_LIMIT);
   const limit = Number.isFinite(rawLimit)
@@ -77,7 +105,6 @@ export async function GET(req: NextRequest) {
     reactionsByMessage.set(r.messageId, list);
   }
 
-  const userId = session?.user.id;
   const result = recent.reverse().map((m) => {
     const raw = reactionsByMessage.get(m.id) ?? [];
     const emojiMap = new Map<string, { userNames: string[]; reacted: boolean }>();
@@ -121,7 +148,7 @@ export async function POST(req: NextRequest) {
 
   // Look up meeting to get groupId for auth
   const [mtg] = await db
-    .select({ groupId: meeting.groupId })
+    .select({ groupId: meeting.groupId, isPublic: meeting.isPublic })
     .from(meeting)
     .where(eq(meeting.id, meetingIdRaw))
     .limit(1);
@@ -130,8 +157,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  const { error, session } = await requireGroupMember(mtg.groupId);
-  if (error) return error;
+  const { session: authSession } = await requireAuth();
+  if (!authSession) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  let session = authSession;
+  if (!mtg.isPublic) {
+    const groupMemberResult = await requireGroupMember(mtg.groupId);
+    if (groupMemberResult.error) return groupMemberResult.error;
+    if (!groupMemberResult.session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    session = groupMemberResult.session;
+  }
 
   const [lastMessage] = await db
     .select({ createdAt: chatMessage.createdAt })

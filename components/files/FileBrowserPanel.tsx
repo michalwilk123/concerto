@@ -23,6 +23,8 @@ interface FileBrowserPanelProps {
   compact?: boolean;
   groupId: string;
   ancestors: FolderDoc[];
+  /** The current folder from the URL — used as the authoritative folderId for uploads and creation */
+  folderId?: string | null;
   initialFolderId?: string;
 }
 
@@ -32,6 +34,7 @@ export function FileBrowserPanel({
   compact = false,
   groupId,
   ancestors,
+  folderId: folderIdProp,
   initialFolderId,
 }: FileBrowserPanelProps) {
   const router = useRouter();
@@ -55,6 +58,9 @@ export function FileBrowserPanel({
     deleteFolder,
   } = useFileManagerStore();
 
+  // URL prop is the authoritative source of truth; fall back to store if not provided
+  const activeFolderId = folderIdProp !== undefined ? folderIdProp : currentFolderId;
+
   // When used in sidebar with initialFolderId, initialize the store
   useEffect(() => {
     if (!initialFolderId) return;
@@ -77,7 +83,7 @@ export function FileBrowserPanel({
   };
 
   const handleUploadComplete = () => {
-    fetchContents(currentFolderId);
+    fetchContents(activeFolderId);
     toast.success(t("files.uploadSuccess"));
   };
 
@@ -101,7 +107,7 @@ export function FileBrowserPanel({
 
   const handleCreateFolder = async (name: string) => {
     try {
-      await createFolder(name);
+      await createFolder(name, activeFolderId);
       toast.success(t("files.createFolderSuccess", { name }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("files.createFolderFailed"));
@@ -140,7 +146,7 @@ export function FileBrowserPanel({
         {allowManage && (
           <FileUploader
             groupId={groupId}
-            folderId={currentFolderId}
+            folderId={activeFolderId}
             onUploadComplete={handleUploadComplete}
           />
         )}
