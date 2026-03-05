@@ -1,7 +1,11 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
+import { getMimeFromExtension } from "@/lib/file-helpers";
+import { objectExists, putObject } from "@/lib/s3-client";
+import { db } from "@/db";
+import { file as fileTable } from "@/db/schema";
 
 const SEED_FILES = ["Lenna.png", "wilhelm.wav", "zen_of_python.txt"];
 
@@ -16,24 +20,28 @@ export async function POST(req: NextRequest) {
   const { error } = await requireGroupTeacher(groupId);
   if (error) return error;
 
-  const seedDir = path.join(process.cwd(), "uploads", groupId);
-
-  // Check if already seeded by looking for first seed file on disk
-  try {
-    await stat(path.join(seedDir, SEED_FILES[0]));
+  // Check if already seeded by looking for first seed file in S3
+  const firstKey = `${groupId}/${SEED_FILES[0]}`;
+  if (await objectExists(firstKey)) {
     return NextResponse.json({ message: "Already seeded" });
-  } catch {
-    // Not found, proceed with seeding
   }
-
-  await mkdir(seedDir, { recursive: true });
 
   for (const filename of SEED_FILES) {
     const srcPath = path.join(process.cwd(), "public", "seed-files", filename);
-    const destPath = path.join(seedDir, filename);
+    const key = `${groupId}/${filename}`;
     try {
       const buffer = await readFile(srcPath);
-      await writeFile(destPath, buffer);
+      const mimeType = getMimeFromExtension(filename);
+      await putObject(key, buffer, mimeType);
+      await db.insert(fileTable).values({
+        id: key,
+        name: filename,
+        mimeType,
+        size: buffer.length,
+        groupId,
+        folderId: null,
+        uploadedById: null,
+      }).onConflictDoNothing();
     } catch (err) {
       console.error(`Failed to seed ${filename}:`, err);
     }

@@ -2,10 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { groupMember, meeting } from "@/db/schema";
+import { groupMember, meeting, meetingSession } from "@/db/schema";
 import type { Role } from "@/types/room";
-import { addParticipant, roleToPreset } from "./realtimekit";
-import { type Room, roomRestoreLocks, rooms } from "./room-store";
+import { addParticipant, createMeeting, roleToPreset } from "./realtimekit";
+import { createEmptyRoom, type Room, roomRestoreLocks, rooms, rtkCreationLocks } from "./room-store";
 
 /**
  * Get a room by meeting ID, restoring it from the DB if not in memory.
@@ -52,15 +52,7 @@ export async function getOrRestoreRoom(meetingId: string): Promise<Room | NextRe
         return existingAfterDb;
       }
 
-      const restoredRoom: Room = {
-        groupId: meetingRow.groupId,
-        rtkMeetingId: meetingRow.rtkMeetingId,
-        participants: new Map(),
-        connectedTeachers: new Set(),
-        waitingRoom: new Map(),
-        approvedTokens: new Map(),
-        rejectedParticipants: new Set(),
-      };
+      const restoredRoom = createEmptyRoom(meetingRow.groupId, meetingRow.rtkMeetingId);
       rooms.set(meetingId, restoredRoom);
       console.log(
         `[getOrRestoreRoom] Restored room ${meetingId} from DB (rtkMeetingId=${meetingRow.rtkMeetingId})`,
@@ -94,6 +86,63 @@ export async function determineRole(
 
   if (member?.role === "teacher") return "teacher";
   return "student";
+}
+
+/**
+ * Lazily create RTK meeting session for a Room if not yet created.
+ * Uses a per-meeting lock to avoid duplicate RTK meetings on concurrent joins.
+ */
+export async function ensureRealtimeKitMeeting(
+  meetingId: string,
+  logPrefix: "room/join" | "room/guest-join" = "room/join",
+): Promise<Room> {
+  if (!rooms.has(meetingId)) {
+    throw new Error("Room not found in memory");
+  }
+
+  const currentRoom = rooms.get(meetingId)!;
+  if (currentRoom.rtkMeetingId) return currentRoom;
+
+  let pending = rtkCreationLocks.get(meetingId);
+  if (!pending) {
+    console.log(`[${logPrefix}] Creating RTK meeting for meetingId=${meetingId}`);
+    pending = (async () => {
+      const rtkId = await createMeeting();
+      const canonicalRoom = rooms.get(meetingId);
+      if (!canonicalRoom) throw new Error("Room disappeared during RTK creation");
+      canonicalRoom.rtkMeetingId = rtkId;
+      await db
+        .insert(meetingSession)
+        .values({ id: rtkId, meetingId })
+        .catch((err) => {
+          console.error(`[${logPrefix}] Failed to persist meeting session:`, err);
+        });
+      await db
+        .update(meeting)
+        .set({ rtkMeetingId: rtkId })
+        .where(eq(meeting.id, meetingId))
+        .catch((err) => {
+          console.error(`[${logPrefix}] Failed to update meeting rtkMeetingId:`, err);
+        });
+      console.log(
+        `[${logPrefix}] Lazily created RTK meeting: rtkMeetingId=${rtkId} for meetingId=${meetingId}`,
+      );
+      return rtkId;
+    })();
+    rtkCreationLocks.set(meetingId, pending);
+    pending.finally(() => rtkCreationLocks.delete(meetingId));
+  } else {
+    console.log(`[${logPrefix}] Reusing concurrent RTK creation lock for meetingId=${meetingId}`);
+  }
+
+  await pending;
+
+  const roomAfter = rooms.get(meetingId);
+  if (!roomAfter || !roomAfter.rtkMeetingId) {
+    throw new Error("Failed to create meeting");
+  }
+
+  return roomAfter;
 }
 
 /**

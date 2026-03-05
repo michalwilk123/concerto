@@ -61,11 +61,9 @@ function RoomContent({
   role,
   onLeave,
   onEndMeeting,
-  onRoomStateChange,
   hasAudioOutput,
-}: Omit<VideoRoomProps, "token"> & { hasAudioOutput: boolean }) {
+}: Omit<VideoRoomProps, "token" | "onRoomStateChange"> & { hasAudioOutput: boolean }) {
   const { meeting } = useRealtimeKitMeeting();
-  const roomState = useRealtimeKitSelector((m) => m.self.roomState);
   const selfPresetName = useRealtimeKitSelector((m) => m.self.presetName);
   const joinedParticipants = useRealtimeKitSelector((m) => m.participants.joined.toArray());
   const canRecord = useRealtimeKitSelector((m) => m.self.permissions.canRecord);
@@ -79,7 +77,6 @@ function RoomContent({
   const [lastSavedRoomDescription, setLastSavedRoomDescription] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const toast = useToast();
-  const hasNotifiedRef = useRef(false);
   const lastRecordingStateRef = useRef<string | null>(null);
 
   const currentRole: Role = selfPresetName ? presetToRole(selfPresetName) : role;
@@ -137,16 +134,6 @@ function RoomContent({
       toast.error(t("meetings.updateFailed"));
     }
   };
-
-  // Watch for kicked/ended/disconnected states
-  useEffect(() => {
-    console.log("[RTK][RoomContent] roomState changed:", roomState);
-    if (roomState && roomState !== "init" && roomState !== "joined" && !hasNotifiedRef.current) {
-      hasNotifiedRef.current = true;
-      console.log("[RTK][RoomContent] notifying parent about roomState:", roomState);
-      onRoomStateChange(roomState);
-    }
-  }, [roomState, onRoomStateChange]);
 
   // Build participants list for sidebar
   const sidebarParticipants: RoomParticipant[] = [
@@ -307,23 +294,26 @@ function RoomContent({
 }
 
 export default function VideoRoom(props: VideoRoomProps) {
+  const { token, meetingId, onRoomStateChange, participantName, role, groupId, onLeave, onEndMeeting } =
+    props;
   const [meeting, initMeeting] = useRealtimeKitClient();
   const [hasAudioOutput, setHasAudioOutput] = useState(true);
   const { t } = useTranslation();
   const toast = useToast();
+  const roomStateNotifiedRef = useRef(false);
 
   useEffect(() => {
     if (!meeting) {
       let cancelled = false;
       const run = async () => {
         try {
-          console.log("[RTK][VideoRoom] initMeeting start", {
-            meetingId: props.meetingId,
-            tokenLength: props.token?.length ?? 0,
+            console.log("[RTK][VideoRoom] initMeeting start", {
+            meetingId,
+            tokenLength: token?.length ?? 0,
             defaults: { audio: false, video: false },
           });
           await initMeeting({
-            authToken: props.token,
+            authToken: token,
             defaults: {
               audio: false,
               video: false,
@@ -336,7 +326,7 @@ export default function VideoRoom(props: VideoRoomProps) {
             setHasAudioOutput(false);
             console.log("[RTK][VideoRoom] no audio output device, retrying without audio output");
             await initMeeting({
-              authToken: props.token,
+              authToken: token,
               defaults: {
                 audio: false,
                 video: false,
@@ -353,12 +343,14 @@ export default function VideoRoom(props: VideoRoomProps) {
           toast.error(getErrorMessage(error));
         }
       };
+      // This effect performs external meeting initialization and may update state from async results.
+      // eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
       run();
       return () => {
         cancelled = true;
       };
     }
-  }, [meeting, initMeeting, props.token, t, toast.error, toast.warning]);
+  }, [initMeeting, meeting, meetingId, token, toast]);
 
   useEffect(() => {
     if (!meeting) return;
@@ -380,10 +372,18 @@ export default function VideoRoom(props: VideoRoomProps) {
       console.log("[RTK][VideoRoom] event: waitlisted", {
         roomState: meeting.self.roomState,
       });
+      if (!roomStateNotifiedRef.current) {
+        roomStateNotifiedRef.current = true;
+        onRoomStateChange("waitlisted");
+      }
     };
 
     const onRoomLeft = (payload: unknown) => {
       console.log("[RTK][VideoRoom] event: roomLeft", payload);
+      if (!roomStateNotifiedRef.current) {
+        roomStateNotifiedRef.current = true;
+        onRoomStateChange(String(meeting.self.roomState || "left"));
+      }
     };
 
     const onMediaPermissionUpdate = (payload: unknown) => {
@@ -414,7 +414,7 @@ export default function VideoRoom(props: VideoRoomProps) {
       meeting.self.removeListener("mediaPermissionUpdate", onMediaPermissionUpdate);
       meeting.meta.removeListener("socketConnectionUpdate", onSocketConnectionUpdate);
     };
-  }, [meeting]);
+  }, [meeting, onRoomStateChange]);
 
   return (
     <RealtimeKitProvider
@@ -434,7 +434,15 @@ export default function VideoRoom(props: VideoRoomProps) {
         </div>
       }
     >
-      <RoomContent {...props} hasAudioOutput={hasAudioOutput} />
+      <RoomContent
+        meetingId={meetingId}
+        participantName={participantName}
+        role={role}
+        groupId={groupId}
+        onLeave={onLeave}
+        onEndMeeting={onEndMeeting}
+        hasAudioOutput={hasAudioOutput}
+      />
     </RealtimeKitProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { ilike, or } from "drizzle-orm";
+import { and, ilike, ne, or } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { user } from "@/db/schema";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const results = await db
     .select({ id: user.id, name: user.name, email: user.email })
     .from(user)
-    .where(or(ilike(user.name, `%${q}%`), ilike(user.email, `%${q}%`)))
+    .where(and(or(ilike(user.name, `%${q}%`), ilike(user.email, `%${q}%`)), ne(user.role, "admin")))
     .limit(20);
 
   return NextResponse.json(results);

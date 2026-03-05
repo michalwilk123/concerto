@@ -9,8 +9,9 @@ export function VideoPreviewer({ fileUrl }: PreviewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    const videoElement = videoRef.current;
     return () => {
-      videoRef.current?.pause();
+      videoElement?.pause();
     };
   }, []);
 

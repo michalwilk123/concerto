@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -23,29 +23,50 @@ export function CreateMeetingModal({
   onCreated,
   defaultName = "",
 }: CreateMeetingModalProps) {
+  return (
+    <Modal open={open} onClose={onClose} maxWidth={420}>
+      {open ? (
+        <CreateMeetingModalContent
+          key={`create-meeting-${defaultName}`}
+          onClose={onClose}
+          onCreated={onCreated}
+          defaultName={defaultName}
+        />
+      ) : null}
+    </Modal>
+  );
+}
+
+interface CreateMeetingModalContentProps {
+  onClose: () => void;
+  onCreated: (meetingId: string) => void;
+  defaultName: string;
+}
+
+function CreateMeetingModalContent({
+  onClose,
+  onCreated,
+  defaultName,
+}: CreateMeetingModalContentProps) {
   const { t } = useTranslation();
   const [meetingName, setMeetingName] = useState(defaultName);
-  const [groupId, setGroupId] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fetchingGroups, setFetchingGroups] = useState(false);
+  const [fetchingGroups, setFetchingGroups] = useState(true);
+  const groupId = selectedGroupId || groups[0]?.id || "";
 
   useEffect(() => {
-    if (!open) return;
     let cancelled = false;
-
-    setError(null);
-    setFetchingGroups(true);
 
     groupsApi
       .list()
       .then((g) => {
         if (cancelled) return;
         setGroups(g);
-        setGroupId((prev) => prev || g[0]?.id || "");
       })
       .catch(() => {
         if (!cancelled) setError(t("createMeeting.loadGroupsFailed"));
@@ -57,15 +78,7 @@ export function CreateMeetingModal({
     return () => {
       cancelled = true;
     };
-  }, [open, t]);
-
-  useEffect(() => {
-    if (open) {
-      setMeetingName(defaultName);
-      setIsPublic(false);
-      setRequiresApproval(false);
-    }
-  }, [open, defaultName]);
+  }, [t]);
 
   const handleSubmit = async () => {
     if (!meetingName.trim() || !groupId) return;
@@ -88,40 +101,39 @@ export function CreateMeetingModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth={420}>
-      <div style={{ padding: 24 }}>
-        <Typography as="h2" variant="titleMd" style={{ margin: "0 0 20px 0" }}>
-          {t("createMeeting.title")}
+    <div style={{ padding: 24 }}>
+      <Typography as="h2" variant="titleMd" style={{ margin: "0 0 20px 0" }}>
+        {t("createMeeting.title")}
+      </Typography>
+
+      {error && (
+        <div
+          style={{
+            padding: "8px 12px",
+            marginBottom: 16,
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: "var(--radius-md)",
+            color: "#f87171",
+            fontSize: "0.82rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <label htmlFor="create-meeting-name" style={{ display: "block", marginBottom: 6 }}>
+        <Typography as="span" variant="label" tone="secondary">
+          {t("createMeeting.nameLabel")}
         </Typography>
-
-        {error && (
-          <div
-            style={{
-              padding: "8px 12px",
-              marginBottom: 16,
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.2)",
-              borderRadius: "var(--radius-md)",
-              color: "#f87171",
-              fontSize: "0.82rem",
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <label htmlFor="create-meeting-name" style={{ display: "block", marginBottom: 6 }}>
-          <Typography as="span" variant="label" tone="secondary">
-            {t("createMeeting.nameLabel")}
-          </Typography>
-        </label>
-        <TextInput
-          id="create-meeting-name"
-          value={meetingName}
-          onChange={(e) => setMeetingName(e.target.value)}
-          placeholder={t("createMeeting.namePlaceholder")}
-          style={{ width: "100%", marginBottom: 16, fontSize: "0.84rem" }}
-        />
+      </label>
+      <TextInput
+        id="create-meeting-name"
+        value={meetingName}
+        onChange={(e) => setMeetingName(e.target.value)}
+        placeholder={t("createMeeting.namePlaceholder")}
+        style={{ width: "100%", marginBottom: 16, fontSize: "0.84rem" }}
+      />
 
         <label htmlFor="create-meeting-group" style={{ display: "block", marginBottom: 6 }}>
           <Typography as="span" variant="label" tone="secondary">
@@ -137,21 +149,20 @@ export function CreateMeetingModal({
             {t("createMeeting.noGroups")}
           </Typography>
         ) : (
-          <Select
-            id="create-meeting-group"
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            style={{
-              width: "100%",
-              marginBottom: 16,
-            }}
-          >
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </Select>
+          <div style={{ marginBottom: 16 }}>
+            <Select value={groupId} onValueChange={setSelectedGroupId}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         <label
@@ -198,21 +209,20 @@ export function CreateMeetingModal({
           </Typography>
         </label>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <InlineButton variant="secondary" size="sm" onClick={onClose}>
-            {t("createMeeting.cancel")}
-          </InlineButton>
-          <InlineButton
-            variant="primary"
-            size="sm"
-            onClick={handleSubmit}
-            loading={loading}
-            disabled={!meetingName.trim() || !groupId || groups.length === 0}
-          >
-            {t("createMeeting.submit")}
-          </InlineButton>
-        </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <InlineButton variant="secondary" size="sm" onClick={onClose}>
+          {t("createMeeting.cancel")}
+        </InlineButton>
+        <InlineButton
+          variant="primary"
+          size="sm"
+          onClick={handleSubmit}
+          loading={loading}
+          disabled={!meetingName.trim() || !groupId || groups.length === 0}
+        >
+          {t("createMeeting.submit")}
+        </InlineButton>
       </div>
-    </Modal>
+    </div>
   );
 }

@@ -36,6 +36,13 @@
       "when": 1772369000000,
       "tag": "0004_waiting_activation_default",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772749600049,
+      "tag": "0005_sparkling_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

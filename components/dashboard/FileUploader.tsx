@@ -2,7 +2,7 @@
 
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { InlineButton } from "@/components/ui/inline-button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { filesApi } from "@/lib/api-client";
 
@@ -14,90 +14,44 @@ interface FileUploaderProps {
 
 export function FileUploader({ groupId, folderId, onUploadComplete }: FileUploaderProps) {
   const { t } = useTranslation();
-  const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async (file: File) => {
     try {
       setUploading(true);
-      setProgress(30);
-      setProgress(50);
       await filesApi.upload({ file, groupId, folderId });
-      setProgress(100);
-      setTimeout(() => {
-        setProgress(0);
-        setUploading(false);
-        onUploadComplete?.();
-      }, 500);
+      setUploading(false);
+      onUploadComplete?.();
     } catch (error) {
       console.error(t("uploader.uploadFailed"), error);
       setUploading(false);
-      setProgress(0);
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleUpload(file);
-  };
-
   return (
-    <div style={{ marginBottom: 24 }}>
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleUpload(file);
+          e.target.value = "";
         }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => {
-          if (!uploading) fileInputRef.current?.click();
-        }}
-        style={{
-          position: "relative",
-          cursor: "pointer",
-          borderRadius: "var(--radius-lg)",
-          border: `2px dashed ${isDragging ? "var(--accent-purple)" : "var(--border-default)"}`,
-          padding: 32,
-          textAlign: "center",
-          background: isDragging ? "rgba(139, 92, 246, 0.05)" : "var(--bg-tertiary)",
-          transition: "border-color 0.2s, background 0.2s",
-        }}
+        disabled={uploading}
+      />
+      <InlineButton
+        variant="accent"
+        size="md"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        style={{ display: "flex", alignItems: "center", gap: 8 }}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleUpload(file);
-          }}
-          disabled={uploading}
-        />
-        <Upload size={40} style={{ margin: "0 auto", color: "var(--text-tertiary)" }} />
-        <p
-          style={{
-            marginTop: 8,
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            color: "var(--text-secondary)",
-          }}
-        >
-          {uploading ? t("uploader.uploading") : t("uploader.dropOrClick")}
-        </p>
-        <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-          {t("uploader.maxFileSize")}
-        </p>
-        {uploading && (
-          <div style={{ marginTop: 16 }}>
-            <ProgressBar value={progress / 100} color="var(--accent-purple)" height={6} />
-          </div>
-        )}
-      </div>
-    </div>
+        <Upload size={16} />
+        {uploading ? t("uploader.uploading") : t("uploader.uploadFile")}
+      </InlineButton>
+    </>
   );
 }

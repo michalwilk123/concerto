@@ -1,30 +1,6 @@
-import { readdir, stat } from "node:fs/promises";
-import path from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
 import { requireGroupMember } from "@/lib/auth-helpers";
-
-async function dirSize(dirPath: string): Promise<number> {
-  let total = 0;
-  try {
-    const entries = await readdir(dirPath);
-    for (const entry of entries) {
-      const fullPath = path.join(dirPath, entry);
-      try {
-        const s = await stat(fullPath);
-        if (s.isFile()) {
-          total += s.size;
-        } else if (s.isDirectory()) {
-          total += await dirSize(fullPath);
-        }
-      } catch {
-        // ignore
-      }
-    }
-  } catch {
-    // directory doesn't exist yet
-  }
-  return total;
-}
+import { listObjects } from "@/lib/s3-client";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -37,8 +13,8 @@ export async function GET(req: NextRequest) {
   const { error } = await requireGroupMember(groupId);
   if (error) return error;
 
-  const uploadDir = path.join(process.cwd(), "uploads", groupId);
-  const totalBytes = await dirSize(uploadDir);
+  const objects = await listObjects(`${groupId}/`);
+  const totalBytes = objects.reduce((sum, o) => sum + o.size, 0);
 
   return NextResponse.json({ totalBytes });
 }

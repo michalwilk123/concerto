@@ -15,16 +15,27 @@ interface CreateFolderModalProps {
 }
 
 export function CreateFolderModal({ isOpen, onClose, onSubmit }: CreateFolderModalProps) {
+  return (
+    <Modal open={isOpen} onClose={onClose} maxWidth={400}>
+      {isOpen ? <CreateFolderForm key="create-folder-open" onClose={onClose} onSubmit={onSubmit} /> : null}
+    </Modal>
+  );
+}
+
+interface CreateFolderFormProps {
+  onClose: () => void;
+  onSubmit: (name: string) => void;
+}
+
+function CreateFolderForm({ onClose, onSubmit }: CreateFolderFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }
-  }, [isOpen]);
+    const timeout = setTimeout(() => inputRef.current?.focus(), 80);
+    return () => clearTimeout(timeout);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +45,7 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit }: CreateFolderMod
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} maxWidth={400}>
+    <>
       <div
         style={{
           padding: "20px 20px 16px",
@@ -79,6 +90,6 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit }: CreateFolderMod
           </InlineButton>
         </div>
       </form>
-    </Modal>
+    </>
   );
 }

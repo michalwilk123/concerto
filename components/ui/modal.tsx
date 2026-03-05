@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 interface ModalProps {
@@ -12,11 +12,11 @@ interface ModalProps {
 
 export function Modal({ open, onClose, children, maxWidth = 400 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -36,7 +36,7 @@ export function Modal({ open, onClose, children, maxWidth = 400 }: ModalProps) {
     [onClose],
   );
 
-  if (!open || !mounted) return null;
+  if (!open || !isClient) return null;
 
   return createPortal(
     <div

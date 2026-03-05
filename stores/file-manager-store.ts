@@ -12,6 +12,8 @@ interface FileManagerState {
   isLoading: boolean;
   hasFetched: boolean;
   storageUsed: number;
+  selectedItems: Set<string>; // "file:id" | "folder:id"
+  lastSelectedId: string | null;
 
   setCurrentGroupId: (id: string | null) => void;
   setCurrentFolderId: (id: string | null) => void;
@@ -20,8 +22,18 @@ interface FileManagerState {
   fetchStorage: (groupId?: string) => Promise<void>;
   uploadFile: (file: File, folderId?: string | null) => Promise<void>;
   deleteFile: (id: string) => Promise<void>;
+  renameFile: (id: string, name: string) => Promise<void>;
+  renameFolder: (id: string, name: string) => Promise<void>;
   createFolder: (name: string, parentId?: string | null) => Promise<void>;
   deleteFolder: (id: string) => Promise<void>;
+  moveFile: (fileId: string, targetFolderId: string | null) => Promise<void>;
+  moveFolder: (folderId: string, targetFolderId: string | null) => Promise<void>;
+  bulkMove: (items: { type: "file" | "folder"; id: string }[], targetFolderId: string | null) => Promise<void>;
+  bulkDelete: (items: { type: "file" | "folder"; id: string }[]) => Promise<void>;
+  toggleSelect: (key: string) => void;
+  rangeSelect: (key: string, allKeys: string[]) => void;
+  selectAll: (allKeys: string[]) => void;
+  clearSelection: () => void;
 }
 
 export const useFileManagerStore = create<FileManagerState>((set, get) => ({
@@ -34,9 +46,11 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   isLoading: false,
   hasFetched: false,
   storageUsed: 0,
+  selectedItems: new Set(),
+  lastSelectedId: null,
 
   setCurrentGroupId: (id) =>
-    set({ currentGroupId: id, currentFolderId: null, files: [], folders: [], hasFetched: false }),
+    set({ currentGroupId: id, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null }),
 
   setCurrentFolderId: (id) => set({ currentFolderId: id }),
 
@@ -53,7 +67,6 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
         foldersApi.list(groupId, folderId),
       ]);
 
-      // Fetch current folder info for breadcrumbs
       let currentFolder: FolderDoc | null = null;
       if (folderId) {
         try {
@@ -84,10 +97,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   uploadFile: async (file, folderId) => {
     const groupId = get().currentGroupId;
     if (!groupId) return;
-
     await filesApi.upload({ file, groupId, folderId });
-
-    // Refresh contents and storage
     await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
   },
 
@@ -96,10 +106,19 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
   },
 
+  renameFile: async (id, name) => {
+    await filesApi.rename(id, name);
+    await get().fetchContents(get().currentFolderId);
+  },
+
+  renameFolder: async (id, name) => {
+    await foldersApi.rename(id, name);
+    await get().fetchContents(get().currentFolderId);
+  },
+
   createFolder: async (name, parentId) => {
     const groupId = get().currentGroupId;
     if (!groupId) return;
-
     const effectiveParentId = parentId !== undefined ? parentId : get().currentFolderId;
     await foldersApi.create({ name, groupId, parentId: effectiveParentId });
     await get().fetchContents(effectiveParentId);
@@ -109,4 +128,68 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     await foldersApi.delete(id);
     await get().fetchContents(get().currentFolderId);
   },
+
+  moveFile: async (fileId, targetFolderId) => {
+    await filesApi.move(fileId, targetFolderId);
+    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    get().clearSelection();
+  },
+
+  moveFolder: async (folderId, targetFolderId) => {
+    await foldersApi.move(folderId, targetFolderId);
+    await get().fetchContents(get().currentFolderId);
+    get().clearSelection();
+  },
+
+  bulkMove: async (items, targetFolderId) => {
+    await filesApi.bulkMove(items, targetFolderId);
+    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    get().clearSelection();
+  },
+
+  bulkDelete: async (items) => {
+    await filesApi.bulkDelete(items);
+    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    get().clearSelection();
+  },
+
+  toggleSelect: (key) => {
+    const next = new Set(get().selectedItems);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    set({ selectedItems: next, lastSelectedId: key });
+  },
+
+  rangeSelect: (key, allKeys) => {
+    const lastId = get().lastSelectedId;
+    if (!lastId) {
+      const next = new Set(get().selectedItems);
+      next.add(key);
+      set({ selectedItems: next, lastSelectedId: key });
+      return;
+    }
+    const fromIdx = allKeys.indexOf(lastId);
+    const toIdx = allKeys.indexOf(key);
+    if (fromIdx === -1 || toIdx === -1) {
+      const next = new Set(get().selectedItems);
+      next.add(key);
+      set({ selectedItems: next, lastSelectedId: key });
+      return;
+    }
+    const [start, end] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+    const next = new Set(get().selectedItems);
+    for (let i = start; i <= end; i++) {
+      next.add(allKeys[i]);
+    }
+    set({ selectedItems: next, lastSelectedId: key });
+  },
+
+  selectAll: (allKeys) => {
+    set({ selectedItems: new Set(allKeys), lastSelectedId: null });
+  },
+
+  clearSelection: () => set({ selectedItems: new Set(), lastSelectedId: null }),
 }));

@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireGroupMember, requireGroupTeacher } from "@/lib/auth-helpers";
-import { deleteFileById, listGroupFiles, parseFileId, readFileById } from "@/lib/services/file-service";
+import {
+  deleteFileById,
+  listGroupFiles,
+  parseFileId,
+  readFileById,
+  renameFileById,
+} from "@/lib/services/file-service";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -50,4 +56,34 @@ export async function DELETE(req: NextRequest) {
 
   await deleteFileById(id);
   return NextResponse.json({ success: true });
+}
+
+export async function PATCH(req: NextRequest) {
+  const body = await req.json().catch(() => null);
+  const id = body?.id;
+  const name = body?.name;
+
+  if (typeof id !== "string" || !id.trim()) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+  if (typeof name !== "string" || !name.trim()) {
+    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  }
+
+  const parsed = parseFileId(id);
+  if (!parsed) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const { error } = await requireGroupTeacher(parsed.groupId);
+  if (error) return error;
+
+  try {
+    const renamed = await renameFileById(id, name);
+    if (!renamed) return NextResponse.json({ error: "File not found" }, { status: 404 });
+    return NextResponse.json(renamed);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Rename failed" },
+      { status: 400 },
+    );
+  }
 }

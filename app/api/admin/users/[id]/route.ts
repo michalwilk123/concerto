@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { user } from "@/db/schema";
+import { groupMember, user } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-helpers";
 
 const VALID_ROLES = ["admin", "teacher", "student"] as const;
@@ -18,6 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json();
   const updates: Record<string, unknown> = {};
+  let roleToApply: (typeof VALID_ROLES)[number] | null = null;
 
   if ("role" in body) {
     if (!VALID_ROLES.includes(body.role)) {
@@ -27,6 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       );
     }
     updates.role = body.role;
+    roleToApply = body.role;
   }
 
   if ("isActive" in body) {
@@ -47,16 +49,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   updates.updatedAt = new Date();
 
-  const [updated] = await db.update(user).set(updates).where(eq(user.id, id)).returning({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    banned: user.banned,
-    banReason: user.banReason,
-    isActive: user.isActive,
-    createdAt: user.createdAt,
-    image: user.image,
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx.update(user).set(updates).where(eq(user.id, id)).returning({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      banned: user.banned,
+      banReason: user.banReason,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      image: user.image,
+    });
+
+    if (!row) return null;
+
+    if (roleToApply === "admin") {
+      await tx.delete(groupMember).where(eq(groupMember.userId, id));
+    }
+
+    return row;
   });
 
   if (!updated) {

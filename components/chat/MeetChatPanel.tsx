@@ -1,7 +1,7 @@
 "use client";
 
 import { Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -33,6 +33,13 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const scrollToBottom = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+  }, []);
 
   const userId = session?.user.id ?? null;
   const isReadOnly = !session;
@@ -41,12 +48,13 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
   useEffect(() => {
     if (!meetingId) return;
     let mounted = true;
-    setIsLoadingHistory(true);
 
     chatApi
       .list(meetingId, 100, { participantName })
       .then((history) => {
-        if (mounted) setMessages(history);
+        if (!mounted) return;
+        setMessages(history);
+        scrollToBottom();
       })
       .catch((error) => {
         if (mounted) {
@@ -60,7 +68,7 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
     return () => {
       mounted = false;
     };
-  }, [meetingId, participantName, t, toast]);
+  }, [meetingId, participantName, scrollToBottom, t, toast]);
 
   // WebSocket connection
   useEffect(() => {
@@ -95,6 +103,7 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
             if (prev.some((m) => m.id === incoming.id)) return prev;
             return [...prev, incoming];
           });
+          scrollToBottom();
         } catch {
           // ignore malformed
         }
@@ -116,14 +125,7 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
       }
       ws?.close();
     };
-  }, [meetingId]);
-
-  // Auto-scroll
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container || messages.length === 0) return;
-    container.scrollTop = container.scrollHeight;
-  }, [messages.length]);
+  }, [meetingId, scrollToBottom]);
 
   const canSend = useMemo(
     () => !isReadOnly && input.trim().length > 0 && !isSending,
@@ -142,6 +144,7 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
         if (prev.some((m) => m.id === created.id)) return prev;
         return [...prev, created];
       });
+      scrollToBottom();
     } catch (error) {
       setInput(content);
       toast.error(error instanceof Error ? error.message : t("chat.sendFailed"));

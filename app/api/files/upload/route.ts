@@ -10,13 +10,18 @@ export async function POST(req: NextRequest) {
 
   if (!groupId) return NextResponse.json({ error: "groupId is required" }, { status: 400 });
 
-  const { error } = await requireGroupTeacher(groupId);
+  const { error, session } = await requireGroupTeacher(groupId);
   if (error) return error;
 
   if (!uploadedFile) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
   try {
-    const fileDoc = await uploadGroupFile({ file: uploadedFile, groupId, folderId });
+    const fileDoc = await uploadGroupFile({
+      file: uploadedFile,
+      groupId,
+      folderId,
+      uploadedById: session!.user.id,
+    });
     return NextResponse.json(fileDoc);
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Upload failed" }, { status: 400 });

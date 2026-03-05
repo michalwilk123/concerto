@@ -339,6 +339,21 @@ export const filesApi = {
     }
   },
 
+  async rename(id: string, name: string): Promise<FileWithUrl> {
+    const response = await fetch("/api/files", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Rename failed");
+    }
+
+    return response.json();
+  },
+
   async getStorage(groupId: string): Promise<{ totalBytes: number }> {
     const response = await fetch(`/api/files/storage?groupId=${groupId}`);
 
@@ -362,6 +377,50 @@ export const filesApi = {
       throw new Error(error.error || "Failed to seed files");
     }
 
+    return response.json();
+  },
+
+  async move(fileId: string, targetFolderId: string | null): Promise<FileWithUrl> {
+    const response = await fetch("/api/files/move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileId, targetFolderId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Move failed");
+    }
+    return response.json();
+  },
+
+  async bulkMove(
+    items: { type: "file" | "folder"; id: string }[],
+    targetFolderId: string | null,
+  ): Promise<{ moved: string[]; errors: { id: string; error: string }[] }> {
+    const response = await fetch("/api/files/bulk-move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items, targetFolderId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Bulk move failed");
+    }
+    return response.json();
+  },
+
+  async bulkDelete(
+    items: { type: "file" | "folder"; id: string }[],
+  ): Promise<{ deleted: string[]; errors: { id: string; error: string }[] }> {
+    const response = await fetch("/api/files/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Bulk delete failed");
+    }
     return response.json();
   },
 };
@@ -446,6 +505,32 @@ export const foldersApi = {
       const error = await response.json();
       throw new Error(error.error || "Delete failed");
     }
+  },
+
+  async move(id: string, parentId: string | null): Promise<FolderDoc> {
+    const response = await fetch(`/api/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Move failed");
+    }
+    return response.json();
+  },
+
+  async rename(id: string, name: string): Promise<FolderDoc> {
+    const response = await fetch(`/api/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Rename failed");
+    }
+    return response.json();
   },
 
   async findMeetingsFolder(groupId: string): Promise<FolderDoc | null> {
@@ -548,7 +633,7 @@ export const adminApi = {
   },
 };
 
-// Users API Client (lightweight search for teachers + admins)
+// Users API Client (lightweight search for assignable non-admin users)
 export const usersApi = {
   async search(query: string): Promise<{ id: string; name: string; email: string }[]> {
     const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
@@ -665,8 +750,13 @@ export const meetingsApi = {
 };
 
 // Translations API Client
+export interface TranslationSet {
+  name: string;
+  overrides: Record<string, string>;
+}
+
 export const translationsApi = {
-  async get(): Promise<Record<string, string>> {
+  async getAll(): Promise<{ translations: TranslationSet[] }> {
     const response = await fetch("/api/translations");
     if (!response.ok) {
       const error = await response.json();
@@ -675,11 +765,28 @@ export const translationsApi = {
     return response.json();
   },
 
-  async save(overrides: Record<string, string>): Promise<void> {
+  async getByName(name?: string): Promise<Record<string, string>> {
+    const langParam = name ?? "default";
+    const response = await fetch(`/api/translations?name=${encodeURIComponent(langParam)}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to load translations");
+    }
+    return response.json();
+  },
+
+  async getLanguages(): Promise<string[]> {
+    const response = await fetch("/api/translations/languages");
+    if (!response.ok) return ["default"];
+    const data = await response.json();
+    return data.languages as string[];
+  },
+
+  async saveAll(translations: TranslationSet[]): Promise<void> {
     const response = await fetch("/api/translations", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(overrides),
+      body: JSON.stringify({ translations }),
     });
     if (!response.ok) {
       const error = await response.json();

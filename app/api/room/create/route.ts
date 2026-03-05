@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { folder, meeting } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { rooms } from "@/lib/room-store";
+import { createEmptyRoom, rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -67,15 +67,7 @@ export async function POST(request: NextRequest) {
     // Non-fatal — meeting still works without the folder
   }
 
-  rooms.set(dbMeetingId, {
-    groupId,
-    rtkMeetingId: null,
-    participants: new Map(),
-    connectedTeachers: new Set(),
-    waitingRoom: new Map(),
-    approvedTokens: new Map(),
-    rejectedParticipants: new Set(),
-  });
+  rooms.set(dbMeetingId, createEmptyRoom(groupId));
 
   console.log(
     `[room/create] Room created: meetingId=${dbMeetingId}, creator=${creatorName}, groupId=${groupId}`,

@@ -20,6 +20,18 @@ export interface Room {
   rejectedParticipants: Set<string>;
 }
 
+export function createEmptyRoom(groupId: string, rtkMeetingId: string | null = null): Room {
+  return {
+    groupId,
+    rtkMeetingId,
+    participants: new Map(),
+    connectedTeachers: new Set(),
+    waitingRoom: new Map(),
+    approvedTokens: new Map(),
+    rejectedParticipants: new Set(),
+  };
+}
+
 // Use globalThis to survive Next.js dev hot-reloads
 const globalRooms = globalThis as unknown as {
   __rooms?: Map<string, Room>;

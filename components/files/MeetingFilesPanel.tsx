@@ -1,7 +1,7 @@
 "use client";
 
 import { Files, Trash2, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FilePreviewModal } from "@/components/dashboard/preview/FilePreviewModal";
 import { useToast } from "@/components/Toast";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -24,7 +24,7 @@ export function MeetingFilesPanel({ meetingId, allowManage }: MeetingFilesPanelP
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInFlightRef = useRef(false);
 
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     try {
       const list = await meetingFilesApi.list(meetingId);
       setFiles(list);
@@ -33,15 +33,15 @@ export function MeetingFilesPanel({ meetingId, allowManage }: MeetingFilesPanelP
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [meetingId]);
 
   useEffect(() => {
-    setIsLoading(true);
-    setFiles([]);
+    // This effect performs initial remote loading when the meeting context changes.
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
     fetchFiles().catch(() => {
       setIsLoading(false);
     });
-  }, [meetingId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchFiles]);
 
   const handleUpload = async (file: File) => {
     if (uploadInFlightRef.current) return;

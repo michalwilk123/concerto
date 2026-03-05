@@ -4,7 +4,7 @@ import { Film, FolderOpen, HardDrive, Languages, Music, Settings } from "lucide-
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { groupsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
@@ -70,17 +70,17 @@ export function DashboardSidebar({
       <nav style={{ flex: 1, padding: "0 8px" }}>
         {groups.length > 1 && (
           <div style={{ padding: "0 4px", marginBottom: 12 }}>
-            <Select
-              value={groupId}
-              onChange={(e) => router.push(buildDashboardUrl(e.target.value))}
-              variant="compact"
-              style={{ width: "100%" }}
-            >
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
+            <Select value={groupId} onValueChange={(v) => router.push(buildDashboardUrl(v))}>
+              <SelectTrigger variant="compact" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         )}

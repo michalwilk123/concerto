@@ -5,11 +5,31 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
 import { InlineButton } from "@/components/ui/inline-button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { signOut, useSession } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { Role } from "@/types/room";
 import ConcertoLogo from "./ConcertoLogo";
+
+function LanguageSelector() {
+  const { currentLanguage, availableLanguages, setLanguage } = useTranslation();
+  if (availableLanguages.length <= 1) return null;
+  return (
+    <Select value={currentLanguage} onValueChange={setLanguage}>
+      <SelectTrigger variant="compact" className="w-auto min-w-[100px] text-[0.8rem]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {availableLanguages.map((lang) => (
+          <SelectItem key={lang} value={lang}>
+            {lang}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 type AppHeaderProps =
   | { mode: "app" }
@@ -80,6 +100,7 @@ function AppModeHeader() {
         </a>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <LanguageSelector />
         {isPending ? null : user ? (
           <>
             <span style={{ fontSize: "0.84rem", color: "var(--text-secondary)" }}>{user.name}</span>
@@ -286,6 +307,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           {t("appHeader.dashboard")}
         </a>
 
+        <LanguageSelector />
         <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
           {participantName}
         </span>

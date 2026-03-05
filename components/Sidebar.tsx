@@ -33,7 +33,6 @@ export default function Sidebar({
 }: SidebarProps) {
   const { role, meetingId, participantName } = useRoomStore();
   const { t } = useTranslation();
-  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
   const [waiting, setWaiting] = useState<WaitingParticipant[]>([]);
 
   useEffect(() => {
@@ -60,26 +59,6 @@ export default function Sidebar({
   }, [role, meetingId]);
 
   const waitingCount = waiting.length;
-
-  useEffect(() => {
-    let element = document.getElementById("portal-root");
-    let createdPortalRoot = false;
-
-    if (!element) {
-      element = document.createElement("div");
-      element.id = "portal-root";
-      document.body.appendChild(element);
-      createdPortalRoot = true;
-    }
-
-    setPortalElement(element);
-
-    return () => {
-      if (createdPortalRoot && element?.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-    };
-  }, []);
 
   const tabs: { id: SidebarTab; label: string; icon: React.ReactNode; visible: boolean }[] = [
     {
@@ -228,7 +207,11 @@ export default function Sidebar({
         >
           {activeTab === "participants" && <ParticipantMenu participants={participants} />}
           {activeTab === "files" && meetingId && (
-            <MeetingFilesPanel meetingId={meetingId} allowManage={isTeacher(role)} />
+            <MeetingFilesPanel
+              key={`files-${meetingId}`}
+              meetingId={meetingId}
+              allowManage={isTeacher(role)}
+            />
           )}
           {meetingId && (
             <div
@@ -238,7 +221,11 @@ export default function Sidebar({
                 minHeight: 0,
               }}
             >
-              <MeetChatPanel meetingId={meetingId} participantName={participantName} />
+              <MeetChatPanel
+                key={`chat-${meetingId}-${participantName ?? "anon"}`}
+                meetingId={meetingId}
+                participantName={participantName}
+              />
             </div>
           )}
           {activeTab === "waitingRoom" && meetingId && (
@@ -255,7 +242,7 @@ export default function Sidebar({
     </>
   );
 
-  if (!portalElement) return null;
+  if (typeof document === "undefined") return null;
 
-  return createPortal(sidebarContent, portalElement);
+  return createPortal(sidebarContent, document.body);
 }

@@ -10,7 +10,7 @@ import { EntityGridRow } from "@/components/ui/entity-list-row";
 import { InlineButton } from "@/components/ui/inline-button";
 import { InlineErrorBanner } from "@/components/ui/inline-error-banner";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -43,13 +43,12 @@ export function ManagePanel() {
 
   const isAdmin = session?.user?.role === "admin";
 
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
@@ -71,7 +70,6 @@ export function ManagePanel() {
   }, []);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const res = await adminApi.listUsers({ page, limit, search: debouncedSearch || undefined });
@@ -79,12 +77,12 @@ export function ManagePanel() {
       setTotal(res.total);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("manage.loadUsersFailed"));
-    } finally {
-      setLoading(false);
     }
   }, [page, limit, debouncedSearch, t]);
 
   useEffect(() => {
+    // This effect performs initial and pagination-driven remote loading for the admin table.
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
     if (isAdmin) fetchUsers();
   }, [fetchUsers, isAdmin]);
 
@@ -221,8 +219,8 @@ export function ManagePanel() {
               t("manage.tableActions"),
             ]}
             columns="2fr 2.5fr 100px 110px 110px 90px"
-            isLoading={loading}
-            hasRows={users.length > 0}
+            isLoading={users === null}
+            hasRows={(users?.length ?? 0) > 0}
             emptyState={
               <EmptyState
                 icon={<Users size={32} />}
@@ -232,11 +230,11 @@ export function ManagePanel() {
               />
             }
           >
-            {users.map((u, i) => (
+            {(users ?? []).map((u, i) => (
               <EntityGridRow
                 key={u.id}
                 columns="2fr 2.5fr 100px 110px 110px 90px"
-                isLast={i === users.length - 1}
+                isLast={i === (users?.length ?? 0) - 1}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                   <div
@@ -415,18 +413,20 @@ export function ManagePanel() {
                     {t("manage.roleLabel")}
                   </Typography>
                 </label>
-                <Select
-                  id="edit-user-role"
-                  value={editForm.role || "student"}
-                  onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    marginBottom: 24,
-                  }}
-                >
-                  <option value="teacher">{t("manage.roleTeacher")}</option>
-                  <option value="student">{t("manage.roleStudent")}</option>
-                </Select>
+                <div style={{ marginBottom: 24 }}>
+                  <Select
+                    value={editForm.role || "student"}
+                    onValueChange={(v) => setEditForm((f) => ({ ...f, role: v }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="teacher">{t("manage.roleTeacher")}</SelectItem>
+                      <SelectItem value="student">{t("manage.roleStudent")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <InlineButton variant="secondary" size="sm" onClick={() => setEditUser(null)}>

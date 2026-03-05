@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -160,4 +160,21 @@ export const chatReaction = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("chat_reaction_message_idx").on(table.messageId)],
+);
+
+export const file = pgTable(
+  "file",
+  {
+    id: text("id").primaryKey(), // path-based: groupId/[folderId/]filename
+    name: text("name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    groupId: text("group_id")
+      .notNull()
+      .references(() => group.id, { onDelete: "cascade" }),
+    folderId: text("folder_id").references(() => folder.id, { onDelete: "set null" }),
+    uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("file_group_folder_idx").on(table.groupId, table.folderId)],
 );

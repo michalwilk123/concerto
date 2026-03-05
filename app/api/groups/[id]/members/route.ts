@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     })
     .from(groupMember)
     .innerJoin(user, eq(groupMember.userId, user.id))
-    .where(eq(groupMember.groupId, groupId));
+    .where(and(eq(groupMember.groupId, groupId), ne(user.role, "admin")));
 
   return NextResponse.json(members);
 }
@@ -49,6 +49,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const [existingUser] = await db.select().from(user).where(eq(user.id, userId)).limit(1);
   if (!existingUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  if (existingUser.role === "admin") {
+    return NextResponse.json(
+      { error: "Admins cannot be assigned to groups. They already have full group access." },
+      { status: 400 },
+    );
   }
 
   // Check if already a member

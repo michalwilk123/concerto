@@ -229,7 +229,7 @@ export default function DashboardGroupPage() {
                 </div>
                 <div style={{ flex: 1, overflow: "hidden" }}>
                   {selectedMeetingId ? (
-                    <MeetChatPanel meetingId={selectedMeetingId} />
+                    <MeetChatPanel key={`meeting-chat-${selectedMeetingId}`} meetingId={selectedMeetingId} />
                   ) : (
                     <div
                       style={{

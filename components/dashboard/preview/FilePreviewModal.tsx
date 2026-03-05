@@ -63,7 +63,12 @@ export function FilePreviewModal({
         </div>
         <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
           {PreviewerComponent && fileUrl && (
-            <PreviewerComponent fileUrl={fileUrl} fileName={fileName} mimeType={mimeType} />
+            <PreviewerComponent
+              key={fileUrl}
+              fileUrl={fileUrl}
+              fileName={fileName}
+              mimeType={mimeType}
+            />
           )}
         </div>
       </div>

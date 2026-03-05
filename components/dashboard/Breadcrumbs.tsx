@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroppable } from "@dnd-kit/core";
 import { ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
@@ -11,31 +12,64 @@ interface BreadcrumbsProps {
   ancestors: FolderDoc[];
 }
 
+function DroppableCrumb({
+  dropId,
+  folderId,
+  children,
+  href,
+  isCurrent,
+}: {
+  dropId: string;
+  folderId: string | null;
+  children: React.ReactNode;
+  href: string;
+  isCurrent: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: dropId,
+    data: { type: "breadcrumb", folderId },
+  });
+
+  return (
+    <Link
+      ref={setNodeRef}
+      href={href}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        background: isOver ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "none",
+        border: isOver ? "1px solid var(--accent-primary)" : "1px solid transparent",
+        padding: "4px 8px",
+        color: isCurrent ? "var(--text-primary)" : "var(--text-secondary)",
+        cursor: "pointer",
+        borderRadius: "var(--radius-sm)",
+        fontWeight: 500,
+        textDecoration: "none",
+        transition: "background 0.1s, border-color 0.1s",
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
   const isAtRoot = ancestors.length === 0;
   const { t } = useTranslation();
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
-      <Link
+      <DroppableCrumb
+        dropId="breadcrumb:root"
+        folderId={null}
         href={buildDashboardUrl(groupId)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          background: "none",
-          border: "none",
-          padding: "4px 8px",
-          color: isAtRoot ? "var(--text-primary)" : "var(--text-secondary)",
-          cursor: "pointer",
-          borderRadius: "var(--radius-sm)",
-          fontWeight: 500,
-          textDecoration: "none",
-        }}
+        isCurrent={isAtRoot}
       >
         <Home size={16} />
         <span>{t("breadcrumbs.myFiles")}</span>
-      </Link>
+      </DroppableCrumb>
+
       {ancestors.map((folder, index) => {
         const isLast = index === ancestors.length - 1;
 
@@ -43,20 +77,18 @@ export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
           <span key={folder.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ChevronRight size={16} style={{ color: "var(--text-tertiary)" }} />
             {isLast ? (
-              <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{folder.name}</span>
+              <span style={{ color: "var(--text-primary)", fontWeight: 500, padding: "4px 8px" }}>
+                {folder.name}
+              </span>
             ) : (
-              <Link
+              <DroppableCrumb
+                dropId={`breadcrumb:${folder.id}`}
+                folderId={folder.id}
                 href={buildDashboardUrl(groupId, { folderId: folder.id })}
-                style={{
-                  color: "var(--text-secondary)",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  padding: "4px 8px",
-                  borderRadius: "var(--radius-sm)",
-                }}
+                isCurrent={false}
               >
                 {folder.name}
-              </Link>
+              </DroppableCrumb>
             )}
           </span>
         );

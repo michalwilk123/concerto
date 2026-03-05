@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
-import { rooms } from "@/lib/room-store";
+import { createEmptyRoom, rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -33,15 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, meetingId });
   }
 
-  rooms.set(meetingId, {
-    groupId,
-    rtkMeetingId: existingMeeting.rtkMeetingId,
-    participants: new Map(),
-    connectedTeachers: new Set(),
-    waitingRoom: new Map(),
-    approvedTokens: new Map(),
-    rejectedParticipants: new Set(),
-  });
+  rooms.set(meetingId, createEmptyRoom(groupId, existingMeeting.rtkMeetingId));
 
   console.log(`[room/rejoin] Rejoined meeting: meetingId=${meetingId}, groupId=${groupId}`);
 

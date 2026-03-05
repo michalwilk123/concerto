@@ -9,8 +9,9 @@ export function AudioPreviewer({ fileUrl }: PreviewerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
+    const audioElement = audioRef.current;
     return () => {
-      audioRef.current?.pause();
+      audioElement?.pause();
     };
   }, []);
 

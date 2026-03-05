@@ -1,21 +1,23 @@
 "use client";
 
+import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { FolderPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BulkActionBar } from "@/components/dashboard/BulkActionBar";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
 import { CreateFolderModal } from "@/components/dashboard/CreateFolderModal";
-import { FileList } from "@/components/dashboard/FileList";
 import { FileUploader } from "@/components/dashboard/FileUploader";
-import { FolderList } from "@/components/dashboard/FolderList";
 import { LoadingSkeleton } from "@/components/dashboard/LoadingSkeleton";
+import { UnifiedFileList } from "@/components/dashboard/UnifiedFileList";
+import { UnifiedFileRow } from "@/components/dashboard/UnifiedFileRow";
 import { FilePreviewModal } from "@/components/dashboard/preview/FilePreviewModal";
 import { useToast } from "@/components/Toast";
 import { InlineButton } from "@/components/ui/inline-button";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
 import { useFileManagerStore } from "@/stores/file-manager-store";
 import { useTranslation } from "@/hooks/useTranslation";
-import type { FolderDoc } from "@/types/files";
+import type { FileWithUrl, FolderDoc } from "@/types/files";
 
 interface FileBrowserPanelProps {
   allowManage: boolean;
@@ -23,7 +25,6 @@ interface FileBrowserPanelProps {
   compact?: boolean;
   groupId: string;
   ancestors: FolderDoc[];
-  /** The current folder from the URL — used as the authoritative folderId for uploads and creation */
   folderId?: string | null;
   initialFolderId?: string;
 }
@@ -41,6 +42,8 @@ export function FileBrowserPanel({
   const toast = useToast();
   const { t } = useTranslation();
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [activeDragItem, setActiveDragItem] = useState<{ type: "file" | "folder"; item: FileWithUrl | FolderDoc } | null>(null);
+
   const {
     files,
     folders,
@@ -49,19 +52,27 @@ export function FileBrowserPanel({
     previewFile,
     isLoading,
     hasFetched,
+    selectedItems,
     setCurrentGroupId,
     setCurrentFolderId,
     setPreviewFile,
     fetchContents,
     deleteFile,
+    renameFile,
     createFolder,
     deleteFolder,
+    moveFile,
+    moveFolder,
+    bulkMove,
+    bulkDelete,
+    toggleSelect,
+    rangeSelect,
+    selectAll,
+    clearSelection,
   } = useFileManagerStore();
 
-  // URL prop is the authoritative source of truth; fall back to store if not provided
   const activeFolderId = folderIdProp !== undefined ? folderIdProp : currentFolderId;
 
-  // When used in sidebar with initialFolderId, initialize the store
   useEffect(() => {
     if (!initialFolderId) return;
     if (currentGroupId !== groupId) {
@@ -69,14 +80,16 @@ export function FileBrowserPanel({
     }
     setCurrentFolderId(initialFolderId);
     fetchContents(initialFolderId);
-  }, [
-    initialFolderId,
-    groupId,
-    currentGroupId,
-    fetchContents,
-    setCurrentFolderId,
-    setCurrentGroupId,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialFolderId, groupId, currentGroupId, fetchContents, setCurrentFolderId, setCurrentGroupId]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  const allKeys = [
+    ...folders.map((f) => `folder:${f.id}`),
+    ...files.map((f) => `file:${f.id}`),
+  ];
 
   const handleNavigateToFolder = (folderId: string | null) => {
     router.push(buildDashboardUrl(groupId, { folderId }));
@@ -114,62 +127,188 @@ export function FileBrowserPanel({
     }
   };
 
+  const handleBulkDelete = async () => {
+    const items = Array.from(selectedItems).map((key) => {
+      const [type, ...rest] = key.split(":");
+      return { type: type as "file" | "folder", id: rest.join(":") };
+    });
+    try {
+      const result = await Promise.resolve().then(() => bulkDelete(items));
+      toast.success(t("fileList.bulkDeleteSuccess", { count: String(items.length) }));
+    } catch (err) {
+      toast.error(t("fileList.bulkDeleteFailed"));
+    }
+  };
+
+  const handleToggleSelect = (key: string, e: React.MouseEvent) => {
+    if (e.shiftKey) {
+      rangeSelect(key, allKeys);
+    } else {
+      toggleSelect(key);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const allSelected = allKeys.every((k) => selectedItems.has(k));
+    if (allSelected) {
+      clearSelection();
+    } else {
+      selectAll(allKeys);
+    }
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const data = event.active.data.current as { type: "file" | "folder"; item: FileWithUrl | FolderDoc } | undefined;
+    if (data) setActiveDragItem(data);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDragItem(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeKey = active.id as string;
+    const [activeType, ...activeIdParts] = activeKey.split(":");
+    const activeId = activeIdParts.join(":");
+
+    // Determine target folder from drop target
+    let targetFolderId: string | null = null;
+    const overData = over.data.current as { type: string; folderId?: string } | undefined;
+
+    if (over.id === "breadcrumb:root") {
+      targetFolderId = null;
+    } else if (typeof over.id === "string" && over.id.startsWith("breadcrumb:")) {
+      targetFolderId = over.id.replace("breadcrumb:", "");
+    } else if (overData?.type === "folder") {
+      targetFolderId = overData.folderId as string;
+      // Don't drop onto self
+      if (targetFolderId === activeId && activeType === "folder") return;
+    } else {
+      return;
+    }
+
+    // Determine if this is a bulk move (dragged item is in selection)
+    const isBulkDrag = selectedItems.has(activeKey) && selectedItems.size > 1;
+
+    try {
+      if (isBulkDrag) {
+        const items = Array.from(selectedItems).map((key) => {
+          const [type, ...rest] = key.split(":");
+          return { type: type as "file" | "folder", id: rest.join(":") };
+        });
+        await bulkMove(items, targetFolderId);
+        toast.success(t("fileList.moveSuccess"));
+      } else if (activeType === "file") {
+        await moveFile(activeId, targetFolderId);
+        toast.success(t("fileList.moveSuccess"));
+      } else if (activeType === "folder") {
+        await moveFolder(activeId, targetFolderId);
+        toast.success(t("fileList.moveSuccess"));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("already exists")) {
+        toast.error(t("fileList.moveCollision"));
+      } else {
+        toast.error(t("fileList.moveFailed"));
+      }
+    }
+  };
+
+  const dragCount = activeDragItem
+    ? selectedItems.has(`${activeDragItem.type}:${activeDragItem.item.id}`) && selectedItems.size > 1
+      ? selectedItems.size
+      : 1
+    : 0;
+
   return (
     <>
-      <div
-        style={{
-          padding: compact ? "var(--space-md)" : 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 24,
-          }}
-        >
-          <Breadcrumbs groupId={groupId} ancestors={ancestors} />
-          {allowManage && showCreateFolderButton && (
-            <InlineButton
-              variant="accent"
-              size="md"
-              onClick={() => setShowCreateFolder(true)}
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
-            >
-              <FolderPlus size={16} />
-              {t("files.newFolder")}
-            </InlineButton>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div style={{ padding: compact ? "var(--space-md)" : 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 24,
+            }}
+          >
+            <Breadcrumbs groupId={groupId} ancestors={ancestors} />
+            {allowManage && showCreateFolderButton && (
+              <InlineButton
+                variant="accent"
+                size="md"
+                onClick={() => setShowCreateFolder(true)}
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <FolderPlus size={16} />
+                {t("files.newFolder")}
+              </InlineButton>
+            )}
+          </div>
+
+          {allowManage && (
+            <FileUploader
+              groupId={groupId}
+              folderId={activeFolderId}
+              onUploadComplete={handleUploadComplete}
+            />
+          )}
+
+          {isLoading && !hasFetched ? (
+            <LoadingSkeleton />
+          ) : (
+            <UnifiedFileList
+              folders={folders}
+              files={files}
+              selectedItems={selectedItems}
+              readOnly={!allowManage}
+              onNavigateToFolder={(id) => handleNavigateToFolder(id)}
+              onPreviewFile={(file) => setPreviewFile(file)}
+              onDeleteFile={handleDeleteFile}
+              onDeleteFolder={handleDeleteFolder}
+              onToggleSelect={handleToggleSelect}
+              onSelectAll={handleSelectAll}
+            />
           )}
         </div>
 
-        {allowManage && (
-          <FileUploader
-            groupId={groupId}
-            folderId={activeFolderId}
-            onUploadComplete={handleUploadComplete}
-          />
-        )}
-
-        {isLoading && !hasFetched ? (
-          <LoadingSkeleton />
-        ) : (
-          <>
-            <FolderList
-              folders={folders}
-              onNavigate={handleNavigateToFolder}
-              onDelete={handleDeleteFolder}
-              readOnly={!allowManage}
-            />
-            <FileList
-              files={files}
-              onPreview={(file) => setPreviewFile(file)}
-              onDelete={handleDeleteFile}
-              readOnly={!allowManage}
-            />
-          </>
-        )}
-      </div>
+        <DragOverlay>
+          {activeDragItem && (
+            <div style={{ position: "relative" }}>
+              <UnifiedFileRow
+                type={activeDragItem.type}
+                item={activeDragItem.item}
+                isSelected={false}
+                isDragOverlay
+                readOnly
+                onCheckboxChange={() => {}}
+                onClick={() => {}}
+                onDelete={() => {}}
+              />
+              {dragCount > 1 && (
+                <div style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  background: "var(--accent-primary)",
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: 20,
+                  height: 20,
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  {dragCount}
+                </div>
+              )}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {allowManage && showCreateFolderButton && (
         <CreateFolderModal
@@ -186,6 +325,14 @@ export function FileBrowserPanel({
         fileUrl={previewFile?.url ?? null}
         mimeType={previewFile?.mimeType ?? ""}
       />
+
+      {allowManage && (
+        <BulkActionBar
+          count={selectedItems.size}
+          onClear={clearSelection}
+          onDelete={handleBulkDelete}
+        />
+      )}
     </>
   );
 }

@@ -34,6 +34,7 @@ services:
       R2_SECRET_ACCESS_KEY: "${R2_SECRET_ACCESS_KEY:-}"
       R2_BUCKET_NAME: "${R2_BUCKET_NAME:-concerto-recordings}"
       R2_PUBLIC_URL: "${R2_PUBLIC_URL:-}"
+      # S3_* vars are NOT set here so that Next.js reads them from .env.local (mounted via volumes)
     depends_on:
       - postgres
 

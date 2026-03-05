@@ -57,6 +57,9 @@ export const defaultTranslations: Record<string, string> = {
   "files.folderDeleteSuccess": "Folder deleted",
   "files.createFolderSuccess": 'Folder "{name}" created',
   "files.createFolderFailed": "Failed to create folder",
+  "files.renameSuccess": "File renamed",
+  "files.renameFailed": "Failed to rename file",
+  "files.renameNameUnavailable": 'The name "{name}" cannot be used. A file with this name already exists.',
   "files.empty": "No files yet",
   "files.uploadHint": "Drop files here or click to upload",
   "files.uploading": "Uploading...",
@@ -72,6 +75,8 @@ export const defaultTranslations: Record<string, string> = {
   "fileList.title": "Files",
   "fileList.empty": "No files in this folder.",
   "fileItem.download": "Download",
+  "fileItem.rename": "Rename",
+  "fileItem.renamePrompt": "Enter a new file name",
   "fileItem.delete": "Delete",
   "fileItem.deleteTitle": "Delete File",
   "fileItem.deleteMessage":
@@ -302,12 +307,35 @@ export const defaultTranslations: Record<string, string> = {
   "preview.videoNotSupported": "Your browser does not support the video element.",
   "preview.notAvailable": "Preview not available for this file type",
 
+  // File browser (unified list + DnD)
+  "fileList.colName": "Name",
+  "fileList.colDate": "Date",
+  "fileList.colAuthor": "Author",
+  "fileList.colSize": "Size",
+  "fileList.unknownAuthor": "—",
+  "fileList.moveSuccess": "Moved successfully",
+  "fileList.moveFailed": "Move failed",
+  "fileList.moveCollision": "A file with that name already exists in the destination",
+  "fileList.bulkDeleteConfirm": "Delete {count} selected item(s)? This cannot be undone.",
+  "fileList.bulkDeleteSuccess": "Deleted {count} item(s)",
+  "fileList.bulkDeleteFailed": "Some items could not be deleted",
+  "fileList.selectedCount": "{count} selected",
+  "fileList.clearSelection": "Clear selection",
+  "fileList.deleteSelected": "Delete selected",
+  "fileList.folderRenameSuccess": "Folder renamed",
+  "fileList.folderRenameFailed": "Failed to rename folder",
+
   // Translations panel
   "translations.title": "Edit Concerto interface text",
   "translations.save": "Save",
   "translations.saving": "Saving...",
   "translations.saveSuccess": "Translations saved",
   "translations.saveFailed": "Failed to save translations",
+  "translations.newTranslation": "New Translation",
+  "translations.deleteTitle": "Delete Translation",
+  "translations.deleteMessage": "Are you sure you want to delete \"{name}\"?",
+  "translations.deleteButton": "Delete",
+  "translations.addTranslation": "Add Translation",
 };
 
 export type TranslationKey = keyof typeof defaultTranslations;

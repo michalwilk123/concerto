@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EntityGridRow } from "@/components/ui/entity-list-row";
 import { InlineButton } from "@/components/ui/inline-button";
 import { InlineErrorBanner } from "@/components/ui/inline-error-banner";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Spinner from "@/components/ui/spinner";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
@@ -30,8 +30,7 @@ interface GroupMemberManagerProps {
 
 export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
   const { t } = useTranslation();
-  const [members, setMembers] = useState<MemberWithInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<MemberWithInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Add member state
@@ -45,19 +44,18 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const fetchMembers = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const m = await groupsApi.getMembers(group.id);
       setMembers(m);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("groupMembers.loadFailed"));
-    } finally {
-      setLoading(false);
     }
   }, [group.id, t]);
 
   useEffect(() => {
+    // This effect performs initial data loading for the selected group.
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
     fetchMembers();
   }, [fetchMembers]);
 
@@ -72,7 +70,7 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
       setSearching(true);
       try {
         const results = await usersApi.search(search.trim());
-        const memberIds = new Set(members.map((m) => m.userId));
+        const memberIds = new Set((members ?? []).map((m) => m.userId));
         setSearchResults(results.filter((u) => !memberIds.has(u.id)));
       } catch {
         // ignore search errors
@@ -215,13 +213,14 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
               </div>
             )}
           </div>
-          <Select
-            value={addRole}
-            onChange={(e) => setAddRole(e.target.value as "teacher" | "student")}
-            style={{ background: "var(--bg-secondary)" }}
-          >
-            <option value="student">{t("groupMembers.student")}</option>
-            <option value="teacher">{t("groupMembers.teacher")}</option>
+          <Select value={addRole} onValueChange={(v) => setAddRole(v as "teacher" | "student")}>
+            <SelectTrigger variant="compact" className="bg-[var(--bg-secondary)]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="student">{t("groupMembers.student")}</SelectItem>
+              <SelectItem value="teacher">{t("groupMembers.teacher")}</SelectItem>
+            </SelectContent>
           </Select>
         </div>
       </div>
@@ -235,8 +234,8 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
           "",
         ]}
         columns="2fr 2.5fr 100px 60px"
-        isLoading={loading}
-        hasRows={members.length > 0}
+        isLoading={members === null}
+        hasRows={(members?.length ?? 0) > 0}
         emptyState={
           <EmptyState
             icon={<Users size={32} />}
@@ -246,11 +245,11 @@ export function GroupMemberManager({ group, onBack }: GroupMemberManagerProps) {
           />
         }
       >
-        {members.map((m, i) => (
+        {(members ?? []).map((m, i) => (
           <EntityGridRow
             key={m.id}
             columns="2fr 2.5fr 100px 60px"
-            isLast={i === members.length - 1}
+            isLast={i === (members?.length ?? 0) - 1}
           >
             <Typography variant="bodySm" weight={500}>
               {m.userName}
