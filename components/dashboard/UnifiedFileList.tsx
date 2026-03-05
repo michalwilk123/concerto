@@ -13,6 +13,8 @@ interface UnifiedFileListProps {
   onPreviewFile: (file: FileWithUrl) => void;
   onDeleteFile: (id: string) => void;
   onDeleteFolder: (id: string) => void;
+  onRenameFile: (id: string, name: string) => void;
+  onRenameFolder: (id: string, name: string) => void;
   onToggleSelect: (key: string, e: React.MouseEvent) => void;
   onSelectAll: () => void;
 }
@@ -26,6 +28,8 @@ export function UnifiedFileList({
   onPreviewFile,
   onDeleteFile,
   onDeleteFolder,
+  onRenameFile,
+  onRenameFolder,
   onToggleSelect,
   onSelectAll,
 }: UnifiedFileListProps) {
@@ -105,6 +109,7 @@ export function UnifiedFileList({
                 onCheckboxChange={(e) => onToggleSelect(`folder:${folder.id}`, e)}
                 onClick={() => onNavigateToFolder(folder.id)}
                 onDelete={() => onDeleteFolder(folder.id)}
+                onRename={folder.isSystem ? undefined : (name) => onRenameFolder(folder.id, name)}
               />
             ))}
             {files.map((file) => (
@@ -117,6 +122,7 @@ export function UnifiedFileList({
                 onCheckboxChange={(e) => onToggleSelect(`file:${file.id}`, e)}
                 onClick={() => onPreviewFile(file)}
                 onDelete={() => onDeleteFile(file.id)}
+                onRename={(name) => onRenameFile(file.id, name)}
               />
             ))}
           </>

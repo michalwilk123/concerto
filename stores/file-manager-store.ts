@@ -107,13 +107,25 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   renameFile: async (id, name) => {
-    await filesApi.rename(id, name);
-    await get().fetchContents(get().currentFolderId);
+    const prev = get().files;
+    set({ files: prev.map((f) => (f.id === id ? { ...f, name } : f)) });
+    try {
+      await filesApi.rename(id, name);
+    } catch (err) {
+      set({ files: prev });
+      throw err;
+    }
   },
 
   renameFolder: async (id, name) => {
-    await foldersApi.rename(id, name);
-    await get().fetchContents(get().currentFolderId);
+    const prev = get().folders;
+    set({ folders: prev.map((f) => (f.id === id ? { ...f, name } : f)) });
+    try {
+      await foldersApi.rename(id, name);
+    } catch (err) {
+      set({ folders: prev });
+      throw err;
+    }
   },
 
   createFolder: async (name, parentId) => {
@@ -130,21 +142,44 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   moveFile: async (fileId, targetFolderId) => {
-    await filesApi.move(fileId, targetFolderId);
-    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    const prev = { files: get().files, folders: get().folders };
+    set({ files: prev.files.filter((f) => f.id !== fileId) });
     get().clearSelection();
+    try {
+      await filesApi.move(fileId, targetFolderId);
+    } catch (err) {
+      set({ files: prev.files, folders: prev.folders });
+      throw err;
+    }
   },
 
   moveFolder: async (folderId, targetFolderId) => {
-    await foldersApi.move(folderId, targetFolderId);
-    await get().fetchContents(get().currentFolderId);
+    const prev = { files: get().files, folders: get().folders };
+    set({ folders: prev.folders.filter((f) => f.id !== folderId) });
     get().clearSelection();
+    try {
+      await foldersApi.move(folderId, targetFolderId);
+    } catch (err) {
+      set({ files: prev.files, folders: prev.folders });
+      throw err;
+    }
   },
 
   bulkMove: async (items, targetFolderId) => {
-    await filesApi.bulkMove(items, targetFolderId);
-    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    const prev = { files: get().files, folders: get().folders };
+    const fileIds = new Set(items.filter((i) => i.type === "file").map((i) => i.id));
+    const folderIds = new Set(items.filter((i) => i.type === "folder").map((i) => i.id));
+    set({
+      files: prev.files.filter((f) => !fileIds.has(f.id)),
+      folders: prev.folders.filter((f) => !folderIds.has(f.id)),
+    });
     get().clearSelection();
+    try {
+      await filesApi.bulkMove(items, targetFolderId);
+    } catch (err) {
+      set({ files: prev.files, folders: prev.folders });
+      throw err;
+    }
   },
 
   bulkDelete: async (items) => {

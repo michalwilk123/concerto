@@ -86,6 +86,7 @@ export const defaultTranslations: Record<string, string> = {
   "createFolder.cancel": "Cancel",
   "createFolder.create": "Create",
   "uploader.uploading": "Uploading...",
+  "uploader.uploadFile": "Upload file",
   "uploader.dropOrClick": "Drop files here or click to upload",
   "uploader.maxFileSize": "Max 50MB per file",
   "uploader.uploadFailed": "Upload failed",

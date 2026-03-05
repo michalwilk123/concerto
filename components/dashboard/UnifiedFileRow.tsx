@@ -1,7 +1,7 @@
 "use client";
 
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { Folder, GripVertical, Trash2 } from "lucide-react";
+import { Folder, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -17,6 +17,7 @@ interface UnifiedFileRowProps {
   onCheckboxChange: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete: () => void;
+  onRename?: (newName: string) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -38,17 +39,22 @@ export function UnifiedFileRow({
   onCheckboxChange,
   onClick,
   onDelete,
+  onRename,
 }: UnifiedFileRowProps) {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(item.name);
 
   const dndId = `${type}:${item.id}`;
   const isSystemFolder = type === "folder" && (item as FolderDoc).isSystem;
+  const isFolder = type === "folder";
+  const file = !isFolder ? (item as FileWithUrl) : null;
 
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: dndId,
-    disabled: isSystemFolder || isDragOverlay,
+    disabled: isSystemFolder || isDragOverlay || isEditing,
     data: { type, item },
   });
 
@@ -58,14 +64,13 @@ export function UnifiedFileRow({
     data: { type: "folder", folderId: item.id },
   });
 
-  const isFolder = type === "folder";
-  const folder = isFolder ? (item as FolderDoc) : null;
-  const file = !isFolder ? (item as FileWithUrl) : null;
+  const combinedRef = (el: HTMLElement | null) => {
+    setDragRef(el);
+    if (isFolder) setDropRef(el);
+  };
 
   const Icon = isFolder ? Folder : getFileIcon(file!.mimeType);
-  const iconColor = isFolder
-    ? "var(--accent-primary)"
-    : "var(--text-tertiary)";
+  const iconColor = isFolder ? "var(--accent-primary)" : "var(--text-tertiary)";
 
   const rowBg = isDragging
     ? "transparent"
@@ -83,11 +88,25 @@ export function UnifiedFileRow({
       ? "1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)"
       : "1px solid transparent";
 
-  // Combine drag + drop refs for folder rows
-  const combinedRef = (el: HTMLElement | null) => {
-    setDragRef(el);
-    if (isFolder) setDropRef(el);
+  const commitRename = () => {
+    const trimmed = editValue.trim();
+    setIsEditing(false);
+    if (trimmed && trimmed !== item.name) {
+      onRename?.(trimmed);
+    } else {
+      setEditValue(item.name);
+    }
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") commitRename();
+    if (e.key === "Escape") {
+      setEditValue(item.name);
+      setIsEditing(false);
+    }
+  };
+
+  const showActions = !readOnly && !isSystemFolder && (hovered || isSelected) && !isEditing;
 
   return (
     <>
@@ -95,7 +114,7 @@ export function UnifiedFileRow({
         ref={combinedRef}
         style={{
           display: "grid",
-          gridTemplateColumns: "28px 28px 1fr 110px 110px 70px 36px",
+          gridTemplateColumns: "28px 28px 1fr 110px 110px 70px 60px",
           alignItems: "center",
           gap: 0,
           height: 44,
@@ -103,10 +122,10 @@ export function UnifiedFileRow({
           background: rowBg,
           border: rowBorder,
           borderRadius: "var(--radius-sm)",
-          cursor: isDragging ? "grabbing" : isFolder ? "pointer" : "default",
+          cursor: isDragging ? "grabbing" : isEditing ? "text" : isFolder ? "pointer" : "default",
           opacity: isDragging ? 0.4 : 1,
           transition: "background 0.1s, border-color 0.1s",
-          userSelect: "none",
+          userSelect: isEditing ? "text" : "none",
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -119,8 +138,8 @@ export function UnifiedFileRow({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: isSystemFolder ? "default" : "grab",
-            color: hovered && !isSystemFolder ? "var(--text-tertiary)" : "transparent",
+            cursor: isSystemFolder || isEditing ? "default" : "grab",
+            color: hovered && !isSystemFolder && !isEditing ? "var(--text-tertiary)" : "transparent",
             transition: "color 0.1s",
             flexShrink: 0,
           }}
@@ -131,7 +150,7 @@ export function UnifiedFileRow({
         {/* Checkbox */}
         <div
           style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-          onClick={(e) => { e.stopPropagation(); onCheckboxChange(e); }}
+          onClick={(e) => { e.stopPropagation(); if (!isEditing) onCheckboxChange(e); }}
         >
           <input
             type="checkbox"
@@ -144,26 +163,49 @@ export function UnifiedFileRow({
         {/* Name */}
         <div
           style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, paddingRight: 8 }}
-          onClick={onClick}
+          onClick={isEditing ? undefined : onClick}
         >
           <Icon
             size={16}
             style={{ color: iconColor, flexShrink: 0 }}
             fill={isFolder ? "color-mix(in srgb, var(--accent-primary) 15%, transparent)" : "none"}
           />
-          <span
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: isFolder ? 500 : 400,
-              color: "var(--text-primary)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              cursor: isFolder ? "pointer" : "default",
-            }}
-          >
-            {item.name}
-          </span>
+          {isEditing ? (
+            <input
+              autoFocus
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={commitRename}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: "0.875rem",
+                fontWeight: isFolder ? 500 : 400,
+                color: "var(--text-primary)",
+                background: "var(--bg-primary)",
+                border: "1px solid var(--accent-primary)",
+                borderRadius: "var(--radius-sm)",
+                padding: "2px 6px",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: isFolder ? 500 : 400,
+                color: "var(--text-primary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                cursor: isFolder ? "pointer" : "default",
+              }}
+            >
+              {item.name}
+            </span>
+          )}
           {isSystemFolder && (
             <span style={{
               fontSize: "0.65rem",
@@ -199,9 +241,32 @@ export function UnifiedFileRow({
           {!isFolder ? formatSize((item as FileWithUrl).size) : ""}
         </div>
 
-        {/* Delete */}
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          {!readOnly && !isSystemFolder && (hovered || isSelected) && (
+        {/* Actions: rename + delete */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 2 }}>
+          {showActions && onRename && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditValue(item.name);
+                setIsEditing(true);
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 4,
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                borderRadius: "var(--radius-sm)",
+                display: "flex",
+                alignItems: "center",
+              }}
+              title={t("fileItem.rename")}
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+          {showActions && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}

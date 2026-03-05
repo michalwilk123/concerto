@@ -1,6 +1,6 @@
 "use client";
 
-import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, pointerWithin, useSensor, useSensors } from "@dnd-kit/core";
 import { FolderPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -59,6 +59,7 @@ export function FileBrowserPanel({
     fetchContents,
     deleteFile,
     renameFile,
+    renameFolder,
     createFolder,
     deleteFolder,
     moveFile,
@@ -106,6 +107,28 @@ export function FileBrowserPanel({
       toast.success(t("files.deleteSuccess"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("files.deleteFailed"));
+    }
+  };
+
+  const handleRenameFile = async (id: string, name: string) => {
+    try {
+      await renameFile(id, name);
+      toast.success(t("files.renameSuccess"));
+    } catch (err) {
+      if (err instanceof Error && /already exists/i.test(err.message)) {
+        toast.error(t("files.renameNameUnavailable", { name }));
+        return;
+      }
+      toast.error(err instanceof Error ? err.message : t("files.renameFailed"));
+    }
+  };
+
+  const handleRenameFolder = async (id: string, name: string) => {
+    try {
+      await renameFolder(id, name);
+      toast.success(t("fileList.folderRenameSuccess"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("fileList.folderRenameFailed"));
     }
   };
 
@@ -223,7 +246,7 @@ export function FileBrowserPanel({
 
   return (
     <>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div style={{ padding: compact ? "var(--space-md)" : 0 }}>
           <div
             style={{
@@ -234,26 +257,27 @@ export function FileBrowserPanel({
             }}
           >
             <Breadcrumbs groupId={groupId} ancestors={ancestors} />
-            {allowManage && showCreateFolderButton && (
-              <InlineButton
-                variant="accent"
-                size="md"
-                onClick={() => setShowCreateFolder(true)}
-                style={{ display: "flex", alignItems: "center", gap: 8 }}
-              >
-                <FolderPlus size={16} />
-                {t("files.newFolder")}
-              </InlineButton>
+            {allowManage && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <FileUploader
+                  groupId={groupId}
+                  folderId={activeFolderId}
+                  onUploadComplete={handleUploadComplete}
+                />
+                {showCreateFolderButton && (
+                  <InlineButton
+                    variant="accent"
+                    size="md"
+                    onClick={() => setShowCreateFolder(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <FolderPlus size={16} />
+                    {t("files.newFolder")}
+                  </InlineButton>
+                )}
+              </div>
             )}
           </div>
-
-          {allowManage && (
-            <FileUploader
-              groupId={groupId}
-              folderId={activeFolderId}
-              onUploadComplete={handleUploadComplete}
-            />
-          )}
 
           {isLoading && !hasFetched ? (
             <LoadingSkeleton />
@@ -267,6 +291,8 @@ export function FileBrowserPanel({
               onPreviewFile={(file) => setPreviewFile(file)}
               onDeleteFile={handleDeleteFile}
               onDeleteFolder={handleDeleteFolder}
+              onRenameFile={handleRenameFile}
+              onRenameFolder={handleRenameFolder}
               onToggleSelect={handleToggleSelect}
               onSelectAll={handleSelectAll}
             />
