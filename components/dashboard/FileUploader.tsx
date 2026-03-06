@@ -4,15 +4,16 @@ import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { useTranslation } from "@/hooks/useTranslation";
-import { filesApi } from "@/lib/api-client";
+import { filesApi, meetingFilesApi } from "@/lib/api-client";
 
 interface FileUploaderProps {
   groupId: string;
   folderId?: string | null;
+  meetingId?: string;
   onUploadComplete?: () => void;
 }
 
-export function FileUploader({ groupId, folderId, onUploadComplete }: FileUploaderProps) {
+export function FileUploader({ groupId, folderId, meetingId, onUploadComplete }: FileUploaderProps) {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,7 +21,11 @@ export function FileUploader({ groupId, folderId, onUploadComplete }: FileUpload
   const handleUpload = async (file: File) => {
     try {
       setUploading(true);
-      await filesApi.upload({ file, groupId, folderId });
+      if (meetingId) {
+        await meetingFilesApi.upload({ file, meetingId, folderId });
+      } else {
+        await filesApi.upload({ file, groupId, folderId });
+      }
       setUploading(false);
       onUploadComplete?.();
     } catch (error) {

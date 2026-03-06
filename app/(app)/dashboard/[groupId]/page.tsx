@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Files, MessageSquare, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
@@ -18,6 +18,8 @@ import { useFileManagerStore } from "@/stores/file-manager-store";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
+type MeetingSidebarTab = "chat" | "files";
+
 export default function DashboardGroupPage() {
   const router = useRouter();
   const params = useParams<{ groupId: string }>();
@@ -25,9 +27,9 @@ export default function DashboardGroupPage() {
   const { data: session, isPending } = useSession();
   const { t } = useTranslation();
   const hasSeeded = useRef(false);
-  const [meetingsFolderName, setMeetingsFolderName] = useState<string | null>(null);
   const [ancestors, setAncestors] = useState<FolderDoc[]>([]);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(true);
+  const [meetingSidebarTab, setMeetingSidebarTab] = useState<MeetingSidebarTab>("chat");
   const { fetchContents, setCurrentGroupId, setCurrentFolderId } = useFileManagerStore();
 
   const groupId = params.groupId;
@@ -98,17 +100,6 @@ export default function DashboardGroupPage() {
       .catch(() => {});
   }, [user, isPrivileged, groupId, fetchContents, folderId]);
 
-  // Load meetings folder name for teacher/admin
-  useEffect(() => {
-    if (!user || !isPrivileged) return;
-    foldersApi
-      .findMeetingsFolder(groupId)
-      .then((folder) => {
-        if (folder) setMeetingsFolderName(folder.name);
-      })
-      .catch(() => {});
-  }, [user, isPrivileged, groupId]);
-
   const handleSelectMeeting = useCallback(
     (meetingId: string | null) => {
       router.push(
@@ -136,7 +127,7 @@ export default function DashboardGroupPage() {
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden", background: "var(--bg-primary)" }}>
       <DashboardSidebar
-        meetingsFolderName={meetingsFolderName}
+        meetingsFolderName={null}
         groupId={groupId}
         activeTab={activeTab}
       />
@@ -194,19 +185,44 @@ export default function DashboardGroupPage() {
                   overflow: "hidden",
                 }}
               >
+                {/* Sidebar header with tabs + close */}
                 <div
                   style={{
-                    padding: "12px 16px",
                     borderBottom: "1px solid var(--border-primary)",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    color: "var(--text-primary)",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
                   }}
                 >
-                  {t("dashboard.meetingChat")}
+                  <div style={{ display: "flex", flex: 1 }}>
+                    {(["chat", "files"] as MeetingSidebarTab[]).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setMeetingSidebarTab(tab)}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          padding: "10px 12px",
+                          background: "transparent",
+                          border: "none",
+                          borderBottom:
+                            meetingSidebarTab === tab
+                              ? "2px solid var(--text-primary)"
+                              : "2px solid transparent",
+                          color: meetingSidebarTab === tab ? "var(--text-primary)" : "var(--text-secondary)",
+                          fontSize: "0.82rem",
+                          fontWeight: meetingSidebarTab === tab ? 600 : 400,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {tab === "chat" ? <MessageSquare size={14} /> : <Files size={14} />}
+                        {tab === "chat" ? t("dashboard.meetingChat") : t("sidebar.files")}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setChatSidebarOpen(false)}
@@ -215,33 +231,70 @@ export default function DashboardGroupPage() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: 28,
-                      height: 28,
+                      width: 32,
+                      height: 32,
                       border: "none",
                       borderRadius: "var(--radius-sm)",
                       background: "transparent",
                       color: "var(--text-tertiary)",
                       cursor: "pointer",
+                      marginRight: 4,
                     }}
                   >
                     <PanelRightClose size={16} />
                   </button>
                 </div>
+
                 <div style={{ flex: 1, overflow: "hidden" }}>
-                  {selectedMeetingId ? (
-                    <MeetChatPanel key={`meeting-chat-${selectedMeetingId}`} meetingId={selectedMeetingId} />
-                  ) : (
-                    <div
-                      style={{
-                        height: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--text-tertiary)",
-                        fontSize: "0.82rem",
-                      }}
-                    >
-                      {t("dashboard.selectMeeting")}
+                  {meetingSidebarTab === "chat" && (
+                    <>
+                      {selectedMeetingId ? (
+                        <MeetChatPanel
+                          key={`meeting-chat-${selectedMeetingId}`}
+                          meetingId={selectedMeetingId}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "var(--text-tertiary)",
+                            fontSize: "0.82rem",
+                          }}
+                        >
+                          {t("dashboard.selectMeeting")}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {meetingSidebarTab === "files" && (
+                    <div style={{ flex: 1, overflow: "auto", height: "100%" }}>
+                      {selectedMeetingId ? (
+                        <FileBrowserPanel
+                          key={`meeting-files-${selectedMeetingId}`}
+                          meetingId={selectedMeetingId}
+                          groupId={groupId}
+                          allowManage={isPrivileged}
+                          showCreateFolderButton={isPrivileged}
+                          compact
+                          ancestors={[]}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "var(--text-tertiary)",
+                            fontSize: "0.82rem",
+                          }}
+                        >
+                          {t("dashboard.selectMeeting")}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

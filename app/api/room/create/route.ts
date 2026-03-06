@@ -1,8 +1,7 @@
-import { and, eq, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { folder, meeting } from "@/db/schema";
+import { meeting } from "@/db/schema";
 import { requireGroupTeacher } from "@/lib/auth-helpers";
 import { createEmptyRoom, rooms } from "@/lib/room-store";
 
@@ -28,43 +27,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[room/create] Failed to persist meeting:", err);
     return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 });
-  }
-
-  // Auto-create a dashboard folder for this meeting
-  try {
-    // Find or create the "meetings" system folder for this group
-    let [meetingsFolder] = await db
-      .select()
-      .from(folder)
-      .where(
-        and(
-          eq(folder.groupId, groupId),
-          eq(folder.isSystem, true),
-          eq(folder.name, "meetings"),
-          isNull(folder.parentId),
-        ),
-      )
-      .limit(1);
-
-    if (!meetingsFolder) {
-      const [created] = await db
-        .insert(folder)
-        .values({ id: nanoid(), name: "meetings", groupId, parentId: null, isSystem: true })
-        .returning();
-      meetingsFolder = created;
-    }
-
-    // Create subfolder for this meeting using meetingId as folder id
-    await db.insert(folder).values({
-      id: dbMeetingId,
-      name: meetingName,
-      groupId,
-      parentId: meetingsFolder.id,
-      isSystem: false,
-    });
-  } catch (err) {
-    console.error("[room/create] Failed to create meeting folder:", err);
-    // Non-fatal — meeting still works without the folder
   }
 
   rooms.set(dbMeetingId, createEmptyRoom(groupId));

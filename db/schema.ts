@@ -91,9 +91,13 @@ export const folder = pgTable(
       .references(() => group.id, { onDelete: "cascade" }),
     parentId: text("parent_id"),
     isSystem: boolean("is_system").notNull().default(false),
+    meetingId: text("meeting_id").references(() => meeting.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("folder_group_parent_idx").on(table.groupId, table.parentId)],
+  (table) => [
+    index("folder_group_parent_idx").on(table.groupId, table.parentId),
+    index("folder_meeting_idx").on(table.meetingId),
+  ],
 );
 
 export const meeting = pgTable(
@@ -165,7 +169,7 @@ export const chatReaction = pgTable(
 export const file = pgTable(
   "file",
   {
-    id: text("id").primaryKey(), // path-based: groupId/[folderId/]filename
+    id: text("id").primaryKey(), // path-based: groupId/[folderId/]filename or meetings/meetingId/[folderId/]filename
     name: text("name").notNull(),
     mimeType: text("mime_type").notNull(),
     size: integer("size").notNull(),
@@ -173,8 +177,12 @@ export const file = pgTable(
       .notNull()
       .references(() => group.id, { onDelete: "cascade" }),
     folderId: text("folder_id").references(() => folder.id, { onDelete: "set null" }),
+    meetingId: text("meeting_id").references(() => meeting.id, { onDelete: "cascade" }),
     uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("file_group_folder_idx").on(table.groupId, table.folderId)],
+  (table) => [
+    index("file_group_folder_idx").on(table.groupId, table.folderId),
+    index("file_meeting_idx").on(table.meetingId),
+  ],
 );

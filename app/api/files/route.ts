@@ -1,4 +1,7 @@
+import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { db } from "@/db";
+import { meeting } from "@/db/schema";
 import { requireGroupMember, requireGroupTeacher } from "@/lib/auth-helpers";
 import {
   deleteFileById,
@@ -7,6 +10,19 @@ import {
   readFileById,
   renameFileById,
 } from "@/lib/services/file-service";
+
+async function resolveGroupId(parsed: { groupId: string | null; meetingId: string | null }): Promise<string | null> {
+  if (parsed.groupId) return parsed.groupId;
+  if (parsed.meetingId) {
+    const [row] = await db
+      .select({ groupId: meeting.groupId })
+      .from(meeting)
+      .where(eq(meeting.id, parsed.meetingId))
+      .limit(1);
+    return row?.groupId ?? null;
+  }
+  return null;
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,7 +33,10 @@ export async function GET(req: NextRequest) {
     const parsed = parseFileId(id);
     if (!parsed) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-    const { error } = await requireGroupMember(parsed.groupId);
+    const groupId = await resolveGroupId(parsed);
+    if (!groupId) return NextResponse.json({ error: "File not found" }, { status: 404 });
+
+    const { error } = await requireGroupMember(groupId);
     if (error) return error;
 
     const loaded = await readFileById(id);
@@ -51,7 +70,10 @@ export async function DELETE(req: NextRequest) {
   const parsed = parseFileId(id);
   if (!parsed) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-  const { error } = await requireGroupTeacher(parsed.groupId);
+  const groupId = await resolveGroupId(parsed);
+  if (!groupId) return NextResponse.json({ error: "File not found" }, { status: 404 });
+
+  const { error } = await requireGroupTeacher(groupId);
   if (error) return error;
 
   await deleteFileById(id);
@@ -73,7 +95,10 @@ export async function PATCH(req: NextRequest) {
   const parsed = parseFileId(id);
   if (!parsed) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-  const { error } = await requireGroupTeacher(parsed.groupId);
+  const groupId = await resolveGroupId(parsed);
+  if (!groupId) return NextResponse.json({ error: "File not found" }, { status: 404 });
+
+  const { error } = await requireGroupTeacher(groupId);
   if (error) return error;
 
   try {

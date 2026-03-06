@@ -14,6 +14,7 @@ import { UnifiedFileRow } from "@/components/dashboard/UnifiedFileRow";
 import { FilePreviewModal } from "@/components/dashboard/preview/FilePreviewModal";
 import { useToast } from "@/components/Toast";
 import { InlineButton } from "@/components/ui/inline-button";
+import { meetingFoldersApi } from "@/lib/api-client";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
 import { useFileManagerStore } from "@/stores/file-manager-store";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -24,6 +25,7 @@ interface FileBrowserPanelProps {
   showCreateFolderButton?: boolean;
   compact?: boolean;
   groupId: string;
+  meetingId?: string;
   ancestors: FolderDoc[];
   folderId?: string | null;
   initialFolderId?: string;
@@ -34,7 +36,8 @@ export function FileBrowserPanel({
   showCreateFolderButton = true,
   compact = false,
   groupId,
-  ancestors,
+  meetingId,
+  ancestors: ancestorsProp,
   folderId: folderIdProp,
   initialFolderId,
 }: FileBrowserPanelProps) {
@@ -44,16 +47,22 @@ export function FileBrowserPanel({
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState<{ type: "file" | "folder"; item: FileWithUrl | FolderDoc } | null>(null);
 
+  // Local state for meeting-mode navigation
+  const [localFolderId, setLocalFolderId] = useState<string | null>(null);
+  const [localAncestors, setLocalAncestors] = useState<FolderDoc[]>([]);
+
   const {
     files,
     folders,
     currentFolderId,
     currentGroupId,
+    currentMeetingId,
     previewFile,
     isLoading,
     hasFetched,
     selectedItems,
     setCurrentGroupId,
+    setCurrentMeetingId,
     setCurrentFolderId,
     setPreviewFile,
     fetchContents,
@@ -72,28 +81,65 @@ export function FileBrowserPanel({
     clearSelection,
   } = useFileManagerStore();
 
-  const activeFolderId = folderIdProp !== undefined ? folderIdProp : currentFolderId;
-
+  // Init: sync group/meeting to store
   useEffect(() => {
-    if (!initialFolderId) return;
-    if (currentGroupId !== groupId) {
-      setCurrentGroupId(groupId);
+    if (meetingId) {
+      if (currentMeetingId !== meetingId) {
+        setCurrentMeetingId(meetingId);
+        setLocalFolderId(null);
+        setLocalAncestors([]);
+        fetchContents(null);
+      }
+    } else {
+      if (!initialFolderId) return;
+      if (currentGroupId !== groupId) {
+        setCurrentGroupId(groupId);
+      }
+      setCurrentFolderId(initialFolderId);
+      fetchContents(initialFolderId);
     }
-    setCurrentFolderId(initialFolderId);
-    fetchContents(initialFolderId);
-  }, [initialFolderId, groupId, currentGroupId, fetchContents, setCurrentFolderId, setCurrentGroupId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meetingId, initialFolderId, groupId]);
+
+  // Clean up meeting context on unmount
+  useEffect(() => {
+    if (!meetingId) return;
+    return () => {
+      // Don't reset if we're still in the same meeting context
+    };
+  }, [meetingId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
+
+  // Active folder/ancestors: meeting mode uses local state, group mode uses props/store
+  const activeFolderId = meetingId ? localFolderId : (folderIdProp !== undefined ? folderIdProp : currentFolderId);
+  const activeAncestors = meetingId ? localAncestors : ancestorsProp;
 
   const allKeys = [
     ...folders.map((f) => `folder:${f.id}`),
     ...files.map((f) => `file:${f.id}`),
   ];
 
-  const handleNavigateToFolder = (folderId: string | null) => {
-    router.push(buildDashboardUrl(groupId, { folderId }));
+  const handleNavigateToFolder = async (folderId: string | null) => {
+    if (meetingId) {
+      setLocalFolderId(folderId);
+      setCurrentFolderId(folderId);
+      fetchContents(folderId);
+      if (folderId) {
+        try {
+          const anc = await meetingFoldersApi.getAncestors(folderId);
+          setLocalAncestors(anc);
+        } catch {
+          setLocalAncestors([]);
+        }
+      } else {
+        setLocalAncestors([]);
+      }
+    } else {
+      router.push(buildDashboardUrl(groupId, { folderId }));
+    }
   };
 
   const handleUploadComplete = () => {
@@ -156,9 +202,9 @@ export function FileBrowserPanel({
       return { type: type as "file" | "folder", id: rest.join(":") };
     });
     try {
-      const result = await Promise.resolve().then(() => bulkDelete(items));
+      await bulkDelete(items);
       toast.success(t("fileList.bulkDeleteSuccess", { count: String(items.length) }));
-    } catch (err) {
+    } catch {
       toast.error(t("fileList.bulkDeleteFailed"));
     }
   };
@@ -194,7 +240,6 @@ export function FileBrowserPanel({
     const [activeType, ...activeIdParts] = activeKey.split(":");
     const activeId = activeIdParts.join(":");
 
-    // Determine target folder from drop target
     let targetFolderId: string | null = null;
     const overData = over.data.current as { type: string; folderId?: string } | undefined;
 
@@ -204,13 +249,11 @@ export function FileBrowserPanel({
       targetFolderId = over.id.replace("breadcrumb:", "");
     } else if (overData?.type === "folder") {
       targetFolderId = overData.folderId as string;
-      // Don't drop onto self
       if (targetFolderId === activeId && activeType === "folder") return;
     } else {
       return;
     }
 
-    // Determine if this is a bulk move (dragged item is in selection)
     const isBulkDrag = selectedItems.has(activeKey) && selectedItems.size > 1;
 
     try {
@@ -256,11 +299,16 @@ export function FileBrowserPanel({
               marginBottom: 24,
             }}
           >
-            <Breadcrumbs groupId={groupId} ancestors={ancestors} />
+            <Breadcrumbs
+              groupId={groupId}
+              ancestors={activeAncestors}
+              onNavigate={meetingId ? (folderId) => handleNavigateToFolder(folderId) : undefined}
+            />
             {allowManage && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <FileUploader
                   groupId={groupId}
+                  meetingId={meetingId}
                   folderId={activeFolderId}
                   onUploadComplete={handleUploadComplete}
                 />

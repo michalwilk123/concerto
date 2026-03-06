@@ -426,8 +426,9 @@ export const filesApi = {
 };
 
 export const meetingFilesApi = {
-  async list(meetingId: string): Promise<FileWithUrl[]> {
+  async list(meetingId: string, folderId?: string | null): Promise<FileWithUrl[]> {
     const params = new URLSearchParams({ meetingId });
+    if (folderId) params.set("folderId", folderId);
     const response = await fetch(`/api/meeting-files?${params}`);
     if (!response.ok) {
       const error = await response.json();
@@ -436,10 +437,11 @@ export const meetingFilesApi = {
     return response.json();
   },
 
-  async upload(params: { meetingId: string; file: File }): Promise<FileWithUrl> {
+  async upload(params: { meetingId: string; file: File; folderId?: string | null }): Promise<FileWithUrl> {
     const formData = new FormData();
     formData.append("meetingId", params.meetingId);
     formData.append("file", params.file);
+    if (params.folderId) formData.append("folderId", params.folderId);
 
     const response = await fetch("/api/meeting-files", {
       method: "POST",
@@ -448,6 +450,149 @@ export const meetingFilesApi = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Upload failed");
+    }
+    return response.json();
+  },
+
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/meeting-files?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Delete failed");
+    }
+  },
+
+  async rename(id: string, name: string): Promise<FileWithUrl> {
+    const response = await fetch("/api/meeting-files", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Rename failed");
+    }
+    return response.json();
+  },
+
+  async move(fileId: string, targetFolderId: string | null): Promise<FileWithUrl> {
+    const response = await fetch("/api/meeting-files/move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileId, targetFolderId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Move failed");
+    }
+    return response.json();
+  },
+
+  async bulkMove(
+    items: { type: "file" | "folder"; id: string }[],
+    targetFolderId: string | null,
+  ): Promise<{ moved: string[]; errors: { id: string; error: string }[] }> {
+    const response = await fetch("/api/meeting-files/bulk-move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items, targetFolderId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Bulk move failed");
+    }
+    return response.json();
+  },
+
+  async bulkDelete(
+    items: { type: "file" | "folder"; id: string }[],
+  ): Promise<{ deleted: string[]; errors: { id: string; error: string }[] }> {
+    const response = await fetch("/api/meeting-files/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Bulk delete failed");
+    }
+    return response.json();
+  },
+};
+
+export const meetingFoldersApi = {
+  async list(meetingId: string, parentId?: string | null): Promise<FolderDoc[]> {
+    const params = new URLSearchParams({ meetingId });
+    if (parentId) params.set("parentId", parentId);
+    const response = await fetch(`/api/meeting-files/folders?${params}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to list meeting folders");
+    }
+    return response.json();
+  },
+
+  async get(id: string): Promise<FolderDoc> {
+    const response = await fetch(`/api/meeting-files/folders/${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get meeting folder");
+    }
+    return response.json();
+  },
+
+  async create(params: { name: string; meetingId: string; parentId?: string | null }): Promise<FolderDoc> {
+    const response = await fetch("/api/meeting-files/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create meeting folder");
+    }
+    return response.json();
+  },
+
+  async rename(id: string, name: string): Promise<FolderDoc> {
+    const response = await fetch(`/api/meeting-files/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Rename failed");
+    }
+    return response.json();
+  },
+
+  async move(id: string, parentId: string | null): Promise<FolderDoc> {
+    const response = await fetch(`/api/meeting-files/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Move failed");
+    }
+    return response.json();
+  },
+
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/meeting-files/folders/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Delete failed");
+    }
+  },
+
+  async getAncestors(id: string): Promise<FolderDoc[]> {
+    const response = await fetch(`/api/meeting-files/folders/${id}/ancestors`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get ancestors");
     }
     return response.json();
   },

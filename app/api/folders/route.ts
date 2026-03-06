@@ -63,8 +63,8 @@ export async function GET(req: NextRequest) {
   if (error) return error;
 
   const whereClause = parentId
-    ? and(eq(folder.groupId, groupId), eq(folder.parentId, parentId))
-    : and(eq(folder.groupId, groupId), isNull(folder.parentId));
+    ? and(eq(folder.groupId, groupId), eq(folder.parentId, parentId), isNull(folder.meetingId))
+    : and(eq(folder.groupId, groupId), isNull(folder.parentId), isNull(folder.meetingId));
 
   const folders = await db.select().from(folder).where(whereClause);
   console.log(

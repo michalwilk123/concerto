@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { filesApi, foldersApi } from "@/lib/api-client";
+import { filesApi, foldersApi, meetingFilesApi, meetingFoldersApi } from "@/lib/api-client";
 import type { FileWithUrl, FolderDoc } from "@/types/files";
 
 interface FileManagerState {
@@ -8,6 +8,7 @@ interface FileManagerState {
   currentFolderId: string | null;
   currentFolder: FolderDoc | null;
   currentGroupId: string | null;
+  currentMeetingId: string | null;
   previewFile: FileWithUrl | null;
   isLoading: boolean;
   hasFetched: boolean;
@@ -16,6 +17,7 @@ interface FileManagerState {
   lastSelectedId: string | null;
 
   setCurrentGroupId: (id: string | null) => void;
+  setCurrentMeetingId: (id: string | null) => void;
   setCurrentFolderId: (id: string | null) => void;
   setPreviewFile: (file: FileWithUrl | null) => void;
   fetchContents: (folderId?: string | null) => Promise<void>;
@@ -42,6 +44,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   currentFolderId: null,
   currentFolder: null,
   currentGroupId: null,
+  currentMeetingId: null,
   previewFile: null,
   isLoading: false,
   hasFetched: false,
@@ -50,27 +53,42 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   lastSelectedId: null,
 
   setCurrentGroupId: (id) =>
-    set({ currentGroupId: id, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null }),
+    set({ currentGroupId: id, currentMeetingId: null, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null }),
+
+  setCurrentMeetingId: (id) =>
+    set({ currentMeetingId: id, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null }),
 
   setCurrentFolderId: (id) => set({ currentFolderId: id }),
 
   setPreviewFile: (file) => set({ previewFile: file }),
 
   fetchContents: async (folderId) => {
-    const groupId = get().currentGroupId;
-    if (!groupId) return;
+    const { currentGroupId, currentMeetingId } = get();
+    if (!currentMeetingId && !currentGroupId) return;
 
     set({ isLoading: true });
     try {
-      const [files, folders] = await Promise.all([
-        filesApi.list(groupId, folderId),
-        foldersApi.list(groupId, folderId),
-      ]);
+      let files: FileWithUrl[];
+      let folders: FolderDoc[];
+
+      if (currentMeetingId) {
+        [files, folders] = await Promise.all([
+          meetingFilesApi.list(currentMeetingId, folderId),
+          meetingFoldersApi.list(currentMeetingId, folderId),
+        ]);
+      } else {
+        [files, folders] = await Promise.all([
+          filesApi.list(currentGroupId!, folderId),
+          foldersApi.list(currentGroupId!, folderId),
+        ]);
+      }
 
       let currentFolder: FolderDoc | null = null;
       if (folderId) {
         try {
-          currentFolder = await foldersApi.get(folderId);
+          currentFolder = currentMeetingId
+            ? await meetingFoldersApi.get(folderId)
+            : await foldersApi.get(folderId);
         } catch {
           // ignore
         }
@@ -95,22 +113,38 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   uploadFile: async (file, folderId) => {
-    const groupId = get().currentGroupId;
-    if (!groupId) return;
-    await filesApi.upload({ file, groupId, folderId });
-    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    const { currentGroupId, currentMeetingId } = get();
+    if (currentMeetingId) {
+      await meetingFilesApi.upload({ file, meetingId: currentMeetingId, folderId });
+    } else {
+      if (!currentGroupId) return;
+      await filesApi.upload({ file, groupId: currentGroupId, folderId });
+    }
+    await get().fetchContents(get().currentFolderId);
+    if (!currentMeetingId) await get().fetchStorage();
   },
 
   deleteFile: async (id) => {
-    await filesApi.delete(id);
-    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    const { currentMeetingId } = get();
+    if (currentMeetingId) {
+      await meetingFilesApi.delete(id);
+    } else {
+      await filesApi.delete(id);
+    }
+    await get().fetchContents(get().currentFolderId);
+    if (!currentMeetingId) await get().fetchStorage();
   },
 
   renameFile: async (id, name) => {
+    const { currentMeetingId } = get();
     const prev = get().files;
     set({ files: prev.map((f) => (f.id === id ? { ...f, name } : f)) });
     try {
-      await filesApi.rename(id, name);
+      if (currentMeetingId) {
+        await meetingFilesApi.rename(id, name);
+      } else {
+        await filesApi.rename(id, name);
+      }
     } catch (err) {
       set({ files: prev });
       throw err;
@@ -118,10 +152,15 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   renameFolder: async (id, name) => {
+    const { currentMeetingId } = get();
     const prev = get().folders;
     set({ folders: prev.map((f) => (f.id === id ? { ...f, name } : f)) });
     try {
-      await foldersApi.rename(id, name);
+      if (currentMeetingId) {
+        await meetingFoldersApi.rename(id, name);
+      } else {
+        await foldersApi.rename(id, name);
+      }
     } catch (err) {
       set({ folders: prev });
       throw err;
@@ -129,24 +168,38 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   createFolder: async (name, parentId) => {
-    const groupId = get().currentGroupId;
-    if (!groupId) return;
+    const { currentGroupId, currentMeetingId } = get();
     const effectiveParentId = parentId !== undefined ? parentId : get().currentFolderId;
-    await foldersApi.create({ name, groupId, parentId: effectiveParentId });
+    if (currentMeetingId) {
+      await meetingFoldersApi.create({ name, meetingId: currentMeetingId, parentId: effectiveParentId });
+    } else {
+      if (!currentGroupId) return;
+      await foldersApi.create({ name, groupId: currentGroupId, parentId: effectiveParentId });
+    }
     await get().fetchContents(effectiveParentId);
   },
 
   deleteFolder: async (id) => {
-    await foldersApi.delete(id);
+    const { currentMeetingId } = get();
+    if (currentMeetingId) {
+      await meetingFoldersApi.delete(id);
+    } else {
+      await foldersApi.delete(id);
+    }
     await get().fetchContents(get().currentFolderId);
   },
 
   moveFile: async (fileId, targetFolderId) => {
+    const { currentMeetingId } = get();
     const prev = { files: get().files, folders: get().folders };
     set({ files: prev.files.filter((f) => f.id !== fileId) });
     get().clearSelection();
     try {
-      await filesApi.move(fileId, targetFolderId);
+      if (currentMeetingId) {
+        await meetingFilesApi.move(fileId, targetFolderId);
+      } else {
+        await filesApi.move(fileId, targetFolderId);
+      }
     } catch (err) {
       set({ files: prev.files, folders: prev.folders });
       throw err;
@@ -154,11 +207,16 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   moveFolder: async (folderId, targetFolderId) => {
+    const { currentMeetingId } = get();
     const prev = { files: get().files, folders: get().folders };
     set({ folders: prev.folders.filter((f) => f.id !== folderId) });
     get().clearSelection();
     try {
-      await foldersApi.move(folderId, targetFolderId);
+      if (currentMeetingId) {
+        await meetingFoldersApi.move(folderId, targetFolderId);
+      } else {
+        await foldersApi.move(folderId, targetFolderId);
+      }
     } catch (err) {
       set({ files: prev.files, folders: prev.folders });
       throw err;
@@ -166,6 +224,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   bulkMove: async (items, targetFolderId) => {
+    const { currentMeetingId } = get();
     const prev = { files: get().files, folders: get().folders };
     const fileIds = new Set(items.filter((i) => i.type === "file").map((i) => i.id));
     const folderIds = new Set(items.filter((i) => i.type === "folder").map((i) => i.id));
@@ -175,7 +234,11 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     });
     get().clearSelection();
     try {
-      await filesApi.bulkMove(items, targetFolderId);
+      if (currentMeetingId) {
+        await meetingFilesApi.bulkMove(items, targetFolderId);
+      } else {
+        await filesApi.bulkMove(items, targetFolderId);
+      }
     } catch (err) {
       set({ files: prev.files, folders: prev.folders });
       throw err;
@@ -183,8 +246,14 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   bulkDelete: async (items) => {
-    await filesApi.bulkDelete(items);
-    await Promise.all([get().fetchContents(get().currentFolderId), get().fetchStorage()]);
+    const { currentMeetingId } = get();
+    if (currentMeetingId) {
+      await meetingFilesApi.bulkDelete(items);
+    } else {
+      await filesApi.bulkDelete(items);
+    }
+    await get().fetchContents(get().currentFolderId);
+    if (!currentMeetingId) await get().fetchStorage();
     get().clearSelection();
   },
 

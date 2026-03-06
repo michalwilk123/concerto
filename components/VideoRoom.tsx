@@ -90,8 +90,8 @@ function RoomContent({
   };
 
   useEffect(() => {
-    initialize(meetingId, participantName, role);
-  }, [meetingId, participantName, role, initialize]);
+    initialize(meetingId, participantName, role, groupId);
+  }, [meetingId, participantName, role, groupId, initialize]);
 
   useEffect(() => {
     let cancelled = false;

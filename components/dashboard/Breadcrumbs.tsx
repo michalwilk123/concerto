@@ -10,6 +10,7 @@ import type { FolderDoc } from "@/types/files";
 interface BreadcrumbsProps {
   groupId: string;
   ancestors: FolderDoc[];
+  onNavigate?: (folderId: string | null) => void;
 }
 
 function DroppableCrumb({
@@ -17,12 +18,14 @@ function DroppableCrumb({
   folderId,
   children,
   href,
+  onClick,
   isCurrent,
 }: {
   dropId: string;
   folderId: string | null;
   children: React.ReactNode;
-  href: string;
+  href?: string;
+  onClick?: () => void;
   isCurrent: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -30,31 +33,37 @@ function DroppableCrumb({
     data: { type: "breadcrumb", folderId },
   });
 
+  const style: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    background: isOver ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "none",
+    border: isOver ? "1px solid var(--accent-primary)" : "1px solid transparent",
+    padding: "4px 8px",
+    color: isCurrent ? "var(--text-primary)" : "var(--text-secondary)",
+    cursor: "pointer",
+    borderRadius: "var(--radius-sm)",
+    fontWeight: 500,
+    textDecoration: "none",
+    transition: "background 0.1s, border-color 0.1s",
+  };
+
+  if (onClick) {
+    return (
+      <button ref={setNodeRef} type="button" onClick={onClick} style={{ ...style, background: isOver ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "none", border: isOver ? "1px solid var(--accent-primary)" : "1px solid transparent" }}>
+        {children}
+      </button>
+    );
+  }
+
   return (
-    <Link
-      ref={setNodeRef}
-      href={href}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        background: isOver ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "none",
-        border: isOver ? "1px solid var(--accent-primary)" : "1px solid transparent",
-        padding: "4px 8px",
-        color: isCurrent ? "var(--text-primary)" : "var(--text-secondary)",
-        cursor: "pointer",
-        borderRadius: "var(--radius-sm)",
-        fontWeight: 500,
-        textDecoration: "none",
-        transition: "background 0.1s, border-color 0.1s",
-      }}
-    >
+    <Link ref={setNodeRef} href={href!} style={style}>
       {children}
     </Link>
   );
 }
 
-export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
+export function Breadcrumbs({ groupId, ancestors, onNavigate }: BreadcrumbsProps) {
   const isAtRoot = ancestors.length === 0;
   const { t } = useTranslation();
 
@@ -63,7 +72,8 @@ export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
       <DroppableCrumb
         dropId="breadcrumb:root"
         folderId={null}
-        href={buildDashboardUrl(groupId)}
+        href={onNavigate ? undefined : buildDashboardUrl(groupId)}
+        onClick={onNavigate ? () => onNavigate(null) : undefined}
         isCurrent={isAtRoot}
       >
         <Home size={16} />
@@ -84,7 +94,8 @@ export function Breadcrumbs({ groupId, ancestors }: BreadcrumbsProps) {
               <DroppableCrumb
                 dropId={`breadcrumb:${folder.id}`}
                 folderId={folder.id}
-                href={buildDashboardUrl(groupId, { folderId: folder.id })}
+                href={onNavigate ? undefined : buildDashboardUrl(groupId, { folderId: folder.id })}
+                onClick={onNavigate ? () => onNavigate(folder.id) : undefined}
                 isCurrent={false}
               >
                 {folder.name}

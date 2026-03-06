@@ -5,6 +5,7 @@ export interface FileDoc {
   size: number;
   groupId: string;
   folderId: string | null;
+  meetingId: string | null;
   uploadedById: string | null;
   uploadedByName: string | null;
   createdAt: string;
@@ -16,6 +17,7 @@ export interface FolderDoc {
   groupId: string;
   parentId: string | null;
   isSystem: boolean;
+  meetingId: string | null;
   createdAt: string;
 }
 

@@ -91,6 +91,9 @@ export const defaultTranslations: Record<string, string> = {
   "uploader.maxFileSize": "Max 50MB per file",
   "uploader.uploadFailed": "Upload failed",
 
+  // Dashboard meeting sidebar
+  "dashboard.meetingFiles": "Files",
+
   // Meetings
   "meetings.title": "Meetings",
   "meetings.createButton": "Create Meeting",

@@ -4,7 +4,7 @@ import { Files, MessageSquare, UserCheck, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
-import { MeetingFilesPanel } from "@/components/files/MeetingFilesPanel";
+import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
 import { IconButton } from "@/components/ui/icon-button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { roomApi, type WaitingParticipant } from "@/lib/api-client";
@@ -31,7 +31,7 @@ export default function Sidebar({
   onTabChange,
   isOpen,
 }: SidebarProps) {
-  const { role, meetingId, participantName } = useRoomStore();
+  const { role, meetingId, groupId, participantName } = useRoomStore();
   const { t } = useTranslation();
   const [waiting, setWaiting] = useState<WaitingParticipant[]>([]);
 
@@ -206,12 +206,18 @@ export default function Sidebar({
           }}
         >
           {activeTab === "participants" && <ParticipantMenu participants={participants} />}
-          {activeTab === "files" && meetingId && (
-            <MeetingFilesPanel
-              key={`files-${meetingId}`}
-              meetingId={meetingId}
-              allowManage={isTeacher(role)}
-            />
+          {activeTab === "files" && meetingId && groupId && (
+            <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+              <FileBrowserPanel
+                key={`files-${meetingId}`}
+                meetingId={meetingId}
+                groupId={groupId}
+                allowManage={isTeacher(role)}
+                showCreateFolderButton={isTeacher(role)}
+                compact
+                ancestors={[]}
+              />
+            </div>
           )}
           {meetingId && (
             <div
