@@ -48,7 +48,6 @@ export async function POST(req: NextRequest) {
         // Move folder: update parentId with safety checks
         const [f] = await db.select().from(folder).where(eq(folder.id, item.id)).limit(1);
         if (!f) { errors.push({ id: item.id, error: "Folder not found" }); continue; }
-        if (f.isSystem) { errors.push({ id: item.id, error: "Cannot move system folder" }); continue; }
 
         // Circular reference check
         if (targetFolderId) {

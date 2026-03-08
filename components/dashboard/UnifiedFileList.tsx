@@ -9,6 +9,7 @@ interface UnifiedFileListProps {
   files: FileWithUrl[];
   selectedItems: Set<string>;
   readOnly: boolean;
+  compact?: boolean;
   onNavigateToFolder: (folderId: string) => void;
   onPreviewFile: (file: FileWithUrl) => void;
   onDeleteFile: (id: string) => void;
@@ -24,6 +25,7 @@ export function UnifiedFileList({
   files,
   selectedItems,
   readOnly,
+  compact = false,
   onNavigateToFolder,
   onPreviewFile,
   onDeleteFile,
@@ -69,32 +71,34 @@ export function UnifiedFileList({
 
   return (
     <div>
-      {/* Header */}
-      <div style={headerStyle}>
-        <div />
-        {/* Select-all checkbox */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {!readOnly && allKeys.length > 0 && (
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={onSelectAll}
-              style={{ cursor: "pointer", width: 15, height: 15, accentColor: "var(--accent-primary)" }}
-              title="Select all"
-            />
-          )}
+      {/* Header — hidden in compact mode */}
+      {!compact && (
+        <div style={headerStyle}>
+          <div />
+          {/* Select-all checkbox */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {!readOnly && allKeys.length > 0 && (
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={onSelectAll}
+                style={{ cursor: "pointer", width: 15, height: 15, accentColor: "var(--accent-primary)" }}
+                title="Select all"
+              />
+            )}
+          </div>
+          <div style={colHeaderStyle}>{t("fileList.colName")}</div>
+          <div style={colHeaderStyle}>{t("fileList.colDate")}</div>
+          <div style={colHeaderStyle}>{t("fileList.colAuthor")}</div>
+          <div style={{ ...colHeaderStyle, textAlign: "right", paddingRight: 4 }}>{t("fileList.colSize")}</div>
+          <div />
         </div>
-        <div style={colHeaderStyle}>{t("fileList.colName")}</div>
-        <div style={colHeaderStyle}>{t("fileList.colDate")}</div>
-        <div style={colHeaderStyle}>{t("fileList.colAuthor")}</div>
-        <div style={{ ...colHeaderStyle, textAlign: "right", paddingRight: 4 }}>{t("fileList.colSize")}</div>
-        <div />
-      </div>
+      )}
 
       {/* Rows */}
       <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingTop: 2 }}>
         {isEmpty ? (
-          <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+          <div style={{ textAlign: "center", padding: compact ? "24px 0" : "48px 0", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
             {t("fileList.empty")}
           </div>
         ) : (
@@ -106,10 +110,11 @@ export function UnifiedFileList({
                 item={folder}
                 isSelected={selectedItems.has(`folder:${folder.id}`)}
                 readOnly={readOnly}
+                compact={compact}
                 onCheckboxChange={(e) => onToggleSelect(`folder:${folder.id}`, e)}
                 onClick={() => onNavigateToFolder(folder.id)}
                 onDelete={() => onDeleteFolder(folder.id)}
-                onRename={folder.isSystem ? undefined : (name) => onRenameFolder(folder.id, name)}
+                onRename={(name) => onRenameFolder(folder.id, name)}
               />
             ))}
             {files.map((file) => (
@@ -119,6 +124,7 @@ export function UnifiedFileList({
                 item={file}
                 isSelected={selectedItems.has(`file:${file.id}`)}
                 readOnly={readOnly}
+                compact={compact}
                 onCheckboxChange={(e) => onToggleSelect(`file:${file.id}`, e)}
                 onClick={() => onPreviewFile(file)}
                 onDelete={() => onDeleteFile(file.id)}

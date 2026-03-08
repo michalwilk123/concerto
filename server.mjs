@@ -1,8 +1,8 @@
 import { createServer } from "node:http";
+import { createHMAC } from "@better-auth/utils/hmac";
 import next from "next";
 import postgres from "postgres";
 import { WebSocketServer } from "ws";
-import { createHMAC } from "@better-auth/utils/hmac";
 
 const dev = process.env.NODE_ENV !== "production";
 const host = process.env.HOSTNAME || "0.0.0.0";
@@ -11,7 +11,6 @@ const chatPath = "/ws/chat";
 const chatChannel = "chat_messages";
 const heartbeatMs = 30_000;
 const metricsLogMs = 60_000;
-const allowedOrigin = process.env.BETTER_AUTH_URL;
 const maxPayloadBytes = 8 * 1024;
 const maxConnectionsPerIp = Number(process.env.CHAT_WS_MAX_CONNECTIONS_PER_IP || 8);
 const sessionCookieCandidates = [
@@ -21,6 +20,29 @@ const sessionCookieCandidates = [
   "session_token",
   "authjs.session-token",
 ];
+
+function normalizeOrigin(value) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function getAllowedOrigins() {
+  const configuredOrigins = (process.env.TRUSTED_ORIGINS || "")
+    .split(",")
+    .map((origin) => normalizeOrigin(origin.trim()))
+    .filter(Boolean);
+
+  const authUrlOrigin = normalizeOrigin(process.env.BETTER_AUTH_URL || "");
+  const localDevOrigins =
+    process.env.NODE_ENV !== "production" ? ["http://localhost:3000", "http://127.0.0.1:3000"] : [];
+
+  return new Set([authUrlOrigin, ...configuredOrigins, ...localDevOrigins].filter(Boolean));
+}
+
+const allowedOrigins = getAllowedOrigins();
 
 const app = next({ dev, hostname: host, port });
 const handle = app.getRequestHandler();
@@ -92,9 +114,9 @@ function getSessionToken(cookieHeader) {
 }
 
 function hasAllowedOrigin(originHeader) {
-  if (!allowedOrigin || !originHeader) return true;
+  if (allowedOrigins.size === 0 || !originHeader) return true;
   try {
-    return new URL(originHeader).origin === new URL(allowedOrigin).origin;
+    return allowedOrigins.has(new URL(originHeader).origin);
   } catch {
     return false;
   }

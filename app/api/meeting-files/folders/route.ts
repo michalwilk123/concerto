@@ -72,7 +72,6 @@ export async function POST(req: NextRequest) {
       groupId,
       parentId: parentId || null,
       meetingId,
-      isSystem: false,
     })
     .returning();
 

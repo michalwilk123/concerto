@@ -51,15 +51,14 @@ export async function GET(req: NextRequest) {
   let userId: string | null = null;
 
   if (currentSession) {
-    if (!currentSession.user.isActive) {
-      return NextResponse.json({ error: "Account is awaiting activation" }, { status: 403 });
-    }
     if (mtg.isPublic) {
-      userId = currentSession.user.id;
-    } else {
-      const { error, session } = await requireGroupMember(mtg.groupId);
+      const { error, session } = await requireAuth(currentSession);
       if (error) return error;
-      userId = session?.user.id ?? null;
+      userId = session.user.id;
+    } else {
+      const { error, session } = await requireGroupMember(mtg.groupId, currentSession);
+      if (error) return error;
+      userId = session.user.id;
     }
   } else {
     if (!mtg.isPublic) {
@@ -160,17 +159,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  const { session: authSession } = await requireAuth();
-  if (!authSession) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const { error: authError, session: authSession } = await requireAuth();
+  if (authError) return authError;
   let session = authSession;
   if (!mtg.isPublic) {
-    const groupMemberResult = await requireGroupMember(mtg.groupId);
+    const groupMemberResult = await requireGroupMember(mtg.groupId, authSession);
     if (groupMemberResult.error) return groupMemberResult.error;
-    if (!groupMemberResult.session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
     session = groupMemberResult.session;
   }
 

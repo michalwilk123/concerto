@@ -28,61 +28,79 @@ Use this file to track what works, what fails, and what still needs validation.
 - `failed`
 - `blocked`
 
-## Test Queue
+## Focus Test Queue
 
 | ID | Area | Task | Status | Notes |
 |---|---|---|---|---|
-| T01 | Auth | Open login and registration pages and verify they load | in progress | First active task |
-| T02 | Auth | Register flow basic validation and waiting approval redirect | pending |  |
-| T03 | Auth | Login invalid credentials error handling | pending |  |
-| T04 | Auth | Login success and dashboard redirect | pending |  |
-| T05 | Auth | Waiting approval page behavior for inactive user | pending |  |
-| T06 | Navigation | Dashboard default redirect to first group | pending |  |
-| T07 | Files | Dashboard files tab loads and seeded files appear for privileged user | pending |  |
-| T08 | Files | Folder creation and breadcrumb navigation | pending |  |
-| T09 | Files | File upload and preview behavior | pending |  |
-| T10 | Files | Move and delete actions including bulk actions | pending |  |
-| T11 | Meetings | Meetings tab loads and meeting list works | pending |  |
-| T12 | Meetings | Create meeting flow | pending |  |
-| T13 | Meetings | Meeting selection opens chat/files/recordings sidebar states | pending |  |
-| T14 | Meeting Room | Lobby or join-key flow to meeting room | pending |  |
-| T15 | Moderation | Waiting room approve/reject behavior | pending |  |
-| T16 | Moderation | Kick/admin leave/rejoin related flows | pending |  |
-| T17 | Chat | Meeting chat send/receive behavior | pending |  |
-| T18 | Recordings | Recordings panel visibility and loading behavior | pending |  |
-| T19 | Translations | Translations tab loads and language actions behave | pending |  |
-| T20 | Manage | Group/user management panel behavior by role | pending |  |
+| F01 | Files | Verify upload drop area size and whether upload destination path is visible | passed | User reported everything works |
+| F02 | Files | Verify renaming files and folders | failed | Rename mostly works; preview breaks until hard refresh |
+| F03 | Meetings | Verify files and recordings are separated correctly in meetings | failed | Structure mostly works; multiple meeting-related regressions found |
+| F04 | Roles | Verify admin is not assigned to a single group and has access everywhere | passed | User reported it works |
+| F05 | Language | Verify users can change language from the user-facing app | in progress | Next active focus task |
+| F06 | Translations | Verify languages can be added or changed in translations | pending |  |
+| F07 | Translations | Verify translations are grouped clearly enough to navigate | pending |  |
 
 ## Current Task
 
-### T01
+### F05
 
-Goal: confirm the auth entry pages render and basic navigation between them works.
+Goal: verify that end users can change language from the app UI.
 
 Steps:
 
-1. Start the app if it is not already running.
-2. Open the localized login page.
-3. Confirm the login form renders with email, password, and submit button.
-4. Use the register link from login and confirm the registration page opens.
-5. Confirm the registration form renders with full name, email, password, confirm password, and submit button.
-6. Use the sign-in link from registration and confirm you can return to login.
+1. Open the user-facing area where language selection should be available.
+2. Find the language switcher or related setting.
+3. Change the language to another available option.
+4. Confirm the UI updates to the selected language.
+5. Reload the page and check whether the selected language persists.
 
 Expected:
 
-- Both pages load without crash or blank screen.
-- Links between login and register work.
-- The visible fields listed above are present.
+- A language change control is available to the user.
+- Changing language updates visible UI text.
+- The selected language persists after reload if that is the intended behavior.
 
 Your reply format:
 
-- `T01 passed`
-- or `T01 failed: ...`
-- or `T01 blocked: ...`
+- `F05 passed`
+- or `F05 failed: ...`
+- or `F05 blocked: ...`
 
 ## Issues / Bugs
 
 - Add short notes here as you find them.
+- `[OBS-01] Logout does not work`
+- `result: using logout redirects back to the main dashboard instead of signing the user out`
+- `expected: logout should end the session and move the user to the correct logged-out screen`
+- `severity: high`
+- `notes: dashboard and sidebar components are still visible`
+- `[OBS-02] Registration page is not reachable`
+- `result: cannot navigate to registration`
+- `expected: registration page should be accessible from the auth flow`
+- `severity: high`
+- `[OBS-03] Preview breaks after file rename until refresh`
+- `result: after renaming a file, clicking preview shows "File not found"; hard refresh fixes it`
+- `expected: preview should work immediately after rename without a manual refresh`
+- `severity: medium`
+- `notes: likely stale UI state after rename`
+- `[OBS-04] Meeting chat loads very slowly`
+- `result: opening meeting chat can take around 5 seconds even with little data`
+- `expected: chat messages should load promptly for low-volume meetings`
+- `severity: medium`
+- `notes: observed on both develop and production; example endpoint /api/chat/messages?meetingId=iZZBZqsTDmfHNA-WsgScP&limit=100 returned once in 5648ms and then in 328ms`
+- `[OBS-05] Meeting files sidebar has broken CSS`
+- `result: files UI in the meeting sidebar shows broken layout and horizontal scrollbar`
+- `expected: sidebar content should fit without horizontal scrolling`
+- `severity: medium`
+- `[OBS-06] Admin cannot join old meeting`
+- `result: joining an older meeting as admin fails; /api/room/join returns 502 after RealtimeKit 401 Invalid Basic token`
+- `expected: admin should be able to join existing meetings`
+- `severity: high`
+- `notes: user reports this as a regression introduced with translation changes`
+- `[OBS-07] New meeting creation should infer current group`
+- `result: create meeting flow allows setting group manually`
+- `expected: the selected dashboard group should be inferred automatically`
+- `severity: medium`
 
 ## Suggested Note Format
 
@@ -93,4 +111,4 @@ Your reply format:
 
 ## Left To Verify
 
-- T02-T20 are still pending.
+- F03-F07 are still pending.

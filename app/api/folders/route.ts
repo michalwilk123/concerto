@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
       name: trimmedName,
       groupId,
       parentId: parentId || null,
-      isSystem: false,
     })
     .returning();
 
@@ -67,8 +66,5 @@ export async function GET(req: NextRequest) {
     : and(eq(folder.groupId, groupId), isNull(folder.parentId), isNull(folder.meetingId));
 
   const folders = await db.select().from(folder).where(whereClause);
-  console.log(
-    `[folders/list] groupId=${groupId}, parentId=${parentId ?? "ROOT"} → ${folders.length} folders: ${folders.map((f) => `${f.name}(id=${f.id},system=${f.isSystem})`).join(", ") || "none"}`,
-  );
   return NextResponse.json(folders);
 }

@@ -1,8 +1,5 @@
 import type { Role } from "@/types/room";
 
-const RTK_ORG_ID = process.env.RTK_ORG_ID || "";
-const RTK_API_KEY = process.env.RTK_API_KEY || "";
-const RTK_BASE_URL = "https://api.realtime.cloudflare.com/v2";
 const CF_API_BASE_URL = "https://api.cloudflare.com/client/v4";
 const CF_ACCOUNT_ID =
   process.env.RTK_ACCOUNT_ID ||
@@ -12,38 +9,10 @@ const CF_ACCOUNT_ID =
 const RTK_APP_ID = process.env.RTK_APP_ID || process.env.RTK_ORG_ID || "";
 const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || "";
 
-function authHeader(): string {
-  const encoded = Buffer.from(`${RTK_ORG_ID}:${RTK_API_KEY}`).toString("base64");
-  return `Basic ${encoded}`;
-}
-
-async function rtkFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const method = (options.method || "GET").toUpperCase();
-  const bodyStr = typeof options.body === "string" ? options.body : "";
-  let parsedBody: unknown = bodyStr;
-  try { parsedBody = bodyStr ? JSON.parse(bodyStr) : undefined; } catch { parsedBody = bodyStr; }
-  console.log(`[RTK v2] ${method} ${path}`, parsedBody ?? "");
-
-  const res = await fetch(`${RTK_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: authHeader(),
-      ...options.headers,
-    },
-  });
-  const text = await res.text().catch(() => "");
-  console.log(`[RTK v2] ${method} ${path} → ${res.status} ${res.statusText}`, text.slice(0, 1000));
-  if (!res.ok) {
-    throw new Error(`RealtimeKit API error ${res.status}: ${text}`);
-  }
-  return new Response(text, { status: res.status, statusText: res.statusText, headers: res.headers });
-}
-
-function assertActiveSessionConfig(): void {
+function assertRealtimeKitConfig(): void {
   if (!CF_ACCOUNT_ID || !RTK_APP_ID || !CF_API_TOKEN) {
     throw new Error(
-      "Missing Cloudflare Active Session config (RTK_ACCOUNT_ID/CLOUDFLARE_ACCOUNT_ID, RTK_APP_ID, CLOUDFLARE_API_TOKEN)",
+      "Missing Cloudflare RealtimeKit config (RTK_ACCOUNT_ID/CLOUDFLARE_ACCOUNT_ID, RTK_APP_ID, CLOUDFLARE_API_TOKEN)",
     );
   }
 }
@@ -52,7 +21,11 @@ async function cfFetch(path: string, options: RequestInit = {}): Promise<Respons
   const method = options.method || "GET";
   const bodyStr = typeof options.body === "string" ? options.body : "";
   let parsedBody: unknown = bodyStr;
-  try { parsedBody = bodyStr ? JSON.parse(bodyStr) : undefined; } catch { parsedBody = bodyStr; }
+  try {
+    parsedBody = bodyStr ? JSON.parse(bodyStr) : undefined;
+  } catch {
+    parsedBody = bodyStr;
+  }
   console.log(`[RTK CF v4] ${method} ${path}`, parsedBody ?? "");
 
   const res = await fetch(`${CF_API_BASE_URL}${path}`, {
@@ -64,7 +37,10 @@ async function cfFetch(path: string, options: RequestInit = {}): Promise<Respons
     },
   });
   const raw = await res.text().catch(() => "");
-  console.log(`[RTK CF v4] ${method} ${path} → ${res.status} ${res.statusText}`, raw.slice(0, 1000));
+  console.log(
+    `[RTK CF v4] ${method} ${path} → ${res.status} ${res.statusText}`,
+    raw.slice(0, 1000),
+  );
 
   let parsed: unknown = null;
   if (raw) {
@@ -106,6 +82,11 @@ async function cfFetch(path: string, options: RequestInit = {}): Promise<Respons
     statusText: res.statusText,
     headers: res.headers,
   });
+}
+
+async function rtkFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  assertRealtimeKitConfig();
+  return cfFetch(`/accounts/${CF_ACCOUNT_ID}/realtime/kit/${RTK_APP_ID}${path}`, options);
 }
 
 export async function createMeeting(): Promise<string> {
@@ -151,7 +132,9 @@ export async function updateParticipantPreset(
 
 export async function listParticipants(
   meetingId: string,
-): Promise<Array<{ id: string; name: string; preset_name: string; custom_participant_id?: string }>> {
+): Promise<
+  Array<{ id: string; name: string; preset_name: string; custom_participant_id?: string }>
+> {
   const res = await rtkFetch(`/meetings/${meetingId}/participants`);
   const data = await res.json();
   return data.data;
@@ -161,7 +144,7 @@ export async function kickActiveSessionParticipants(params: {
   meetingId: string;
   participantIds?: string[];
 }): Promise<void> {
-  assertActiveSessionConfig();
+  assertRealtimeKitConfig();
   const { meetingId, participantIds = [] } = params;
   if (participantIds.length === 0) {
     return;
@@ -176,7 +159,7 @@ export async function kickActiveSessionParticipants(params: {
 }
 
 export async function kickAllActiveSessionParticipants(meetingId: string): Promise<void> {
-  assertActiveSessionConfig();
+  assertRealtimeKitConfig();
   await cfFetch(
     `/accounts/${CF_ACCOUNT_ID}/realtime/kit/${RTK_APP_ID}/meetings/${meetingId}/active-session/kick-all`,
     {

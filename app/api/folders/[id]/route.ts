@@ -23,7 +23,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const [folderDoc] = await db.select().from(folder).where(eq(folder.id, id)).limit(1);
   if (!folderDoc) return NextResponse.json({ error: "Folder not found" }, { status: 404 });
-  if (folderDoc.isSystem) return NextResponse.json({ error: "Cannot modify system folder" }, { status: 403 });
 
   const { error } = await requireGroupTeacher(folderDoc.groupId);
   if (error) return error;
@@ -97,10 +96,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   if (!folderDoc) {
     return NextResponse.json({ error: "Folder not found" }, { status: 404 });
-  }
-
-  if (folderDoc.isSystem) {
-    return NextResponse.json({ error: "Cannot delete system folder" }, { status: 403 });
   }
 
   await deleteFolderRecursive(id, folderDoc.groupId);

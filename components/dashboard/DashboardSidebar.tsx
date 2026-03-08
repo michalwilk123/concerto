@@ -90,15 +90,13 @@ export function DashboardSidebar({
           active={activeItem === "files"}
           onClick={() => router.push(buildDashboardUrl(groupId))}
         />
-        {isPrivileged && (
-          <SidebarButton
-            icon={<Music size={18} />}
-            label={t("sidebar.meetings")}
-            active={activeItem === "meetings"}
-            onClick={() => router.push(buildDashboardUrl(groupId, { tab: "meetings" }))}
-          />
-        )}
-        {isPrivileged && (
+        <SidebarButton
+          icon={<Music size={18} />}
+          label={t("sidebar.meetings")}
+          active={activeItem === "meetings"}
+          onClick={() => router.push(buildDashboardUrl(groupId, { tab: "meetings" }))}
+        />
+        {isAdmin && (
           <SidebarButton
             icon={<Settings size={18} />}
             label={t("sidebar.manage")}

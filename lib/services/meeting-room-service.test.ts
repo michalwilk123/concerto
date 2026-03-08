@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Room } from "@/lib/room-store";
 import {
   addParticipant,
   createMeeting,
@@ -9,6 +8,7 @@ import {
   listParticipants,
   removeParticipant,
 } from "@/lib/realtimekit";
+import type { Room } from "@/lib/room-store";
 import { MeetingRoomService } from "./meeting-room-service";
 
 function createRoom(overrides: Partial<Room> = {}): Room {
@@ -25,13 +25,10 @@ function createRoom(overrides: Partial<Room> = {}): Room {
 }
 
 function assertRtkJoinConfig(): void {
-  assert.equal(Boolean(process.env.RTK_ORG_ID), true, "RTK_ORG_ID is required");
-  assert.equal(Boolean(process.env.RTK_API_KEY), true, "RTK_API_KEY is required");
-}
-
-function assertRtkActiveSessionConfig(): void {
   assert.equal(
-    Boolean(process.env.RTK_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || process.env.R2_ACCOUNT_ID),
+    Boolean(
+      process.env.RTK_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || process.env.R2_ACCOUNT_ID,
+    ),
     true,
     "RTK_ACCOUNT_ID (or CLOUDFLARE_ACCOUNT_ID/R2_ACCOUNT_ID) is required",
   );
@@ -54,21 +51,16 @@ test("rtk integration: create meeting + participant token (join contract)", asyn
 
   const participants = await listParticipants(meetingId);
   assert.equal(
-    participants.some(
-      (p) => p.id === participant.id && p.name === "RTK Join Probe Teacher",
-    ),
+    participants.some((p) => p.id === participant.id && p.name === "RTK Join Probe Teacher"),
     true,
   );
 
   await removeParticipant(meetingId, participant.id);
 });
 
-test(
-  "rtk integration: active-session kick requires active media session",
-  async () => {
-    assertRtkJoinConfig();
-    assertRtkActiveSessionConfig();
-    const meetingId = await createMeeting();
+test("rtk integration: active-session kick requires active media session", async () => {
+  assertRtkJoinConfig();
+  const meetingId = await createMeeting();
   const participant = await addParticipant(
     meetingId,
     "RTK Kick Probe Student",
@@ -92,30 +84,25 @@ test(
   console.log("[rtk-test] kick outcome", { succeeded, caught, message });
   assert.equal(succeeded || caught, true);
   await removeParticipant(meetingId, participant.id);
-  },
-);
+});
 
-test(
-  "rtk integration: active-session kick-all requires active media session",
-  async () => {
-    assertRtkJoinConfig();
-    assertRtkActiveSessionConfig();
-    const meetingId = await createMeeting();
+test("rtk integration: active-session kick-all requires active media session", async () => {
+  assertRtkJoinConfig();
+  const meetingId = await createMeeting();
 
-    let succeeded = false;
-    let caught = false;
-    let message = "";
-    try {
-      await kickAllActiveSessionParticipants(meetingId);
-      succeeded = true;
-    } catch (error) {
-      caught = true;
-      message = error instanceof Error ? error.message : String(error);
-    }
-    console.log("[rtk-test] kick-all outcome", { succeeded, caught, message });
-    assert.equal(succeeded || caught, true);
-  },
-);
+  let succeeded = false;
+  let caught = false;
+  let message = "";
+  try {
+    await kickAllActiveSessionParticipants(meetingId);
+    succeeded = true;
+  } catch (error) {
+    caught = true;
+    message = error instanceof Error ? error.message : String(error);
+  }
+  console.log("[rtk-test] kick-all outcome", { succeeded, caught, message });
+  assert.equal(succeeded || caught, true);
+});
 
 test("service logic: joins a teacher immediately", async () => {
   const room = createRoom();
@@ -167,7 +154,10 @@ test("service logic: does not allow non-teachers to join when no teacher is pres
 test("service logic: kick propagates kickParticipants error and preserves local state", async () => {
   const room = createRoom({
     participants: new Map([
-      ["Student A", { rtkId: "rtk-student-a", customParticipantId: "custom-a", role: "student" as const }],
+      [
+        "Student A",
+        { rtkId: "rtk-student-a", customParticipantId: "custom-a", role: "student" as const },
+      ],
     ]),
     connectedTeachers: new Set(["Teacher A"]),
   });
@@ -265,9 +255,7 @@ test("service logic: kicks everyone after grace period when all teachers leave",
       ],
     ]),
     connectedTeachers: new Set(["Teacher A"]),
-    waitingRoom: new Map([
-      ["Student B", { participantName: "Student B", joinedAt: Date.now() }],
-    ]),
+    waitingRoom: new Map([["Student B", { participantName: "Student B", joinedAt: Date.now() }]]),
   });
   const service = new MeetingRoomService({ teacherGracePeriodMs: 5 });
   let kickAllCalled = 0;

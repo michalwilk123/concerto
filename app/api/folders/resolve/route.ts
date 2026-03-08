@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
     name: string;
     groupId: string;
     parentId: string | null;
-    isSystem: boolean | null;
     createdAt: string | null;
   }
 
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const results = await db.execute(sql`
 			SELECT id, name, group_id AS "groupId", parent_id AS "parentId",
-				   is_system AS "isSystem", created_at AS "createdAt"
+				   created_at AS "createdAt"
 			FROM folder
 			WHERE group_id = ${groupId} AND name = ${name} AND ${condition}
 			LIMIT 1

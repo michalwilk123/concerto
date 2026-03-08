@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const groupId = await getMeetingGroupId(meetingId);
   if (!groupId) return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
 
-  const { error, session } = await requireGroupTeacher(groupId);
+  const { error, session } = await requireGroupMember(groupId);
   if (error) return error;
 
   try {

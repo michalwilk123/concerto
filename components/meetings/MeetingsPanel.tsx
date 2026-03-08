@@ -30,6 +30,7 @@ interface MeetingsPanelProps {
   selectedMeetingId?: string;
   onSelectMeeting?: (id: string) => void;
   headerExtra?: React.ReactNode;
+  isPrivileged?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -48,6 +49,7 @@ export function MeetingsPanel({
   selectedMeetingId,
   onSelectMeeting,
   headerExtra,
+  isPrivileged = true,
 }: MeetingsPanelProps) {
   const router = useRouter();
   const { meetings, isLoading, fetchMeetings, patchMeeting, deleteMeeting } = useMeetingsStore();
@@ -88,21 +90,23 @@ export function MeetingsPanel({
           {t("meetings.title")}
         </Typography>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <InlineButton
-            variant="accent"
-            size="sm"
-            onClick={() => setShowCreateMeeting(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 14px",
-              fontSize: "0.84rem",
-            }}
-          >
-            <Plus size={16} />
-            {t("meetings.createButton")}
-          </InlineButton>
+          {isPrivileged && (
+            <InlineButton
+              variant="accent"
+              size="sm"
+              onClick={() => setShowCreateMeeting(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 14px",
+                fontSize: "0.84rem",
+              }}
+            >
+              <Plus size={16} />
+              {t("meetings.createButton")}
+            </InlineButton>
+          )}
           {headerExtra}
         </div>
       </div>
@@ -120,6 +124,7 @@ export function MeetingsPanel({
               key={m.id}
               meeting={m}
               isSelected={selectedMeetingId === m.id}
+              isPrivileged={isPrivileged}
               onSelect={onSelectMeeting ? () => onSelectMeeting(m.id) : undefined}
               onRejoin={async () => {
                 try {
@@ -143,6 +148,7 @@ export function MeetingsPanel({
 function MeetingItem({
   meeting,
   isSelected,
+  isPrivileged = true,
   onSelect,
   onRejoin,
   onTogglePublic,
@@ -151,6 +157,7 @@ function MeetingItem({
 }: {
   meeting: Meeting;
   isSelected?: boolean;
+  isPrivileged?: boolean;
   onSelect?: () => void;
   onRejoin: () => void;
   onTogglePublic: (isPublic: boolean) => void;
@@ -191,43 +198,47 @@ function MeetingItem({
       }
       actions={
         <>
-          <IconButton
-            variant="square"
-            size="md"
-            onClick={() => onTogglePublic(!meeting.isPublic)}
-            title={meeting.isPublic ? t("meetings.makePrivate") : t("meetings.makePublic")}
-            style={{
-              width: 32,
-              height: 32,
-              border: "1px solid var(--border-default)",
-              background: "var(--bg-primary)",
-              color: meeting.isPublic ? "var(--accent-purple)" : "var(--text-tertiary)",
-              flexShrink: 0,
-            }}
-          >
-            {meeting.isPublic ? <Globe size={16} /> : <Lock size={16} />}
-          </IconButton>
+          {isPrivileged && (
+            <IconButton
+              variant="square"
+              size="md"
+              onClick={() => onTogglePublic(!meeting.isPublic)}
+              title={meeting.isPublic ? t("meetings.makePrivate") : t("meetings.makePublic")}
+              style={{
+                width: 32,
+                height: 32,
+                border: "1px solid var(--border-default)",
+                background: "var(--bg-primary)",
+                color: meeting.isPublic ? "var(--accent-purple)" : "var(--text-tertiary)",
+                flexShrink: 0,
+              }}
+            >
+              {meeting.isPublic ? <Globe size={16} /> : <Lock size={16} />}
+            </IconButton>
+          )}
 
-          <IconButton
-            variant="square"
-            size="md"
-            onClick={() => onToggleApproval(!meeting.requiresApproval)}
-            title={
-              meeting.requiresApproval
-                ? t("meetings.disableApproval")
-                : t("meetings.enableApproval")
-            }
-            style={{
-              width: 32,
-              height: 32,
-              border: "1px solid var(--border-default)",
-              background: "var(--bg-primary)",
-              color: meeting.requiresApproval ? "var(--accent-purple)" : "var(--text-tertiary)",
-              flexShrink: 0,
-            }}
-          >
-            {meeting.requiresApproval ? <Shield size={16} /> : <ShieldOff size={16} />}
-          </IconButton>
+          {isPrivileged && (
+            <IconButton
+              variant="square"
+              size="md"
+              onClick={() => onToggleApproval(!meeting.requiresApproval)}
+              title={
+                meeting.requiresApproval
+                  ? t("meetings.disableApproval")
+                  : t("meetings.enableApproval")
+              }
+              style={{
+                width: 32,
+                height: 32,
+                border: "1px solid var(--border-default)",
+                background: "var(--bg-primary)",
+                color: meeting.requiresApproval ? "var(--accent-purple)" : "var(--text-tertiary)",
+                flexShrink: 0,
+              }}
+            >
+              {meeting.requiresApproval ? <Shield size={16} /> : <ShieldOff size={16} />}
+            </IconButton>
+          )}
 
           <InlineButton
             variant="secondary"
@@ -248,7 +259,7 @@ function MeetingItem({
             {t("meetings.rejoin")}
           </InlineButton>
 
-          {confirmDelete ? (
+          {isPrivileged && (confirmDelete ? (
             <>
               <InlineButton
                 variant="danger"
@@ -294,7 +305,7 @@ function MeetingItem({
             >
               <Trash2 size={16} />
             </IconButton>
-          )}
+          ))}
         </>
       }
     />

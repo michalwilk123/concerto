@@ -77,7 +77,7 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
   }
 
   return (
-    <div style={{ padding: "8px 0" }}>
+    <div style={{ padding: "8px var(--space-md)", overflow: "hidden", minWidth: 0 }}>
       {playingUrl && (
         <div
           style={{
@@ -116,10 +116,11 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 4 }}>
+      <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
         {recordings.map((rec) => (
           <div
             key={rec.id}
+            style={{ minWidth: 0 }}
             title={t("recordings.daysLeft", { days: String(getDaysLeft(rec.lastModified)) })}
           >
             <EntityListRow
@@ -142,9 +143,9 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
               }
               title={rec.name}
               subtitle={
-                <>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
                   {formatSize(rec.size)} &middot; {formatDate(rec.lastModified)}
-                </>
+                </span>
               }
               actions={
                 <a
@@ -168,6 +169,7 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
                   <Download size={14} />
                 </a>
               }
+              style={{ padding: "8px 12px", gap: 8 }}
             />
           </div>
         ))}

@@ -679,11 +679,6 @@ export const foldersApi = {
     return response.json();
   },
 
-  async findMeetingsFolder(groupId: string): Promise<FolderDoc | null> {
-    const folders = await foldersApi.list(groupId, null);
-    return folders.find((f) => f.isSystem && f.name === "meetings") ?? null;
-  },
-
   async getAncestors(id: string): Promise<FolderDoc[]> {
     const response = await fetch(`/api/folders/${id}/ancestors`);
 
@@ -743,18 +738,57 @@ export interface UpdateUserParams {
 
 export const adminApi = {
   async listUsers(
-    params: { page?: number; limit?: number; search?: string } = {},
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+    } = {},
   ): Promise<ListUsersResponse> {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set("page", String(params.page));
     if (params.limit) searchParams.set("limit", String(params.limit));
     if (params.search) searchParams.set("search", params.search);
+    if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+    if (params.sortDir) searchParams.set("sortDir", params.sortDir);
     const response = await fetch(`/api/admin/users?${searchParams}`);
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to list users");
     }
     return response.json();
+  },
+
+  async createUser(data: {
+    name: string;
+    email: string;
+    password: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<AdminUser> {
+    const response = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create user");
+    }
+    return response.json();
+  },
+
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to reset password");
+    }
   },
 
   async updateUser(id: string, data: UpdateUserParams): Promise<AdminUser> {

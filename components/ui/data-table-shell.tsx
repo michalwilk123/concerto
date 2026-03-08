@@ -5,7 +5,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Typography } from "@/components/ui/typography";
 
 interface DataTableShellProps {
-  headers: string[];
+  headers: ReactNode[];
   columns: string;
   isLoading: boolean;
   hasRows: boolean;
@@ -45,8 +45,8 @@ export function DataTableShell({
           background: "var(--bg-tertiary)",
         }}
       >
-        {headers.map((header) => (
-          <Typography key={header} variant="overline" tone="tertiary">
+        {headers.map((header, idx) => (
+          <Typography key={idx} variant="overline" tone="tertiary">
             {header}
           </Typography>
         ))}

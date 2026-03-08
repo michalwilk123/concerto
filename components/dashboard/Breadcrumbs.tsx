@@ -10,6 +10,7 @@ import type { FolderDoc } from "@/types/files";
 interface BreadcrumbsProps {
   groupId: string;
   ancestors: FolderDoc[];
+  compact?: boolean;
   onNavigate?: (folderId: string | null) => void;
 }
 
@@ -63,12 +64,12 @@ function DroppableCrumb({
   );
 }
 
-export function Breadcrumbs({ groupId, ancestors, onNavigate }: BreadcrumbsProps) {
+export function Breadcrumbs({ groupId, ancestors, compact = false, onNavigate }: BreadcrumbsProps) {
   const isAtRoot = ancestors.length === 0;
   const { t } = useTranslation();
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8, fontSize: "0.875rem", minWidth: 0, overflow: "hidden" }}>
       <DroppableCrumb
         dropId="breadcrumb:root"
         folderId={null}
@@ -87,7 +88,7 @@ export function Breadcrumbs({ groupId, ancestors, onNavigate }: BreadcrumbsProps
           <span key={folder.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ChevronRight size={16} style={{ color: "var(--text-tertiary)" }} />
             {isLast ? (
-              <span style={{ color: "var(--text-primary)", fontWeight: 500, padding: "4px 8px" }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 500, padding: "4px 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: compact ? 120 : undefined }}>
                 {folder.name}
               </span>
             ) : (

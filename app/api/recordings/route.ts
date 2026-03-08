@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting, meetingSession } from "@/db/schema";
-import { requireGroupMember } from "@/lib/auth-helpers";
+import { requireGroupTeacher } from "@/lib/auth-helpers";
 import { listRecordings } from "@/lib/realtimekit";
 import type { Recording } from "@/types/recording";
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const concertoMeetingId = request.nextUrl.searchParams.get("meetingId");
 
-  const { error } = await requireGroupMember(groupId);
+  const { error } = await requireGroupTeacher(groupId);
   if (error) return error;
 
   try {

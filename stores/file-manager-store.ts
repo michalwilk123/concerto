@@ -140,11 +140,25 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     const prev = get().files;
     set({ files: prev.map((f) => (f.id === id ? { ...f, name } : f)) });
     try {
-      if (currentMeetingId) {
-        await meetingFilesApi.rename(id, name);
-      } else {
-        await filesApi.rename(id, name);
+      const renamed = currentMeetingId
+        ? await meetingFilesApi.rename(id, name)
+        : await filesApi.rename(id, name);
+
+      const { previewFile, selectedItems, lastSelectedId } = get();
+      const nextSelectedItems = new Set(selectedItems);
+      const oldSelectionKey = `file:${id}`;
+      const newSelectionKey = `file:${renamed.id}`;
+
+      if (nextSelectedItems.delete(oldSelectionKey)) {
+        nextSelectedItems.add(newSelectionKey);
       }
+
+      set({
+        files: get().files.map((f) => (f.id === id ? renamed : f)),
+        previewFile: previewFile?.id === id ? renamed : previewFile,
+        selectedItems: nextSelectedItems,
+        lastSelectedId: lastSelectedId === oldSelectionKey ? newSelectionKey : lastSelectedId,
+      });
     } catch (err) {
       set({ files: prev });
       throw err;

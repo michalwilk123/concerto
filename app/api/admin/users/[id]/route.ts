@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { hashPassword } from "better-auth/crypto";
 import { db } from "@/db";
-import { groupMember, user } from "@/db/schema";
+import { account, groupMember, user } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-helpers";
 
 const VALID_ROLES = ["admin", "teacher", "student"] as const;
@@ -76,6 +77,36 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   return NextResponse.json(updated);
+}
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
+  const { id } = await params;
+  const body = await req.json();
+  const { newPassword } = body;
+
+  if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    return NextResponse.json(
+      { error: "Password must be at least 6 characters" },
+      { status: 400 },
+    );
+  }
+
+  const hashed = await hashPassword(newPassword);
+
+  const [updated] = await db
+    .update(account)
+    .set({ password: hashed, updatedAt: new Date() })
+    .where(and(eq(account.userId, id), eq(account.providerId, "credential")))
+    .returning({ id: account.id });
+
+  if (!updated) {
+    return NextResponse.json({ error: "User account not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

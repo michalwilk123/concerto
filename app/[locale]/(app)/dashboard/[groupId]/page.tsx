@@ -1,23 +1,23 @@
 "use client";
 
-import { Film, Files, MessageSquare, PanelRightOpen } from "lucide-react";
+import { Files, Film, MessageSquare, PanelRightOpen } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useRouter } from "@/i18n/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
 import { ManagePanel } from "@/components/manage/ManagePanel";
 import { MeetingsPanel } from "@/components/meetings/MeetingsPanel";
-import { MeetingRecordingsPanel } from "@/components/recordings/MeetingRecordingsPanel";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
+import { MeetingRecordingsPanel } from "@/components/recordings/MeetingRecordingsPanel";
 import { TranslationsPanel } from "@/components/translations/TranslationsPanel";
 import { LoadingIndicator } from "@/components/ui/loading-state";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useRouter } from "@/i18n/navigation";
 import { filesApi, foldersApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
 import { useFileManagerStore } from "@/stores/file-manager-store";
-import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
 type MeetingSidebarTab = "chat" | "files" | "recordings";
@@ -128,11 +128,7 @@ export default function DashboardGroupPage() {
 
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden", background: "var(--bg-primary)" }}>
-      <DashboardSidebar
-        meetingsFolderName={null}
-        groupId={groupId}
-        activeTab={activeTab}
-      />
+      <DashboardSidebar meetingsFolderName={null} groupId={groupId} activeTab={activeTab} />
       <main style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {activeTab === "translations" ? (
           <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -150,8 +146,9 @@ export default function DashboardGroupPage() {
                   groupId={groupId}
                   selectedMeetingId={selectedMeetingId ?? undefined}
                   onSelectMeeting={handleSelectMeeting}
+                  isPrivileged={isPrivileged}
                   headerExtra={
-                    !chatSidebarOpen ? (
+                    selectedMeetingId && !chatSidebarOpen ? (
                       <button
                         type="button"
                         onClick={() => setChatSidebarOpen(true)}
@@ -176,12 +173,16 @@ export default function DashboardGroupPage() {
                 />
               </div>
             </div>
-            {chatSidebarOpen && (
+            {selectedMeetingId && chatSidebarOpen && (
               <ResizableSidebar
                 tabs={[
-                  { id: "chat", label: t("dashboard.meetingChat"), icon: <MessageSquare size={14} /> },
+                  {
+                    id: "chat",
+                    label: t("dashboard.meetingChat"),
+                    icon: <MessageSquare size={14} />,
+                  },
                   { id: "files", label: t("sidebar.files"), icon: <Files size={14} /> },
-                  { id: "recordings", label: t("sidebar.recordings"), icon: <Film size={14} /> },
+                  ...(isPrivileged ? [{ id: "recordings", label: t("sidebar.recordings"), icon: <Film size={14} /> }] : []),
                 ]}
                 activeTab={meetingSidebarTab}
                 onTabChange={(tab) => setMeetingSidebarTab(tab as MeetingSidebarTab)}
@@ -189,78 +190,32 @@ export default function DashboardGroupPage() {
                 storageKey="dashboard-meeting-sidebar-width"
               >
                 {meetingSidebarTab === "chat" && (
-                  <>
-                    {selectedMeetingId ? (
-                      <MeetChatPanel
-                        key={`meeting-chat-${selectedMeetingId}`}
-                        meetingId={selectedMeetingId}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          height: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--text-tertiary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {t("dashboard.selectMeeting")}
-                      </div>
-                    )}
-                  </>
+                  <MeetChatPanel
+                    key={`meeting-chat-${selectedMeetingId}`}
+                    meetingId={selectedMeetingId}
+                  />
                 )}
                 {meetingSidebarTab === "files" && (
                   <div style={{ flex: 1, overflow: "auto", height: "100%" }}>
-                    {selectedMeetingId ? (
-                      <FileBrowserPanel
-                        key={`meeting-files-${selectedMeetingId}`}
-                        meetingId={selectedMeetingId}
-                        groupId={groupId}
-                        allowManage={isPrivileged}
-                        showCreateFolderButton={isPrivileged}
-                        compact
-                        ancestors={[]}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          height: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--text-tertiary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {t("dashboard.selectMeeting")}
-                      </div>
-                    )}
+                    <FileBrowserPanel
+                      key={`meeting-files-${selectedMeetingId}`}
+                      meetingId={selectedMeetingId}
+                      groupId={groupId}
+                      allowManage={isPrivileged}
+                      allowUpload
+                      showCreateFolderButton={isPrivileged}
+                      compact
+                      ancestors={[]}
+                    />
                   </div>
                 )}
-                {meetingSidebarTab === "recordings" && (
+                {isPrivileged && meetingSidebarTab === "recordings" && (
                   <div style={{ flex: 1, overflow: "auto", height: "100%" }}>
-                    {selectedMeetingId ? (
-                      <MeetingRecordingsPanel
-                        key={`meeting-recordings-${selectedMeetingId}`}
-                        meetingId={selectedMeetingId}
-                        groupId={groupId}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          height: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--text-tertiary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {t("dashboard.selectMeeting")}
-                      </div>
-                    )}
+                    <MeetingRecordingsPanel
+                      key={`meeting-recordings-${selectedMeetingId}`}
+                      meetingId={selectedMeetingId}
+                      groupId={groupId}
+                    />
                   </div>
                 )}
               </ResizableSidebar>
@@ -271,6 +226,7 @@ export default function DashboardGroupPage() {
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
               <FileBrowserPanel
                 allowManage={isPrivileged}
+                allowUpload
                 showCreateFolderButton={isPrivileged}
                 groupId={groupId}
                 folderId={folderId}

@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Globe, Link as LinkIcon, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { useRouter, Link } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
 import { InlineButton } from "@/components/ui/inline-button";
 import { TextInput } from "@/components/ui/text-input";
-import { signOut, useSession } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client";
+import { logoutAndRedirect } from "@/lib/logout";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { Role } from "@/types/room";
 import ConcertoLogo from "./ConcertoLogo";
@@ -102,15 +103,13 @@ export function AppHeader(props: AppHeaderProps) {
 }
 
 function AppModeHeader() {
-  const router = useRouter();
   const { t } = useTranslation();
   const { data: session, isPending } = useSession();
   const user = session?.user;
   const isAdmin = user?.role === "admin";
 
   const handleLogout = async () => {
-    await signOut();
-    router.push("/login");
+    await logoutAndRedirect();
   };
 
   return (

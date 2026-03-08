@@ -6,6 +6,7 @@ import { groupMember } from "@/db/schema";
 import { auth } from "./auth";
 
 const INACTIVE_ACCOUNT_MESSAGE = "Account is awaiting activation";
+type AuthSession = Awaited<ReturnType<typeof auth.api.getSession>>;
 
 export async function getSessionOrNull() {
   try {
@@ -17,9 +18,7 @@ export async function getSessionOrNull() {
   }
 }
 
-export async function requireAuth() {
-  const session = await getSessionOrNull();
-
+function validateSession(session: AuthSession) {
   if (!session) {
     return {
       error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
@@ -37,59 +36,44 @@ export async function requireAuth() {
   return { error: null, session };
 }
 
+export async function requireAuth(existingSession?: AuthSession) {
+  const session = existingSession ?? (await getSessionOrNull());
+  return validateSession(session);
+}
+
 export async function requireAdmin() {
   const session = await getSessionOrNull();
-
-  if (!session) {
-    return {
-      error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-      session: null,
-    };
+  const validated = validateSession(session);
+  if (validated.error) {
+    return validated;
   }
 
-  if (!session.user.isActive) {
-    return {
-      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
-      session: null,
-    };
-  }
-
-  if (session.user.role !== "admin") {
+  if (validated.session.user.role !== "admin") {
     return {
       error: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
       session: null,
     };
   }
 
-  return { error: null, session };
+  return validated;
 }
 
-export async function requireGroupTeacher(groupId: string) {
-  const session = await getSessionOrNull();
-
-  if (!session) {
-    return {
-      error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-      session: null,
-    };
-  }
-
-  if (!session.user.isActive) {
-    return {
-      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
-      session: null,
-    };
+export async function requireGroupTeacher(groupId: string, existingSession?: AuthSession) {
+  const session = existingSession ?? (await getSessionOrNull());
+  const validated = validateSession(session);
+  if (validated.error) {
+    return validated;
   }
 
   // Admin can do anything
-  if (session.user.role === "admin") {
-    return { error: null, session };
+  if (validated.session.user.role === "admin") {
+    return validated;
   }
 
   const [member] = await db
     .select()
     .from(groupMember)
-    .where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, session.user.id)))
+    .where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, validated.session.user.id)))
     .limit(1);
 
   if (!member || member.role !== "teacher") {
@@ -99,35 +83,25 @@ export async function requireGroupTeacher(groupId: string) {
     };
   }
 
-  return { error: null, session };
+  return validated;
 }
 
-export async function requireGroupMember(groupId: string) {
-  const session = await getSessionOrNull();
-
-  if (!session) {
-    return {
-      error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-      session: null,
-    };
-  }
-
-  if (!session.user.isActive) {
-    return {
-      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
-      session: null,
-    };
+export async function requireGroupMember(groupId: string, existingSession?: AuthSession) {
+  const session = existingSession ?? (await getSessionOrNull());
+  const validated = validateSession(session);
+  if (validated.error) {
+    return validated;
   }
 
   // Admin can access everything
-  if (session.user.role === "admin") {
-    return { error: null, session };
+  if (validated.session.user.role === "admin") {
+    return validated;
   }
 
   const [member] = await db
     .select()
     .from(groupMember)
-    .where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, session.user.id)))
+    .where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, validated.session.user.id)))
     .limit(1);
 
   if (!member) {
@@ -137,5 +111,5 @@ export async function requireGroupMember(groupId: string) {
     };
   }
 
-  return { error: null, session };
+  return validated;
 }

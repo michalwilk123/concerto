@@ -15,7 +15,7 @@ async function createGroup(groupId: string) {
 }
 
 async function createFolder(groupId: string, folderId: string) {
-  await db.insert(folderTable).values({ id: folderId, name: folderId, groupId, parentId: null, isSystem: false }).onConflictDoNothing();
+  await db.insert(folderTable).values({ id: folderId, name: folderId, groupId, parentId: null }).onConflictDoNothing();
 }
 
 async function cleanup(groupId: string) {

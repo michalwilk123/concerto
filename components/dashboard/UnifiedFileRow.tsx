@@ -14,6 +14,7 @@ interface UnifiedFileRowProps {
   isSelected: boolean;
   isDragOverlay?: boolean;
   readOnly: boolean;
+  compact?: boolean;
   onCheckboxChange: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete: () => void;
@@ -36,6 +37,7 @@ export function UnifiedFileRow({
   isSelected,
   isDragOverlay = false,
   readOnly,
+  compact = false,
   onCheckboxChange,
   onClick,
   onDelete,
@@ -48,19 +50,18 @@ export function UnifiedFileRow({
   const [editValue, setEditValue] = useState(item.name);
 
   const dndId = `${type}:${item.id}`;
-  const isSystemFolder = type === "folder" && (item as FolderDoc).isSystem;
   const isFolder = type === "folder";
   const file = !isFolder ? (item as FileWithUrl) : null;
 
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: dndId,
-    disabled: isSystemFolder || isDragOverlay || isEditing,
+    disabled: compact || isDragOverlay || isEditing,
     data: { type, item },
   });
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `drop:${dndId}`,
-    disabled: type !== "folder" || isDragOverlay,
+    disabled: compact || type !== "folder" || isDragOverlay,
     data: { type: "folder", folderId: item.id },
   });
 
@@ -106,7 +107,146 @@ export function UnifiedFileRow({
     }
   };
 
-  const showActions = !readOnly && !isSystemFolder && (hovered || isSelected) && !isEditing;
+  const showActions = !readOnly && (hovered || isSelected) && !isEditing;
+
+  const nameCell = (
+    <div
+      style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}
+      onClick={isEditing ? undefined : onClick}
+    >
+      <Icon
+        size={16}
+        style={{ color: iconColor, flexShrink: 0 }}
+        fill={isFolder ? "color-mix(in srgb, var(--accent-primary) 15%, transparent)" : "none"}
+      />
+      {isEditing ? (
+        <input
+          autoFocus
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={commitRename}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: "0.875rem",
+            fontWeight: isFolder ? 500 : 400,
+            color: "var(--text-primary)",
+            background: "var(--bg-primary)",
+            border: "1px solid var(--accent-primary)",
+            borderRadius: "var(--radius-sm)",
+            padding: "2px 6px",
+            outline: "none",
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            fontSize: "0.875rem",
+            fontWeight: isFolder ? 500 : 400,
+            color: "var(--text-primary)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+          }}
+        >
+          {item.name}
+        </span>
+      )}
+    </div>
+  );
+
+  const actionButtons = (
+    <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+      {showActions && onRename && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditValue(item.name);
+            setIsEditing(true);
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 4,
+            cursor: "pointer",
+            color: "var(--text-secondary)",
+            borderRadius: "var(--radius-sm)",
+            display: "flex",
+            alignItems: "center",
+          }}
+          title={t("fileItem.rename")}
+        >
+          <Pencil size={13} />
+        </button>
+      )}
+      {showActions && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 4,
+            cursor: "pointer",
+            color: "var(--accent-red)",
+            borderRadius: "var(--radius-sm)",
+            display: "flex",
+            alignItems: "center",
+          }}
+          title={t("files.delete")}
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <>
+        <div
+          ref={combinedRef}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0,
+            height: 36,
+            padding: "0 8px",
+            background: rowBg,
+            border: rowBorder,
+            borderRadius: "var(--radius-sm)",
+            cursor: "pointer",
+            opacity: isDragging ? 0.4 : 1,
+            transition: "background 0.1s, border-color 0.1s",
+            userSelect: isEditing ? "text" : "none",
+          }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          {nameCell}
+          {actionButtons}
+        </div>
+
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={() => { setShowDeleteConfirm(false); onDelete(); }}
+          title={isFolder ? t("folders.deleteTitle") : t("fileItem.deleteTitle")}
+          message={
+            isFolder
+              ? t("folders.deleteMessage", { name: item.name })
+              : t("fileItem.deleteMessage", { name: item.name })
+          }
+          confirmLabel={isFolder ? t("folders.delete") : t("fileItem.delete")}
+          variant="danger"
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -138,13 +278,13 @@ export function UnifiedFileRow({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: isSystemFolder || isEditing ? "default" : "grab",
-            color: hovered && !isSystemFolder && !isEditing ? "var(--text-tertiary)" : "transparent",
+            cursor: isEditing ? "default" : "grab",
+            color: hovered && !isEditing ? "var(--text-tertiary)" : "transparent",
             transition: "color 0.1s",
             flexShrink: 0,
           }}
         >
-          {!isSystemFolder && <GripVertical size={14} />}
+          <GripVertical size={14} />
         </div>
 
         {/* Checkbox */}
@@ -161,68 +301,7 @@ export function UnifiedFileRow({
         </div>
 
         {/* Name */}
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, paddingRight: 8 }}
-          onClick={isEditing ? undefined : onClick}
-        >
-          <Icon
-            size={16}
-            style={{ color: iconColor, flexShrink: 0 }}
-            fill={isFolder ? "color-mix(in srgb, var(--accent-primary) 15%, transparent)" : "none"}
-          />
-          {isEditing ? (
-            <input
-              autoFocus
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={commitRename}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                fontSize: "0.875rem",
-                fontWeight: isFolder ? 500 : 400,
-                color: "var(--text-primary)",
-                background: "var(--bg-primary)",
-                border: "1px solid var(--accent-primary)",
-                borderRadius: "var(--radius-sm)",
-                padding: "2px 6px",
-                outline: "none",
-              }}
-            />
-          ) : (
-            <span
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: isFolder ? 500 : 400,
-                color: "var(--text-primary)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                cursor: isFolder ? "pointer" : "default",
-              }}
-            >
-              {item.name}
-            </span>
-          )}
-          {isSystemFolder && (
-            <span style={{
-              fontSize: "0.65rem",
-              fontWeight: 500,
-              color: "var(--text-tertiary)",
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "var(--radius-sm)",
-              padding: "1px 5px",
-              flexShrink: 0,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}>
-              system
-            </span>
-          )}
-        </div>
+        {nameCell}
 
         {/* Date */}
         <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -241,51 +320,8 @@ export function UnifiedFileRow({
           {!isFolder ? formatSize((item as FileWithUrl).size) : ""}
         </div>
 
-        {/* Actions: rename + delete */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 2 }}>
-          {showActions && onRename && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditValue(item.name);
-                setIsEditing(true);
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 4,
-                cursor: "pointer",
-                color: "var(--text-secondary)",
-                borderRadius: "var(--radius-sm)",
-                display: "flex",
-                alignItems: "center",
-              }}
-              title={t("fileItem.rename")}
-            >
-              <Pencil size={13} />
-            </button>
-          )}
-          {showActions && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 4,
-                cursor: "pointer",
-                color: "var(--accent-red)",
-                borderRadius: "var(--radius-sm)",
-                display: "flex",
-                alignItems: "center",
-              }}
-              title={t("files.delete")}
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
+        {/* Actions */}
+        {actionButtons}
       </div>
 
       <ConfirmDialog

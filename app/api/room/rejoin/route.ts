@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
-import { requireGroupTeacher } from "@/lib/auth-helpers";
+import { requireGroupMember } from "@/lib/auth-helpers";
 import { createEmptyRoom, rooms } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "meetingId and groupId are required" }, { status: 400 });
   }
 
-  const { error, session } = await requireGroupTeacher(groupId);
+  const { error, session } = await requireGroupMember(groupId);
   if (error) return error;
 
   // Verify the meeting exists and belongs to this group

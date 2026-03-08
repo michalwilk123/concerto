@@ -16,7 +16,6 @@ export interface FolderDoc {
   name: string;
   groupId: string;
   parentId: string | null;
-  isSystem: boolean;
   meetingId: string | null;
   createdAt: string;
 }

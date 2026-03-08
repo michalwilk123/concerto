@@ -10,10 +10,11 @@ interface FileUploaderProps {
   groupId: string;
   folderId?: string | null;
   meetingId?: string;
+  compact?: boolean;
   onUploadComplete?: () => void;
 }
 
-export function FileUploader({ groupId, folderId, meetingId, onUploadComplete }: FileUploaderProps) {
+export function FileUploader({ groupId, folderId, meetingId, compact = false, onUploadComplete }: FileUploaderProps) {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,13 +50,14 @@ export function FileUploader({ groupId, folderId, meetingId, onUploadComplete }:
       />
       <InlineButton
         variant="accent"
-        size="md"
+        size={compact ? "sm" : "md"}
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
-        style={{ display: "flex", alignItems: "center", gap: 8 }}
+        style={{ display: "flex", alignItems: "center", gap: compact ? 0 : 8 }}
+        title={uploading ? t("uploader.uploading") : t("uploader.uploadFile")}
       >
-        <Upload size={16} />
-        {uploading ? t("uploader.uploading") : t("uploader.uploadFile")}
+        <Upload size={compact ? 14 : 16} />
+        {!compact && (uploading ? t("uploader.uploading") : t("uploader.uploadFile"))}
       </InlineButton>
     </>
   );

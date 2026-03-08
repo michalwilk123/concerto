@@ -1,497 +1,188 @@
 "use client";
 
-import { Pencil, Search, Shield, Trash2, Users, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { GroupsManagement } from "@/components/manage/GroupsManagement";
-import { Badge } from "@/components/ui/badge";
-import { DataTableShell } from "@/components/ui/data-table-shell";
-import { EmptyState } from "@/components/ui/empty-state";
-import { EntityGridRow } from "@/components/ui/entity-list-row";
-import { InlineButton } from "@/components/ui/inline-button";
-import { InlineErrorBanner } from "@/components/ui/inline-error-banner";
-import { Modal } from "@/components/ui/modal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TextInput } from "@/components/ui/text-input";
+import { useState, useCallback } from "react";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
-import { type AdminUser, adminApi, type UpdateUserParams } from "@/lib/api-client";
-import { useSession } from "@/lib/auth-client";
+import { type AdminUser, adminApi, groupsApi } from "@/lib/api-client";
+import type { Group } from "@/types/group";
+import { GroupsTable } from "./GroupsTable";
+import { UsersTable } from "./UsersTable";
+import { CreateGroupModal } from "./modals/CreateGroupModal";
+import { CreateUserModal } from "./modals/CreateUserModal";
+import { DeleteConfirmModal } from "./modals/DeleteConfirmModal";
+import { EditGroupModal } from "./modals/EditGroupModal";
+import { EditUserModal } from "./modals/EditUserModal";
+import { ManageMembersModal } from "./modals/ManageMembersModal";
+import { ResetPasswordModal } from "./modals/ResetPasswordModal";
 
-const ROLE_COLORS: Record<string, string> = {
-  admin: "linear-gradient(135deg, #f59e0b, #d97706)",
-  teacher: "linear-gradient(135deg, #22c55e, #16a34a)",
-  student: "linear-gradient(135deg, #a78bfa, #7c3aed)",
-};
+type Tab = "users" | "groups";
 
-const STATUS_DOT = {
-  active: "#22c55e",
-  inactive: "#6b7280",
-  banned: "#ef4444",
-};
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+type ActiveModal =
+  | null
+  | { type: "editUser"; user: AdminUser }
+  | { type: "createUser" }
+  | { type: "deleteUser"; user: AdminUser }
+  | { type: "resetPassword"; user: AdminUser }
+  | { type: "editGroup"; group: Group }
+  | { type: "createGroup" }
+  | { type: "deleteGroup"; group: Group }
+  | { type: "manageMembers"; group: Group };
 
 export function ManagePanel() {
   const { t } = useTranslation();
-  const { data: session } = useSession();
-
-  const isAdmin = session?.user?.role === "admin";
-
-  const [users, setUsers] = useState<AdminUser[] | null>(null);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const [editUser, setEditUser] = useState<AdminUser | null>(null);
-  const [editForm, setEditForm] = useState<UpdateUserParams>({});
-  const [editSaving, setEditSaving] = useState(false);
-
-  const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
+  const [tab, setTab] = useState<Tab>("users");
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(value);
-      setPage(1);
-    }, 300);
+  const closeModal = useCallback(() => setActiveModal(null), []);
+
+  const handleModalSuccess = useCallback(() => {
+    closeModal();
+    refresh();
+  }, [closeModal, refresh]);
+
+  const openModal = useCallback((modal: { type: string; user?: AdminUser; group?: Group }) => {
+    setActiveModal(modal as ActiveModal);
   }, []);
 
-  const fetchUsers = useCallback(async () => {
-    setError(null);
-    try {
-      const res = await adminApi.listUsers({ page, limit, search: debouncedSearch || undefined });
-      setUsers(res.users);
-      setTotal(res.total);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("manage.loadUsersFailed"));
-    }
-  }, [page, limit, debouncedSearch, t]);
-
-  useEffect(() => {
-    // This effect performs initial and pagination-driven remote loading for the admin table.
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
-    if (isAdmin) fetchUsers();
-  }, [fetchUsers, isAdmin]);
-
-  const openEdit = (u: AdminUser) => {
-    const currentRole = u.role === "teacher" || u.role === "student" ? u.role : "student";
-    setEditUser(u);
-    setEditForm({ role: currentRole });
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editUser) return;
-    setEditSaving(true);
-    try {
-      await adminApi.updateUser(editUser.id, editForm);
-      setEditUser(null);
-      fetchUsers();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("manage.updateUserFailed"));
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteUser) return;
+  const handleDeleteUser = async () => {
+    if (activeModal?.type !== "deleteUser") return;
     setDeleteLoading(true);
     try {
-      await adminApi.deleteUser(deleteUser.id);
-      setDeleteUser(null);
-      fetchUsers();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("manage.deleteUserFailed"));
+      await adminApi.deleteUser(activeModal.user.id);
+      handleModalSuccess();
+    } catch {
+      // error handled by inline banner in table
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const totalPages = Math.ceil(total / limit);
+  const handleDeleteGroup = async () => {
+    if (activeModal?.type !== "deleteGroup") return;
+    setDeleteLoading(true);
+    try {
+      await groupsApi.delete(activeModal.group.id);
+      handleModalSuccess();
+    } catch {
+      // error handled by inline banner in table
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: "32px 40px" }}>
-      {/* Groups Section */}
-      <section>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <Shield size={18} style={{ color: "var(--text-tertiary)" }} />
-          <Typography as="h2" variant="titleMd" style={{ margin: 0 }}>
-            {t("manage.groupsTitle")}
-          </Typography>
-        </div>
-        <GroupsManagement isAdmin={isAdmin} />
-      </section>
+      {/* Tab bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          marginBottom: 28,
+          borderBottom: "1px solid var(--border-subtle)",
+        }}
+      >
+        <TabButton active={tab === "users"} onClick={() => setTab("users")}>
+          {t("manage.tabUsers")}
+        </TabButton>
+        <TabButton active={tab === "groups"} onClick={() => setTab("groups")}>
+          {t("manage.tabGroups")}
+        </TabButton>
+      </div>
 
-      {/* Divider */}
-      {isAdmin && (
-        <div
-          style={{
-            height: 1,
-            background: "var(--border-subtle)",
-            margin: "40px 0",
-          }}
-        />
-      )}
+      {/* Active table */}
+      {tab === "users" && <UsersTable openModal={openModal} refreshKey={refreshKey} />}
+      {tab === "groups" && <GroupsTable openModal={openModal} refreshKey={refreshKey} />}
 
-      {/* Users Section (admin only) */}
-      {isAdmin && (
-        <section>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-            <Users size={18} style={{ color: "var(--text-tertiary)" }} />
-            <Typography as="h2" variant="titleMd" style={{ margin: 0 }}>
-              {t("manage.usersTitle")}
-            </Typography>
-            <Typography as="span" variant="meta" tone="tertiary" style={{ marginLeft: 4 }}>
-              {t("manage.usersRegistered", { total: String(total) })}
-            </Typography>
-          </div>
-
-          {/* Search toolbar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ position: "relative", flex: 1, maxWidth: 360 }}>
-              <Search
-                size={15}
-                style={{
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--text-tertiary)",
-                  pointerEvents: "none",
-                }}
-              />
-              <TextInput
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder={t("manage.searchPlaceholder")}
-                style={{
-                  width: "100%",
-                  paddingLeft: 36,
-                  fontSize: "0.84rem",
-                }}
-              />
-            </div>
-            {search && (
-              <InlineButton
-                variant="ghost"
-                size="xs"
-                onClick={() => {
-                  setSearch("");
-                  setDebouncedSearch("");
-                  setPage(1);
-                }}
-                style={{ color: "var(--text-tertiary)" }}
-              >
-                <X size={14} />
-              </InlineButton>
-            )}
-          </div>
-
-          {error && <InlineErrorBanner message={error} onDismiss={() => setError(null)} />}
-
-          <DataTableShell
-            headers={[
-              t("manage.tableName"),
-              t("manage.tableEmail"),
-              t("manage.tableRole"),
-              t("manage.tableStatus"),
-              t("manage.tableCreated"),
-              t("manage.tableActions"),
-            ]}
-            columns="2fr 2.5fr 100px 110px 110px 90px"
-            isLoading={users === null}
-            hasRows={(users?.length ?? 0) > 0}
-            emptyState={
-              <EmptyState
-                icon={<Users size={32} />}
-                title={debouncedSearch ? t("manage.noUsersMatch") : t("manage.noUsersFound")}
-                subtitle={undefined}
-                padding="48px 20px"
-              />
-            }
-          >
-            {(users ?? []).map((u, i) => (
-              <EntityGridRow
-                key={u.id}
-                columns="2fr 2.5fr 100px 110px 110px 90px"
-                isLast={i === (users?.length ?? 0) - 1}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: "50%",
-                      background: u.image
-                        ? `url(${u.image}) center/cover`
-                        : "linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated))",
-                      border: "1px solid var(--border-subtle)",
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {!u.image && u.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "0.84rem",
-                      fontWeight: 500,
-                      color: "var(--text-primary)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {u.name}
-                  </span>
-                </div>
-
-                <span
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "var(--text-secondary)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {u.email}
-                </span>
-
-                <div>
-                  <Badge
-                    label={u.role || "student"}
-                    color={ROLE_COLORS[u.role || "student"] || ROLE_COLORS.student}
-                  />
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: u.banned
-                        ? STATUS_DOT.banned
-                        : u.isActive
-                          ? STATUS_DOT.active
-                          : STATUS_DOT.inactive,
-                      boxShadow: u.banned
-                        ? "0 0 6px rgba(239,68,68,0.4)"
-                        : u.isActive
-                          ? "0 0 6px rgba(34,197,94,0.3)"
-                          : "none",
-                    }}
-                  />
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-                    {u.banned
-                      ? t("manage.statusBanned")
-                      : u.isActive
-                        ? t("manage.statusActive")
-                        : t("manage.statusInactive")}
-                  </span>
-                </div>
-
-                <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>
-                  {formatDate(u.createdAt)}
-                </span>
-
-                <div style={{ display: "flex", gap: 4 }}>
-                  <InlineButton
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => openEdit(u)}
-                    title={t("manage.editUserAction")}
-                    style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-                  >
-                    <Pencil size={14} />
-                  </InlineButton>
-                  {session && u.id !== session.user.id && (
-                    <InlineButton
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => setDeleteUser(u)}
-                      title={t("manage.deleteUserAction")}
-                      style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-                    >
-                      <Trash2 size={14} />
-                    </InlineButton>
-                  )}
-                </div>
-              </EntityGridRow>
-            ))}
-          </DataTableShell>
-
-          {totalPages > 1 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginTop: 16,
-                padding: "0 4px",
-              }}
-            >
-              <Typography as="span" variant="meta" tone="tertiary">
-                {t("manage.pageOf", { page: String(page), total: String(totalPages) })}
-              </Typography>
-              <div style={{ display: "flex", gap: 6 }}>
-                <InlineButton
-                  variant="secondary"
-                  size="xs"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  {t("manage.previous")}
-                </InlineButton>
-                <InlineButton
-                  variant="secondary"
-                  size="xs"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {t("manage.next")}
-                </InlineButton>
-              </div>
-            </div>
-          )}
-
-          {/* Edit Modal */}
-          <Modal open={!!editUser} onClose={() => setEditUser(null)} maxWidth={420}>
-            {editUser && (
-              <div style={{ padding: 24 }}>
-                <Typography as="h2" variant="titleMd" style={{ margin: "0 0 4px 0" }}>
-                  {t("manage.editUserTitle")}
-                </Typography>
-                <Typography
-                  as="p"
-                  variant="bodySm"
-                  tone="tertiary"
-                  style={{ margin: "0 0 24px 0" }}
-                >
-                  {editUser.name} &middot; {editUser.email}
-                </Typography>
-
-                <label
-                  htmlFor="edit-user-role"
-                  style={{
-                    display: "block",
-                    fontSize: "0.76rem",
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    marginBottom: 6,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  <Typography as="span" variant="label" tone="secondary">
-                    {t("manage.roleLabel")}
-                  </Typography>
-                </label>
-                <div style={{ marginBottom: 24 }}>
-                  <Select
-                    value={editForm.role || "student"}
-                    onValueChange={(v) => setEditForm((f) => ({ ...f, role: v }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="teacher">{t("manage.roleTeacher")}</SelectItem>
-                      <SelectItem value="student">{t("manage.roleStudent")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <InlineButton variant="secondary" size="sm" onClick={() => setEditUser(null)}>
-                    {t("manage.cancel")}
-                  </InlineButton>
-                  <InlineButton
-                    variant="accent"
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    loading={editSaving}
-                  >
-                    {t("manage.confirm")}
-                  </InlineButton>
-                </div>
-              </div>
-            )}
-          </Modal>
-
-          {/* Delete Modal */}
-          <Modal open={!!deleteUser} onClose={() => setDeleteUser(null)} maxWidth={400}>
-            {deleteUser && (
-              <div style={{ padding: 24 }}>
-                <Typography as="h2" variant="titleMd" style={{ margin: "0 0 8px 0" }}>
-                  {t("manage.deleteUserTitle")}
-                </Typography>
-                <Typography
-                  as="p"
-                  variant="bodySm"
-                  tone="secondary"
-                  style={{ margin: "0 0 8px 0" }}
-                >
-                  {t("manage.deleteUserMessage", { name: deleteUser.name })}
-                </Typography>
-                <Typography
-                  as="p"
-                  variant="meta"
-                  tone="tertiary"
-                  style={{
-                    margin: "0 0 24px 0",
-                    padding: "8px 12px",
-                    background: "rgba(239,68,68,0.06)",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid rgba(239,68,68,0.12)",
-                  }}
-                >
-                  {t("manage.deleteUserWarning")}
-                </Typography>
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <InlineButton variant="secondary" size="sm" onClick={() => setDeleteUser(null)}>
-                    {t("manage.cancel")}
-                  </InlineButton>
-                  <InlineButton
-                    variant="danger"
-                    size="sm"
-                    onClick={handleDelete}
-                    loading={deleteLoading}
-                  >
-                    {t("manage.deleteUserButton")}
-                  </InlineButton>
-                </div>
-              </div>
-            )}
-          </Modal>
-        </section>
-      )}
+      {/* Modals */}
+      <EditUserModal
+        user={activeModal?.type === "editUser" ? activeModal.user : null}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
+      <CreateUserModal
+        open={activeModal?.type === "createUser"}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
+      <ResetPasswordModal
+        user={activeModal?.type === "resetPassword" ? activeModal.user : null}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
+      <DeleteConfirmModal
+        open={activeModal?.type === "deleteUser"}
+        title={t("manage.deleteUserTitle")}
+        message={
+          activeModal?.type === "deleteUser"
+            ? t("manage.deleteUserMessage", { name: activeModal.user.name })
+            : ""
+        }
+        warning={t("manage.deleteUserWarning")}
+        onConfirm={handleDeleteUser}
+        onClose={closeModal}
+        loading={deleteLoading}
+      />
+      <EditGroupModal
+        group={activeModal?.type === "editGroup" ? activeModal.group : null}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
+      <CreateGroupModal
+        open={activeModal?.type === "createGroup"}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
+      <DeleteConfirmModal
+        open={activeModal?.type === "deleteGroup"}
+        title={t("groups.deleteTitle")}
+        message={
+          activeModal?.type === "deleteGroup"
+            ? t("groups.deleteMessage", { name: activeModal.group.name })
+            : ""
+        }
+        warning={t("groups.deleteWarning")}
+        onConfirm={handleDeleteGroup}
+        onClose={closeModal}
+        loading={deleteLoading}
+      />
+      <ManageMembersModal
+        group={activeModal?.type === "manageMembers" ? activeModal.group : null}
+        onClose={closeModal}
+      />
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "10px 20px",
+        background: "none",
+        border: "none",
+        borderBottom: active ? "2px solid var(--accent-primary)" : "2px solid transparent",
+        color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+        fontWeight: active ? 600 : 500,
+        fontSize: "0.88rem",
+        cursor: "pointer",
+        transition: "color 0.15s, border-color 0.15s",
+      }}
+    >
+      {children}
+    </button>
   );
 }

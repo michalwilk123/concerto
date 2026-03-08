@@ -22,6 +22,7 @@ import type { FileWithUrl, FolderDoc } from "@/types/files";
 
 interface FileBrowserPanelProps {
   allowManage: boolean;
+  allowUpload?: boolean;
   showCreateFolderButton?: boolean;
   compact?: boolean;
   groupId: string;
@@ -33,6 +34,7 @@ interface FileBrowserPanelProps {
 
 export function FileBrowserPanel({
   allowManage,
+  allowUpload,
   showCreateFolderButton = true,
   compact = false,
   groupId,
@@ -41,6 +43,7 @@ export function FileBrowserPanel({
   folderId: folderIdProp,
   initialFolderId,
 }: FileBrowserPanelProps) {
+  const canUpload = allowUpload ?? allowManage;
   const router = useRouter();
   const toast = useToast();
   const { t } = useTranslation();
@@ -296,31 +299,38 @@ export function FileBrowserPanel({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: 24,
+              gap: 8,
+              marginBottom: compact ? 12 : 24,
+              overflow: "hidden",
             }}
           >
             <Breadcrumbs
               groupId={groupId}
               ancestors={activeAncestors}
+              compact={compact}
               onNavigate={meetingId ? (folderId) => handleNavigateToFolder(folderId) : undefined}
             />
-            {allowManage && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <FileUploader
-                  groupId={groupId}
-                  meetingId={meetingId}
-                  folderId={activeFolderId}
-                  onUploadComplete={handleUploadComplete}
-                />
-                {showCreateFolderButton && (
+            {(canUpload || allowManage) && (
+              <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8, flexShrink: 0 }}>
+                {canUpload && (
+                  <FileUploader
+                    groupId={groupId}
+                    meetingId={meetingId}
+                    folderId={activeFolderId}
+                    compact={compact}
+                    onUploadComplete={handleUploadComplete}
+                  />
+                )}
+                {allowManage && showCreateFolderButton && (
                   <InlineButton
                     variant="accent"
-                    size="md"
+                    size={compact ? "sm" : "md"}
                     onClick={() => setShowCreateFolder(true)}
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    style={{ display: "flex", alignItems: "center", gap: compact ? 0 : 8 }}
+                    title={t("files.newFolder")}
                   >
-                    <FolderPlus size={16} />
-                    {t("files.newFolder")}
+                    <FolderPlus size={compact ? 14 : 16} />
+                    {!compact && t("files.newFolder")}
                   </InlineButton>
                 )}
               </div>
@@ -335,6 +345,7 @@ export function FileBrowserPanel({
               files={files}
               selectedItems={selectedItems}
               readOnly={!allowManage}
+              compact={compact}
               onNavigateToFolder={(id) => handleNavigateToFolder(id)}
               onPreviewFile={(file) => setPreviewFile(file)}
               onDeleteFile={handleDeleteFile}

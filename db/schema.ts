@@ -90,7 +90,6 @@ export const folder = pgTable(
       .notNull()
       .references(() => group.id, { onDelete: "cascade" }),
     parentId: text("parent_id"),
-    isSystem: boolean("is_system").notNull().default(false),
     meetingId: text("meeting_id").references(() => meeting.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
