@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect } from "react";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import { groupsApi } from "@/lib/api-client";

@@ -4,6 +4,7 @@ import type { Group, GroupMember } from "@/types/group";
 import type { Meeting } from "@/types/meeting";
 import type { Recording } from "@/types/recording";
 import type { Role } from "@/types/room";
+import { defaultLocale } from "@/i18n/config";
 
 // Request/Response types
 export interface CreateRoomParams {
@@ -895,14 +896,16 @@ export const meetingsApi = {
 };
 
 // Translations API Client
-export interface TranslationSet {
-  name: string;
+export interface LocaleEntry {
+  code: string;
+  label: string;
+  isDefault: boolean;
   overrides: Record<string, string>;
 }
 
 export const translationsApi = {
-  async getAll(): Promise<{ translations: TranslationSet[] }> {
-    const response = await fetch("/api/translations");
+  async getAll(): Promise<{ locales: LocaleEntry[] }> {
+    const response = await fetch("/api/translations", { cache: "no-store" });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to load translations");
@@ -910,9 +913,10 @@ export const translationsApi = {
     return response.json();
   },
 
-  async getByName(name?: string): Promise<Record<string, string>> {
-    const langParam = name ?? "default";
-    const response = await fetch(`/api/translations?name=${encodeURIComponent(langParam)}`);
+  async getByLocale(locale: string): Promise<Record<string, string>> {
+    const response = await fetch(`/api/translations?locale=${encodeURIComponent(locale)}`, {
+      cache: "no-store",
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to load translations");
@@ -920,18 +924,18 @@ export const translationsApi = {
     return response.json();
   },
 
-  async getLanguages(): Promise<string[]> {
-    const response = await fetch("/api/translations/languages");
-    if (!response.ok) return ["default"];
+  async getLocales(): Promise<{ code: string; label: string; isDefault: boolean }[]> {
+    const response = await fetch("/api/translations/languages", { cache: "no-store" });
+    if (!response.ok) return [{ code: defaultLocale, label: "English", isDefault: true }];
     const data = await response.json();
-    return data.languages as string[];
+    return data.locales;
   },
 
-  async saveAll(translations: TranslationSet[]): Promise<void> {
+  async saveAll(locales: LocaleEntry[]): Promise<void> {
     const response = await fetch("/api/translations", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ translations }),
+      body: JSON.stringify({ locales }),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -942,8 +946,9 @@ export const translationsApi = {
 
 // Recordings API Client
 export const recordingsApi = {
-  async list(groupId: string): Promise<Recording[]> {
+  async list(groupId: string, meetingId?: string): Promise<Recording[]> {
     const params = new URLSearchParams({ groupId });
+    if (meetingId) params.set("meetingId", meetingId);
     const response = await fetch(`/api/recordings?${params}`);
 
     if (!response.ok) {

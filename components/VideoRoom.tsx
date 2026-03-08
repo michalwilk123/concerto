@@ -59,6 +59,7 @@ function RoomContent({
   meetingId,
   participantName,
   role,
+  groupId,
   onLeave,
   onEndMeeting,
   hasAudioOutput,
@@ -190,101 +191,111 @@ function RoomContent({
         style={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
           overflow: "hidden",
         }}
       >
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <div style={{ position: "relative", height: "100%", width: "100%" }}>
-            <RtkGrid meeting={meeting} style={{ height: "100%", width: "100%" }} />
-            <div
-              style={{
-                position: "absolute",
-                top: 12,
-                right: 12,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                zIndex: 10,
-              }}
-            >
-              <RtkRecordingIndicator meeting={meeting} />
-              {canRecord ? (
-                <RtkRecordingToggle
-                  meeting={meeting}
-                  onRtkApiError={(event) => {
-                    const detail = event?.detail;
-                    const message = detail?.message || t("video.recordingStateFailed");
-                    toast.error(message);
-                  }}
-                />
-              ) : null}
-            </div>
-          </div>
-        </div>
         <div
           style={{
+            flex: 1,
             display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            padding: "12px 0",
-            background: "var(--bg-secondary)",
+            flexDirection: "column",
+            overflow: "hidden",
+            minWidth: 0,
           }}
         >
-          <RtkMicToggle meeting={meeting} size="md" />
-          <RtkCameraToggle meeting={meeting} size="md" />
-          <RtkScreenShareToggle meeting={meeting} size="md" />
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <div style={{ position: "relative", height: "100%", width: "100%" }}>
+              <RtkGrid meeting={meeting} style={{ height: "100%", width: "100%" }} />
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  zIndex: 10,
+                }}
+              >
+                <RtkRecordingIndicator meeting={meeting} />
+                {canRecord ? (
+                  <RtkRecordingToggle
+                    meeting={meeting}
+                    onRtkApiError={(event) => {
+                      const detail = event?.detail;
+                      const message = detail?.message || t("video.recordingStateFailed");
+                      toast.error(message);
+                    }}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div
             style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              padding: "12px 0",
               background: "var(--bg-secondary)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border-color)",
-              borderRadius: 8,
-              padding: "8px 16px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontWeight: 500,
             }}
           >
-            {t("video.settings")}
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              if (isTeacherRole) {
-                await onEndMeeting();
-              } else {
-                meeting.leaveRoom();
-                onLeave();
-              }
-            }}
-            style={{
-              background: "#e53935",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              padding: "8px 16px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-            }}
-          >
-            {t("video.leave")}
-          </button>
+            <RtkMicToggle meeting={meeting} size="md" />
+            <RtkCameraToggle meeting={meeting} size="md" />
+            <RtkScreenShareToggle meeting={meeting} size="md" />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              style={{
+                background: "var(--bg-secondary)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-color)",
+                borderRadius: 8,
+                padding: "8px 16px",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+              }}
+            >
+              {t("video.settings")}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (isTeacherRole) {
+                  await onEndMeeting();
+                } else {
+                  meeting.leaveRoom();
+                  onLeave();
+                }
+              }}
+              style={{
+                background: "#e53935",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 16px",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+              }}
+            >
+              {t("video.leave")}
+            </button>
+          </div>
         </div>
+
+        <Sidebar
+          participants={sidebarParticipants}
+          onClose={() => setSidebarOpen(false)}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          isOpen={sidebarOpen}
+        />
       </div>
 
-      <Sidebar
-        participants={sidebarParticipants}
-        onClose={() => setSidebarOpen(false)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        isOpen={sidebarOpen}
-      />
       <RtkDialog open={settingsOpen} onRtkDialogClose={() => setSettingsOpen(false)}>
         <RtkSettings meeting={meeting} />
       </RtkDialog>

@@ -1,7 +1,7 @@
 "use client";
 
-import { Film, FolderOpen, HardDrive, Languages, Music, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { FolderOpen, HardDrive, Languages, Music, Settings } from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -98,12 +98,6 @@ export function DashboardSidebar({
             onClick={() => router.push(buildDashboardUrl(groupId, { tab: "meetings" }))}
           />
         )}
-        <SidebarButton
-          icon={<Film size={18} />}
-          label={t("sidebar.recordings")}
-          active={activeItem === "recordings"}
-          onClick={() => router.push(buildDashboardUrl(groupId, { tab: "recordings" }))}
-        />
         {isPrivileged && (
           <SidebarButton
             icon={<Settings size={18} />}

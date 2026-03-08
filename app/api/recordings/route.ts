@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "groupId is required" }, { status: 400 });
   }
 
+  const concertoMeetingId = request.nextUrl.searchParams.get("meetingId");
+
   const { error } = await requireGroupMember(groupId);
   if (error) return error;
 
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Look up meeting names from DB via meeting_session join
     const rtkMeetingIds = [...new Set(rtkRecordings.map((r) => r.meeting_id))];
-    let meetingMap = new Map<string, { id: string; name: string; groupId: string }>();
+    let meetingMap = new Map<string, { id: string; name: string; groupId: string; meetingId: string }>();
     if (rtkMeetingIds.length > 0) {
       try {
         const rows = await db
@@ -35,35 +37,57 @@ export async function GET(request: NextRequest) {
             rtkId: meetingSession.id,
             name: meeting.name,
             groupId: meeting.groupId,
+            meetingId: meeting.id,
           })
           .from(meetingSession)
           .innerJoin(meeting, eq(meeting.id, meetingSession.meetingId))
           .where(inArray(meetingSession.id, rtkMeetingIds));
         meetingMap = new Map(
-          rows.map((r) => [r.rtkId, { id: r.rtkId, name: r.name, groupId: r.groupId }]),
+          rows.map((r) => [r.rtkId, { id: r.rtkId, name: r.name, groupId: r.groupId, meetingId: r.meetingId }]),
         );
       } catch {
         console.warn("[recordings] Could not query meeting tables, showing all recordings");
       }
     }
 
-    // Only include recordings whose meeting belongs to this group,
-    // or recordings from unknown meetings (created before tracking).
+    // If meetingId param is provided, get the RTK session IDs for that concerto meeting
+    let allowedRtkSessionIds: Set<string> | null = null;
+    if (concertoMeetingId) {
+      try {
+        const sessions = await db
+          .select({ id: meetingSession.id })
+          .from(meetingSession)
+          .where(eq(meetingSession.meetingId, concertoMeetingId));
+        allowedRtkSessionIds = new Set(sessions.map((s) => s.id));
+      } catch {
+        allowedRtkSessionIds = new Set();
+      }
+    }
+
+    // Filter recordings
     const recordings: Recording[] = rtkRecordings
       .filter((rec) => {
+        // If filtering by meetingId, only include recordings from those RTK sessions
+        if (allowedRtkSessionIds !== null) {
+          return allowedRtkSessionIds.has(rec.meeting_id);
+        }
         const m = meetingMap.get(rec.meeting_id);
         // Include if: meeting belongs to this group, OR meeting is unknown (not in DB)
         return !m || m.groupId === groupId;
       })
-      .map((rec) => ({
-        id: rec.id,
-        name: rec.output_file_name,
-        meetingName: meetingMap.get(rec.meeting_id)?.name ?? "Unknown meeting",
-        size: rec.file_size,
-        lastModified: rec.stopped_time,
-        url: rec.download_url,
-        duration: rec.recording_duration,
-      }));
+      .map((rec) => {
+        const m = meetingMap.get(rec.meeting_id);
+        return {
+          id: rec.id,
+          name: rec.output_file_name,
+          meetingName: m?.name ?? "Unknown meeting",
+          meetingId: m?.meetingId,
+          size: rec.file_size,
+          lastModified: rec.stopped_time,
+          url: rec.download_url,
+          duration: rec.recording_duration,
+        };
+      });
 
     // Sort newest first
     recordings.sort(

@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { type FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import VideoRoom from "@/components/VideoRoom";

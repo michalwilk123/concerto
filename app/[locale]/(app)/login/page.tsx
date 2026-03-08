@@ -1,6 +1,8 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { type FormEvent, useState, Suspense } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { authClient, signIn } from "@/lib/auth-client";
@@ -149,7 +151,7 @@ function LoginForm() {
             color: "var(--text-secondary)",
           }}
         >
-          {t("auth.login.noAccount")} <a href="/register">{t("auth.login.register")}</a>
+          {t("auth.login.noAccount")} <Link href="/register">{t("auth.login.register")}</Link>
         </p>
       </div>
     </div>

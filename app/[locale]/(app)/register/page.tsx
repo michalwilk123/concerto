@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { type FormEvent, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { signUp } from "@/lib/auth-client";
@@ -174,7 +174,7 @@ export default function RegisterPage() {
             color: "var(--text-secondary)",
           }}
         >
-          {t("auth.register.alreadyHaveAccount")} <a href="/login">{t("auth.register.signIn")}</a>
+          {t("auth.register.alreadyHaveAccount")} <Link href="/login">{t("auth.register.signIn")}</Link>
         </p>
       </div>
     </div>

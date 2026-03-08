@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const parsed = parseFileId(fileId);
   if (!parsed) return NextResponse.json({ error: "Invalid fileId" }, { status: 400 });
 
-  const { error } = await requireGroupTeacher(parsed.groupId);
+  const { error } = await requireGroupTeacher(parsed.groupId!);
   if (error) return error;
 
   try {

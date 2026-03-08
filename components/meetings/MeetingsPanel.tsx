@@ -11,7 +11,7 @@ import {
   Trash2,
   Video,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { CreateMeetingModal } from "@/components/CreateMeetingModal";
 import { EmptyState } from "@/components/ui/empty-state";

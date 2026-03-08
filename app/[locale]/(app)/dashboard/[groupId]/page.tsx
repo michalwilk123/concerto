@@ -1,14 +1,16 @@
 "use client";
 
-import { Files, MessageSquare, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Film, Files, MessageSquare, PanelRightOpen } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
 import { ManagePanel } from "@/components/manage/ManagePanel";
 import { MeetingsPanel } from "@/components/meetings/MeetingsPanel";
-import { RecordingsPanel } from "@/components/recordings/RecordingsPanel";
+import { MeetingRecordingsPanel } from "@/components/recordings/MeetingRecordingsPanel";
+import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { TranslationsPanel } from "@/components/translations/TranslationsPanel";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import { filesApi, foldersApi } from "@/lib/api-client";
@@ -18,7 +20,7 @@ import { useFileManagerStore } from "@/stores/file-manager-store";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { FolderDoc } from "@/types/files";
 
-type MeetingSidebarTab = "chat" | "files";
+type MeetingSidebarTab = "chat" | "files" | "recordings";
 
 export default function DashboardGroupPage() {
   const router = useRouter();
@@ -175,146 +177,105 @@ export default function DashboardGroupPage() {
               </div>
             </div>
             {chatSidebarOpen && (
-              <div
-                style={{
-                  width: 360,
-                  flexShrink: 0,
-                  borderLeft: "1px solid var(--border-primary)",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
-                }}
+              <ResizableSidebar
+                tabs={[
+                  { id: "chat", label: t("dashboard.meetingChat"), icon: <MessageSquare size={14} /> },
+                  { id: "files", label: t("sidebar.files"), icon: <Files size={14} /> },
+                  { id: "recordings", label: t("sidebar.recordings"), icon: <Film size={14} /> },
+                ]}
+                activeTab={meetingSidebarTab}
+                onTabChange={(tab) => setMeetingSidebarTab(tab as MeetingSidebarTab)}
+                onClose={() => setChatSidebarOpen(false)}
+                storageKey="dashboard-meeting-sidebar-width"
               >
-                {/* Sidebar header with tabs + close */}
-                <div
-                  style={{
-                    borderBottom: "1px solid var(--border-primary)",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <div style={{ display: "flex", flex: 1 }}>
-                    {(["chat", "files"] as MeetingSidebarTab[]).map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setMeetingSidebarTab(tab)}
+                {meetingSidebarTab === "chat" && (
+                  <>
+                    {selectedMeetingId ? (
+                      <MeetChatPanel
+                        key={`meeting-chat-${selectedMeetingId}`}
+                        meetingId={selectedMeetingId}
+                      />
+                    ) : (
+                      <div
                         style={{
-                          flex: 1,
+                          height: "100%",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 6,
-                          padding: "10px 12px",
-                          background: "transparent",
-                          border: "none",
-                          borderBottom:
-                            meetingSidebarTab === tab
-                              ? "2px solid var(--text-primary)"
-                              : "2px solid transparent",
-                          color: meetingSidebarTab === tab ? "var(--text-primary)" : "var(--text-secondary)",
+                          color: "var(--text-tertiary)",
                           fontSize: "0.82rem",
-                          fontWeight: meetingSidebarTab === tab ? 600 : 400,
-                          cursor: "pointer",
                         }}
                       >
-                        {tab === "chat" ? <MessageSquare size={14} /> : <Files size={14} />}
-                        {tab === "chat" ? t("dashboard.meetingChat") : t("sidebar.files")}
-                      </button>
-                    ))}
+                        {t("dashboard.selectMeeting")}
+                      </div>
+                    )}
+                  </>
+                )}
+                {meetingSidebarTab === "files" && (
+                  <div style={{ flex: 1, overflow: "auto", height: "100%" }}>
+                    {selectedMeetingId ? (
+                      <FileBrowserPanel
+                        key={`meeting-files-${selectedMeetingId}`}
+                        meetingId={selectedMeetingId}
+                        groupId={groupId}
+                        allowManage={isPrivileged}
+                        showCreateFolderButton={isPrivileged}
+                        compact
+                        ancestors={[]}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--text-tertiary)",
+                          fontSize: "0.82rem",
+                        }}
+                      >
+                        {t("dashboard.selectMeeting")}
+                      </div>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setChatSidebarOpen(false)}
-                    title={t("dashboard.closeChatSidebar")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 32,
-                      height: 32,
-                      border: "none",
-                      borderRadius: "var(--radius-sm)",
-                      background: "transparent",
-                      color: "var(--text-tertiary)",
-                      cursor: "pointer",
-                      marginRight: 4,
-                    }}
-                  >
-                    <PanelRightClose size={16} />
-                  </button>
-                </div>
-
-                <div style={{ flex: 1, overflow: "hidden" }}>
-                  {meetingSidebarTab === "chat" && (
-                    <>
-                      {selectedMeetingId ? (
-                        <MeetChatPanel
-                          key={`meeting-chat-${selectedMeetingId}`}
-                          meetingId={selectedMeetingId}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "var(--text-tertiary)",
-                            fontSize: "0.82rem",
-                          }}
-                        >
-                          {t("dashboard.selectMeeting")}
-                        </div>
-                      )}
-                    </>
-                  )}
-                  {meetingSidebarTab === "files" && (
-                    <div style={{ flex: 1, overflow: "auto", height: "100%" }}>
-                      {selectedMeetingId ? (
-                        <FileBrowserPanel
-                          key={`meeting-files-${selectedMeetingId}`}
-                          meetingId={selectedMeetingId}
-                          groupId={groupId}
-                          allowManage={isPrivileged}
-                          showCreateFolderButton={isPrivileged}
-                          compact
-                          ancestors={[]}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "var(--text-tertiary)",
-                            fontSize: "0.82rem",
-                          }}
-                        >
-                          {t("dashboard.selectMeeting")}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+                )}
+                {meetingSidebarTab === "recordings" && (
+                  <div style={{ flex: 1, overflow: "auto", height: "100%" }}>
+                    {selectedMeetingId ? (
+                      <MeetingRecordingsPanel
+                        key={`meeting-recordings-${selectedMeetingId}`}
+                        meetingId={selectedMeetingId}
+                        groupId={groupId}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--text-tertiary)",
+                          fontSize: "0.82rem",
+                        }}
+                      >
+                        {t("dashboard.selectMeeting")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ResizableSidebar>
             )}
           </div>
         ) : (
           <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-              {activeTab === "files" ? (
-                <FileBrowserPanel
-                  allowManage={isPrivileged}
-                  showCreateFolderButton={isPrivileged}
-                  groupId={groupId}
-                  folderId={folderId}
-                  ancestors={ancestors}
-                />
-              ) : (
-                <RecordingsPanel groupId={groupId} />
-              )}
+              <FileBrowserPanel
+                allowManage={isPrivileged}
+                showCreateFolderButton={isPrivileged}
+                groupId={groupId}
+                folderId={folderId}
+                ancestors={ancestors}
+              />
             </div>
           </div>
         )}

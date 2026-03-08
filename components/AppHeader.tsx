@@ -1,11 +1,11 @@
 "use client";
 
-import { Link, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Globe, Link as LinkIcon, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { useRouter, Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
 import { InlineButton } from "@/components/ui/inline-button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { signOut, useSession } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -13,21 +13,68 @@ import type { Role } from "@/types/room";
 import ConcertoLogo from "./ConcertoLogo";
 
 function LanguageSelector() {
-  const { currentLanguage, availableLanguages, setLanguage } = useTranslation();
-  if (availableLanguages.length <= 1) return null;
+  const { currentLanguage, setLanguage } = useTranslation();
+  const [locales, setLocales] = useState<{ code: string; label: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/translations/languages")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.locales) setLocales(data.locales);
+      })
+      .catch(() => {});
+  }, []);
+
+  const options = locales.length > 0 ? locales : [{ code: currentLanguage, label: currentLanguage }];
+  const isDisabled = options.length <= 1;
+
   return (
-    <Select value={currentLanguage} onValueChange={setLanguage}>
-      <SelectTrigger variant="compact" className="w-auto min-w-[100px] text-[0.8rem]">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {availableLanguages.map((lang) => (
-          <SelectItem key={lang} value={lang}>
-            {lang}
-          </SelectItem>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "0 10px",
+        height: 36,
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-md)",
+        background: "var(--bg-tertiary)",
+      }}
+    >
+      <Globe size={13} style={{ color: "var(--text-tertiary)", flexShrink: 0, opacity: 0.8 }} />
+      <select
+        value={currentLanguage}
+        onChange={(e) => setLanguage(e.target.value)}
+        aria-label="Select language"
+        disabled={isDisabled}
+        style={{
+          height: "100%",
+          minWidth: 88,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          color: "var(--text-primary)",
+          fontSize: "0.82rem",
+          fontWeight: 500,
+          cursor: isDisabled ? "default" : "pointer",
+          opacity: isDisabled ? 0.65 : 1,
+          paddingRight: 4,
+        }}
+      >
+        {options.map((loc) => (
+          <option
+            key={loc.code}
+            value={loc.code}
+            style={{
+              color: "var(--text-primary)",
+              background: "var(--bg-secondary)",
+            }}
+          >
+            {loc.label}
+          </option>
         ))}
-      </SelectContent>
-    </Select>
+      </select>
+    </div>
   );
 }
 
@@ -85,7 +132,7 @@ function AppModeHeader() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <a
+        <Link
           href="/dashboard"
           style={{
             display: "flex",
@@ -97,7 +144,7 @@ function AppModeHeader() {
           onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
         >
           <ConcertoLogo size="sm" />
-        </a>
+        </Link>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <LanguageSelector />
@@ -127,7 +174,7 @@ function AppModeHeader() {
           </>
         ) : (
           <>
-            <a
+            <Link
               href="/login"
               style={{
                 padding: "6px 12px",
@@ -142,8 +189,8 @@ function AppModeHeader() {
               }}
             >
               {t("appHeader.signIn")}
-            </a>
-            <a
+            </Link>
+            <Link
               href="/register"
               style={{
                 padding: "6px 12px",
@@ -158,7 +205,7 @@ function AppModeHeader() {
               }}
             >
               {t("appHeader.register")}
-            </a>
+            </Link>
           </>
         )}
       </div>
@@ -197,7 +244,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
         boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
       }}
     >
-      <a
+      <Link
         href="/dashboard"
         title={t("appHeader.returnToDashboard")}
         style={{
@@ -211,7 +258,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
         onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
         <ConcertoLogo size="md" />
-      </a>
+      </Link>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -250,7 +297,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-tertiary)")}
           >
-            <Link size={14} />
+            <LinkIcon size={14} />
           </IconButton>
         </div>
         <TextInput
@@ -283,7 +330,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           flexShrink: 0,
         }}
       >
-        <a
+        <Link
           href="/dashboard"
           style={{
             padding: "6px 12px",
@@ -305,7 +352,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           }}
         >
           {t("appHeader.dashboard")}
-        </a>
+        </Link>
 
         <LanguageSelector />
         <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>

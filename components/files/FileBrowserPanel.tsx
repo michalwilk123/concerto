@@ -2,7 +2,7 @@
 
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, pointerWithin, useSensor, useSensors } from "@dnd-kit/core";
 import { FolderPlus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { BulkActionBar } from "@/components/dashboard/BulkActionBar";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";

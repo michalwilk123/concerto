@@ -1,91 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { translationsApi } from "@/lib/api-client";
-import { defaultTranslations } from "@/lib/translations";
-
-const LANGUAGE_KEY = "concerto-language";
-
-// Module-level cache — fetched once, shared across all hook instances
-let cachedOverrides: Record<string, string> | null = null;
-let cachedLanguageName: string | null = null;
-let cachedAvailableLanguages: string[] | null = null;
-
-let fetchPromise: Promise<void> | null = null;
-let languagesFetchPromise: Promise<void> | null = null;
-
-const listeners = new Set<() => void>();
-
-function notifyListeners() {
-  for (const cb of listeners) cb();
-}
+import { useLocale, useMessages } from "next-intl";
+import { useRouter, usePathname } from "@/i18n/navigation";
 
 export function invalidateTranslationCache() {
-  cachedOverrides = null;
-  cachedLanguageName = null;
-  cachedAvailableLanguages = null;
-  fetchPromise = null;
-  languagesFetchPromise = null;
-  notifyListeners();
+  // With next-intl, translations are server-loaded.
+  // After admin saves, call POST /api/translations/revalidate then router.refresh().
+  // This is a no-op placeholder; consumers should call it alongside router.refresh().
 }
 
-function getStoredLanguage(): string {
-  if (typeof window === "undefined") return "default";
-  return localStorage.getItem(LANGUAGE_KEY) ?? "default";
-}
-
-function ensureFetched() {
-  if (cachedOverrides !== null) return;
-  if (fetchPromise) return;
-
-  const preferredLanguage = getStoredLanguage();
-
-  fetchPromise = translationsApi
-    .getByName(preferredLanguage)
-    .then((data) => {
-      cachedOverrides = data;
-      cachedLanguageName = preferredLanguage;
-      notifyListeners();
-    })
-    .catch(() => {
-      cachedOverrides = {};
-      cachedLanguageName = preferredLanguage;
-      notifyListeners();
-    });
-}
-
-function ensureLanguagesFetched() {
-  if (cachedAvailableLanguages !== null) return;
-  if (languagesFetchPromise) return;
-
-  languagesFetchPromise = translationsApi
-    .getLanguages()
-    .then((langs) => {
-      cachedAvailableLanguages = langs;
-      notifyListeners();
-    })
-    .catch(() => {
-      cachedAvailableLanguages = ["default"];
-      notifyListeners();
-    });
+function flattenMessages(obj: Record<string, unknown>, prefix = ""): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === "string") {
+      result[fullKey] = value;
+    } else if (value && typeof value === "object") {
+      Object.assign(result, flattenMessages(value as Record<string, unknown>, fullKey));
+    }
+  }
+  return result;
 }
 
 export function useTranslation() {
-  const [, setTick] = useState(0);
+  const locale = useLocale();
+  const nestedMessages = useMessages();
+  const flat = flattenMessages(nestedMessages as Record<string, unknown>);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [availableLanguages, setAvailableLanguages] = useState<
+    { code: string; label: string; isDefault: boolean }[]
+  >([]);
 
   useEffect(() => {
-    const cb = () => setTick((n) => n + 1);
-    listeners.add(cb);
-    ensureFetched();
-    ensureLanguagesFetched();
-    return () => {
-      listeners.delete(cb);
-    };
+    fetch("/api/translations/languages")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.locales) setAvailableLanguages(data.locales);
+      })
+      .catch(() => {});
   }, []);
 
   function t(key: string, params?: Record<string, string>): string {
-    const overrides = cachedOverrides ?? {};
-    let value = overrides[key] ?? defaultTranslations[key] ?? key;
+    let value = flat[key] ?? key;
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         value = value.replace(`{${k}}`, v);
@@ -94,21 +52,15 @@ export function useTranslation() {
     return value;
   }
 
-  function setLanguage(name: string) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(LANGUAGE_KEY, name);
-    }
-    cachedOverrides = null;
-    cachedLanguageName = null;
-    fetchPromise = null;
-    ensureFetched();
-    notifyListeners();
+  function setLanguage(code: string) {
+    document.cookie = `NEXT_LOCALE=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
+    router.replace(pathname, { locale: code });
   }
 
   return {
     t,
-    currentLanguage: cachedLanguageName ?? getStoredLanguage(),
-    availableLanguages: cachedAvailableLanguages ?? [],
+    currentLanguage: locale,
+    availableLanguages: availableLanguages.map((l) => l.code),
     setLanguage,
   };
 }

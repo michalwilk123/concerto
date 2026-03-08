@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
 import { useToast } from "@/components/Toast";
 import {
   AlertDialog,
@@ -29,14 +30,16 @@ import {
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
 import { translationsApi } from "@/lib/api-client";
-import type { TranslationSet } from "@/lib/api-client";
+import type { LocaleEntry } from "@/lib/api-client";
 import { defaultTranslations, getTranslationSections } from "@/lib/translations";
-import { invalidateTranslationCache, useTranslation } from "@/hooks/useTranslation";
+import { SUPPORTED_LOCALES, defaultLocale } from "@/i18n/config";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function TranslationsPanel() {
   const toast = useToast();
+  const router = useRouter();
   const { t } = useTranslation();
-  const [translations, setTranslations] = useState<TranslationSet[]>([]);
+  const [locales, setLocales] = useState<LocaleEntry[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,17 +49,17 @@ export function TranslationsPanel() {
     translationsApi
       .getAll()
       .then((data) => {
-        setTranslations(data.translations);
+        setLocales(data.locales);
       })
       .catch(() => {
-        setTranslations([{ name: "default", overrides: {} }]);
+        setLocales([{ code: defaultLocale, label: "English", isDefault: true, overrides: {} }]);
       });
   }, []);
 
-  const active = translations[activeIndex];
+  const active = locales[activeIndex];
 
   const handleChange = (key: string, value: string) => {
-    setTranslations((prev) => {
+    setLocales((prev) => {
       const updated = [...prev];
       const overrides = { ...updated[activeIndex].overrides };
       if (value === "" || value === defaultTranslations[key]) {
@@ -69,26 +72,45 @@ export function TranslationsPanel() {
     });
   };
 
-  const handleNameChange = (name: string) => {
-    setTranslations((prev) => {
+  const handleLabelChange = (label: string) => {
+    setLocales((prev) => {
       const updated = [...prev];
-      updated[activeIndex] = { ...updated[activeIndex], name };
+      updated[activeIndex] = { ...updated[activeIndex], label };
       return updated;
     });
   };
 
-  const handleAddTranslation = () => {
-    const newSet: TranslationSet = {
-      name: t("translations.newTranslation"),
+  const handleCodeChange = (code: string) => {
+    setLocales((prev) => {
+      const updated = [...prev];
+      const selectedLocale = SUPPORTED_LOCALES.find((locale) => locale.code === code);
+      updated[activeIndex] = {
+        ...updated[activeIndex],
+        code,
+        label: selectedLocale?.label ?? updated[activeIndex].label,
+      };
+      return updated;
+    });
+  };
+
+  const handleAddLocale = () => {
+    const usedCodes = new Set(locales.map((l) => l.code));
+    const nextLocale = SUPPORTED_LOCALES.find((locale) => !usedCodes.has(locale.code));
+    if (!nextLocale) return;
+    const newEntry: LocaleEntry = {
+      code: nextLocale.code,
+      label: nextLocale.label,
+      isDefault: false,
       overrides: active ? { ...active.overrides } : {},
     };
-    const newIndex = translations.length;
-    setTranslations((prev) => [...prev, newSet]);
+    const newIndex = locales.length;
+    setLocales((prev) => [...prev, newEntry]);
     setActiveIndex(newIndex);
   };
 
   const handleDelete = () => {
-    setTranslations((prev) => prev.filter((_, i) => i !== activeIndex));
+    if (active?.isDefault) return;
+    setLocales((prev) => prev.filter((_, i) => i !== activeIndex));
     setActiveIndex(0);
     setDeleteDialogOpen(false);
   };
@@ -96,8 +118,10 @@ export function TranslationsPanel() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await translationsApi.saveAll(translations);
-      invalidateTranslationCache();
+      await translationsApi.saveAll(locales);
+      // Revalidate server-side cache
+      await fetch("/api/translations/revalidate", { method: "POST" });
+      router.refresh();
       toast.success(t("translations.saveSuccess"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("translations.saveFailed"));
@@ -124,7 +148,7 @@ export function TranslationsPanel() {
           {t("translations.title")}
         </Typography>
 
-        {/* Translation selector row */}
+        {/* Locale selector row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Select
             value={String(activeIndex)}
@@ -134,9 +158,9 @@ export function TranslationsPanel() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {translations.map((ts, i) => (
+              {locales.map((loc, i) => (
                 <SelectItem key={i} value={String(i)}>
-                  {ts.name}
+                  {loc.label} ({loc.code}){loc.isDefault ? " *" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -144,19 +168,49 @@ export function TranslationsPanel() {
           <IconButton
             variant="square"
             size="sm"
-            onClick={handleAddTranslation}
+            onClick={handleAddLocale}
             title={t("translations.addTranslation")}
+            disabled={locales.length >= SUPPORTED_LOCALES.length}
           >
             <Plus size={14} />
           </IconButton>
         </div>
 
-        {/* Editable name + delete */}
+        {/* Editable code + label + delete */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+          <Select
+            value={active.code}
+            onValueChange={handleCodeChange}
+            disabled={active.isDefault}
+          >
+            <SelectTrigger
+              variant="compact"
+              style={{ width: 110, fontFamily: "monospace", fontWeight: 600 }}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SUPPORTED_LOCALES.map((locale) => {
+                const isTakenByAnotherLocale = locales.some(
+                  (entry, index) => index !== activeIndex && entry.code === locale.code,
+                );
+
+                return (
+                  <SelectItem
+                    key={locale.code}
+                    value={locale.code}
+                    disabled={isTakenByAnotherLocale}
+                  >
+                    {locale.code}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
           <TextInput
             variant="inline"
-            value={active.name}
-            onChange={(e) => handleNameChange(e.target.value)}
+            value={active.label}
+            onChange={(e) => handleLabelChange(e.target.value)}
             style={{
               flex: 1,
               fontSize: "0.9rem",
@@ -170,10 +224,10 @@ export function TranslationsPanel() {
             variant="square"
             size="sm"
             onClick={() => setDeleteDialogOpen(true)}
-            disabled={translations.length <= 1}
+            disabled={active.isDefault || locales.length <= 1}
             title={t("translations.deleteButton")}
             style={
-              translations.length > 1 ? { color: "var(--accent-red)" } : undefined
+              !active.isDefault && locales.length > 1 ? { color: "var(--accent-red)" } : undefined
             }
           >
             <Trash2 size={14} />
@@ -250,7 +304,7 @@ export function TranslationsPanel() {
           <AlertDialogIconHeader
             variant="danger"
             title={t("translations.deleteTitle")}
-            description={t("translations.deleteMessage", { name: active.name })}
+            description={t("translations.deleteMessage", { name: active.label })}
           />
           <AlertDialogFooter>
             <AlertDialogCancel>{t("confirmDialog.cancel")}</AlertDialogCancel>

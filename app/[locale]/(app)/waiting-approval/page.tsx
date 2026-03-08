@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { signOut, useSession } from "@/lib/auth-client";
