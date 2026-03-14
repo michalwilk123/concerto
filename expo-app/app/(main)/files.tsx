@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
+  BackHandler,
   FlatList,
   Pressable,
   StyleSheet,
@@ -9,12 +10,9 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { File as ExpoFile, Paths } from "expo-file-system";
-import * as Sharing from "expo-sharing";
 import { useGroupsStore } from "@/stores/groups-store";
 import { useFilesStore } from "@/stores/files-store";
-import { useAuthStore } from "@/stores/auth-store";
-import { filesApi } from "@/lib/api";
+import { FilePreviewModal } from "@/components/FilePreviewModal";
 import { colors, spacing, radius } from "@/constants/theme";
 import type { FileWithUrl, FolderDoc } from "@/lib/types";
 
@@ -41,20 +39,33 @@ function getFileIcon(mimeType: string): string {
 
 export default function FilesScreen() {
   const selectedGroupId = useGroupsStore((s) => s.selectedGroupId);
-  const token = useAuthStore((s) => s.token);
   const {
     files,
     folders,
     folderPath,
     isLoading,
     error,
+    previewFile,
     fetchContents,
     navigateToFolder,
+    navigateUp,
     navigateToBreadcrumb,
+    setPreviewFile,
     reset,
   } = useFilesStore();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (folderPath.length > 1 && selectedGroupId) {
+        navigateUp(selectedGroupId);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [folderPath.length, selectedGroupId, navigateUp]);
 
   useEffect(() => {
     if (selectedGroupId) {
@@ -79,22 +90,15 @@ export default function FilesScreen() {
   );
 
   const handleFilePress = useCallback(
-    async (file: FileWithUrl) => {
-      if (!selectedGroupId || !token) return;
-      try {
-        const url = filesApi.downloadUrl(selectedGroupId, file.id);
-        const downloaded = await ExpoFile.downloadFileAsync(url, Paths.cache, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        await Sharing.shareAsync(downloaded.uri, {
-          mimeType: file.mimeType,
-          dialogTitle: file.name,
-        });
-      } catch (e: any) {
-        Alert.alert("Error", e.message || "Could not open file");
+    (file: FileWithUrl) => {
+      if (file.mimeType.startsWith("audio/")) {
+        Alert.alert("Unavailable", "Audio preview is unavailable in this Expo build.");
+        return;
       }
+
+      setPreviewFile(file);
     },
-    [selectedGroupId, token]
+    [setPreviewFile]
   );
 
   const listData: ListItem[] = [
@@ -222,6 +226,12 @@ export default function FilesScreen() {
           )
         }
       />
+      {selectedGroupId && (
+        <FilePreviewModal
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </View>
   );
 }

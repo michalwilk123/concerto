@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FlatList,
   Pressable,
@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { File as ExpoFile, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { colors, spacing, radius } from "@/constants/theme";
-import { meetingsApi } from "@/lib/api";
+import { meetingsApi, resolveApiUrl } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { ChatPanel } from "@/components/meeting/ChatPanel";
 import type { FileWithUrl } from "@/lib/types";
@@ -50,6 +50,7 @@ export default function MeetingDetailScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("details");
   const [files, setFiles] = useState<FileWithUrl[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
+  const filesFetchedRef = useRef(false);
 
   const loadFiles = useCallback(async () => {
     if (!meetingId) return;
@@ -64,19 +65,24 @@ export default function MeetingDetailScreen() {
   }, [meetingId]);
 
   useEffect(() => {
-    if (activeTab === "files" && files.length === 0 && !filesLoading) {
+    if (activeTab === "files" && !filesFetchedRef.current) {
+      filesFetchedRef.current = true;
       loadFiles();
     }
-  }, [activeTab, files.length, filesLoading, loadFiles]);
+  }, [activeTab, loadFiles]);
 
   const handleFilePress = useCallback(
     async (file: FileWithUrl) => {
       if (!token) return;
+      if (file.mimeType.startsWith("audio/")) {
+        Alert.alert("Unavailable", "Audio preview is unavailable in this Expo build.");
+        return;
+      }
       try {
         const downloaded = await ExpoFile.downloadFileAsync(
-          file.url,
+          resolveApiUrl(file.url),
           Paths.cache,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` }, idempotent: true }
         );
         await Sharing.shareAsync(downloaded.uri, {
           mimeType: file.mimeType,

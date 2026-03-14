@@ -41,6 +41,7 @@ interface VideoRoomProps {
   participantName: string;
   role: Role;
   groupId: string;
+  startMediaOnLoad?: boolean;
   onLeave: () => void;
   onEndMeeting: () => Promise<void> | void;
   onRoomStateChange: (roomState: string) => void;
@@ -380,8 +381,17 @@ function RoomContent({
 }
 
 export default function VideoRoom(props: VideoRoomProps) {
-  const { token, meetingId, onRoomStateChange, participantName, role, groupId, onLeave, onEndMeeting } =
-    props;
+  const {
+    token,
+    meetingId,
+    onRoomStateChange,
+    participantName,
+    role,
+    groupId,
+    startMediaOnLoad = false,
+    onLeave,
+    onEndMeeting,
+  } = props;
   const [meeting, initMeeting] = useRealtimeKitClient();
   const [hasAudioOutput, setHasAudioOutput] = useState(true);
   const { t } = useTranslation();
@@ -392,20 +402,24 @@ export default function VideoRoom(props: VideoRoomProps) {
     if (!meeting) {
       let cancelled = false;
       const run = async () => {
+        const initialMediaDefaults = {
+          audio: startMediaOnLoad,
+          video: startMediaOnLoad,
+        };
+
         try {
-            console.log("[RTK][VideoRoom] initMeeting start", {
+          console.log("[RTK][VideoRoom] initMeeting start", {
             meetingId,
             tokenLength: token?.length ?? 0,
-            defaults: { audio: false, video: false },
+            defaults: initialMediaDefaults,
           });
           await initMeeting({
             authToken: token,
-            defaults: {
-              audio: false,
-              video: false,
-            },
+            defaults: initialMediaDefaults,
           });
-          console.log("[RTK][VideoRoom] initMeeting success (audio=false, video=false)");
+          console.log("[RTK][VideoRoom] initMeeting success", {
+            defaults: initialMediaDefaults,
+          });
         } catch (error) {
           if (cancelled) return;
           if (isMissingAudioOutputError(error)) {
@@ -415,7 +429,7 @@ export default function VideoRoom(props: VideoRoomProps) {
               authToken: token,
               defaults: {
                 audio: false,
-                video: false,
+                video: startMediaOnLoad,
               },
             }).catch((retryError) => {
               console.error("RealtimeKit retry init failed:", retryError);
@@ -436,7 +450,7 @@ export default function VideoRoom(props: VideoRoomProps) {
         cancelled = true;
       };
     }
-  }, [initMeeting, meeting, meetingId, token, toast]);
+  }, [initMeeting, meeting, meetingId, startMediaOnLoad, token, toast]);
 
   useEffect(() => {
     if (!meeting) return;

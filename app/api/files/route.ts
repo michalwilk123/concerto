@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { getSessionFromRequest } from "@/app/api/mobile/auth";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
 import { requireGroupMember, requireGroupTeacher } from "@/lib/auth-helpers";
@@ -27,6 +28,7 @@ async function resolveGroupId(parsed: { groupId: string | null; meetingId: strin
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  const session = await getSessionFromRequest(req);
 
   // Serve a file by id
   if (id) {
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
     const groupId = await resolveGroupId(parsed);
     if (!groupId) return NextResponse.json({ error: "File not found" }, { status: 404 });
 
-    const { error } = await requireGroupMember(groupId);
+    const { error } = await requireGroupMember(groupId, session);
     if (error) return error;
 
     const loaded = await readFileById(id);
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
   const groupId = searchParams.get("groupId");
   if (!groupId) return NextResponse.json({ error: "groupId is required" }, { status: 400 });
 
-  const { error } = await requireGroupMember(groupId);
+  const { error } = await requireGroupMember(groupId, session);
   if (error) return error;
 
   const files = await listGroupFiles({ groupId, folderId: searchParams.get("folderId") });
@@ -65,6 +67,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get("id");
+  const session = await getSessionFromRequest(req);
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const parsed = parseFileId(id);
@@ -73,7 +76,7 @@ export async function DELETE(req: NextRequest) {
   const groupId = await resolveGroupId(parsed);
   if (!groupId) return NextResponse.json({ error: "File not found" }, { status: 404 });
 
-  const { error } = await requireGroupTeacher(groupId);
+  const { error } = await requireGroupTeacher(groupId, session);
   if (error) return error;
 
   await deleteFileById(id);
@@ -81,6 +84,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const session = await getSessionFromRequest(req);
   const body = await req.json().catch(() => null);
   const id = body?.id;
   const name = body?.name;
@@ -98,7 +102,7 @@ export async function PATCH(req: NextRequest) {
   const groupId = await resolveGroupId(parsed);
   if (!groupId) return NextResponse.json({ error: "File not found" }, { status: 404 });
 
-  const { error } = await requireGroupTeacher(groupId);
+  const { error } = await requireGroupTeacher(groupId, session);
   if (error) return error;
 
   try {

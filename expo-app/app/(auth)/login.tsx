@@ -41,6 +41,7 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         placeholder="Your password"
         secureTextEntry
+        showPasswordToggle
         autoComplete="password"
       />
 

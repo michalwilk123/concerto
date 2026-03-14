@@ -13,6 +13,12 @@ test("file upload route requires group member (not teacher)", () => {
   assert.ok(!src.includes("requireGroupTeacher"), "should not use requireGroupTeacher");
 });
 
+test("file route supports request-based auth for mobile clients", () => {
+  const src = readRoute("app/api/files/route.ts");
+  assert.ok(src.includes("getSessionFromRequest"), "should resolve auth from the request");
+  assert.ok(src.includes("requireGroupMember(groupId, session)"), "GET file access should accept Bearer auth");
+});
+
 test("meeting-files POST route requires group member for upload", () => {
   const src = readRoute("app/api/meeting-files/route.ts");
   // POST handler uses requireGroupMember for upload

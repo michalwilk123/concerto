@@ -14,10 +14,12 @@ interface FilesState {
   folderPath: BreadcrumbEntry[];
   isLoading: boolean;
   error: string | null;
+  previewFile: FileWithUrl | null;
   fetchContents: (groupId: string, folderId?: string | null) => Promise<void>;
   navigateToFolder: (groupId: string, folder: FolderDoc) => Promise<void>;
   navigateUp: (groupId: string) => Promise<void>;
   navigateToBreadcrumb: (groupId: string, index: number) => Promise<void>;
+  setPreviewFile: (file: FileWithUrl | null) => void;
   reset: () => void;
 }
 
@@ -28,6 +30,7 @@ const initialState = {
   folderPath: [{ id: null, name: "Files" }] as BreadcrumbEntry[],
   isLoading: false,
   error: null,
+  previewFile: null as FileWithUrl | null,
 };
 
 export const useFilesStore = create<FilesState>((set, get) => ({
@@ -69,6 +72,8 @@ export const useFilesStore = create<FilesState>((set, get) => ({
     set({ folderPath: newPath });
     await get().fetchContents(groupId, targetId);
   },
+
+  setPreviewFile: (file) => set({ previewFile: file }),
 
   reset: () => set(initialState),
 }));

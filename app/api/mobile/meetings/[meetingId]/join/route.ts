@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { meeting } from "@/db/schema";
 import {
   createRealtimeKitParticipant,
+  determineRole,
   ensureRealtimeKitMeeting,
   getOrRestoreRoom,
 } from "@/lib/api-helpers";
@@ -53,8 +54,7 @@ export async function POST(
     );
   }
 
-  // Mobile always joins as student
-  const role = "student" as const;
+  const role = await determineRole(currentRoom.groupId, session.user.id, session.user.role);
 
   try {
     const joinResult = await meetingRoomService.joinMeeting({

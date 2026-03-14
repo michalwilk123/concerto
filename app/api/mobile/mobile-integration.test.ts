@@ -22,9 +22,13 @@ const TEST_PASSWORD = "testpass1234";
 const TEST_NAME = "Mobile Test User";
 const GROUP_ID = `grp-${TEST_ID}`;
 const MEETING_ID = `mtg-${TEST_ID}`;
+const TEACHER_EMAIL = `teacher-${TEST_ID}@test.local`;
+const TEACHER_NAME = "Mobile Teacher User";
 
 let userId: string;
 let bearerToken: string;
+let teacherUserId: string;
+let teacherBearerToken: string;
 
 // ─── Setup & teardown ────────────────────────────────────────────────────────
 
@@ -55,6 +59,25 @@ before(async () => {
     role: "student",
   });
 
+  const teacherSignUpRes = await auth.api.signUpEmail({
+    body: { email: TEACHER_EMAIL, password: TEST_PASSWORD, name: TEACHER_NAME },
+  });
+  assert.ok(teacherSignUpRes.user, "Failed to create teacher test user");
+  teacherUserId = teacherSignUpRes.user.id;
+  await db.update(user).set({ isActive: true }).where(eq(user.id, teacherUserId));
+  await db.insert(groupMember).values({
+    id: nanoid(),
+    groupId: GROUP_ID,
+    userId: teacherUserId,
+    role: "teacher",
+  });
+
+  const teacherSignInRes = await auth.api.signInEmail({
+    body: { email: TEACHER_EMAIL, password: TEST_PASSWORD },
+  });
+  assert.ok(teacherSignInRes.token, "Failed to sign in teacher");
+  teacherBearerToken = teacherSignInRes.token;
+
   // Create test meeting
   await db.insert(meeting).values({
     id: MEETING_ID,
@@ -75,6 +98,7 @@ after(async () => {
   await db.delete(meeting).where(eq(meeting.id, MEETING_ID)).catch(() => {});
   await db.delete(groupMember).where(eq(groupMember.groupId, GROUP_ID)).catch(() => {});
   await db.delete(group).where(eq(group.id, GROUP_ID)).catch(() => {});
+  await db.delete(user).where(eq(user.id, teacherUserId)).catch(() => {});
   await db.delete(user).where(eq(user.id, userId)).catch(() => {});
 });
 
@@ -88,6 +112,12 @@ function makeReq(url: string, init?: RequestInit): NextRequest {
 
 function makeUnauthReq(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(new URL(url, "http://localhost"), init as any);
+}
+
+function makeTeacherReq(url: string, init?: RequestInit): NextRequest {
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bearer ${teacherBearerToken}`);
+  return new NextRequest(new URL(url, "http://localhost"), { ...init, headers } as any);
 }
 
 function params<T>(val: T): { params: Promise<T> } {
@@ -179,6 +209,24 @@ test("GET /api/mobile/meetings/[meetingId]/files: returns meeting files", async 
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.ok(Array.isArray(data));
+});
+
+test("POST /api/mobile/meetings/[meetingId]/join: teacher can join immediately as host", async () => {
+  const { POST } = await import("./meetings/[meetingId]/join/route");
+  const res = await POST(
+    makeTeacherReq(`/api/mobile/meetings/${MEETING_ID}/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participantName: TEACHER_NAME }),
+    }),
+    params({ meetingId: MEETING_ID }),
+  );
+
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.status, "joined");
+  assert.equal(data.role, "teacher");
+  assert.ok(data.token, "teacher join should return a room token");
 });
 
 // ─── POST & GET /api/mobile/meetings/[meetingId]/chat ────────────────────────

@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { type FormEvent, useState, Suspense } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { authClient, signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -14,6 +15,7 @@ function LoginForm() {
   const { t } = useTranslation();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const showPendingMessage = searchParams.get("pendingActivation") === "1";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -39,6 +41,7 @@ function LoginForm() {
       const session = await authClient.getSession();
       const isUserActive =
         (session.data?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
+      setLoading(false);
       if (session.data?.user && !isUserActive) {
         router.push("/waiting-approval");
         return;
@@ -127,7 +130,35 @@ function LoginForm() {
             >
               {t("auth.login.password")}
             </label>
-            <input id="password" name="password" type="password" required />
+            <div style={{ position: "relative" }}>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                required
+                style={{ width: "100%", paddingRight: "2.5rem", boxSizing: "border-box" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                style={{
+                  position: "absolute",
+                  right: "0.6rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--text-tertiary)",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: 0,
+                }}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <InlineButton

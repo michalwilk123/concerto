@@ -35,6 +35,14 @@ const configuredBaseUrl =
 
 export const BASE_URL = configuredBaseUrl.replace(/\/$/, "");
 
+export function resolveApiUrl(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  return `${BASE_URL}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
+}
+
 function describeNetworkError(error: unknown, url: string) {
   const message = error instanceof Error ? error.message : String(error);
   return `Network request failed for ${url}. BASE_URL=${BASE_URL}. Original error: ${message}`;
@@ -89,14 +97,16 @@ export const groupsApi = {
 export const filesApi = {
   listFiles: (groupId: string, folderId?: string | null) => {
     const params = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
-    return apiFetch<FileWithUrl[]>(`/api/mobile/groups/${groupId}/files${params}`);
+    return apiFetch<FileWithUrl[]>(`/api/mobile/groups/${groupId}/files${params}`).then((files) =>
+      files.map((file) => ({ ...file, url: resolveApiUrl(file.url) }))
+    );
   },
   listFolders: (groupId: string, parentId?: string | null) => {
     const params = parentId ? `?parentId=${encodeURIComponent(parentId)}` : "";
     return apiFetch<FolderDoc[]>(`/api/mobile/groups/${groupId}/folders${params}`);
   },
-  downloadUrl: (groupId: string, fileId: string) =>
-    `${BASE_URL}/api/mobile/groups/${groupId}/files/${encodeURIComponent(fileId)}`,
+  downloadUrl: (fileId: string) =>
+    resolveApiUrl(`/api/files?id=${encodeURIComponent(fileId)}`),
 };
 
 export const meetingsApi = {
@@ -135,6 +145,8 @@ export const meetingsApi = {
     ),
   meetingFiles: (meetingId: string, folderId?: string | null) => {
     const params = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
-    return apiFetch<FileWithUrl[]>(`/api/mobile/meetings/${meetingId}/files${params}`);
+    return apiFetch<FileWithUrl[]>(`/api/mobile/meetings/${meetingId}/files${params}`).then((files) =>
+      files.map((file) => ({ ...file, url: resolveApiUrl(file.url) }))
+    );
   },
 };

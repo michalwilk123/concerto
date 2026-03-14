@@ -47,12 +47,42 @@ function MeetContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoJoinAttempt, setAutoJoinAttempt] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [startMediaOnLoad, setStartMediaOnLoad] = useState(false);
   // Track the join mode so polling can re-trigger join correctly
   const joinModeRef = useRef<"joining" | "guestJoining">("joining");
 
   useEffect(() => {
     if (!meetingId) router.replace("/dashboard");
   }, [meetingId, router]);
+
+  useEffect(() => {
+    if (!meetingId || initialized || typeof window === "undefined") return;
+
+    const rawHash = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : "";
+    const hashParams = new URLSearchParams(rawHash);
+    const mobileToken = hashParams.get("mobileToken");
+    const mobileParticipantName = hashParams.get("participantName");
+    const mobileRole = hashParams.get("role");
+    const mobileGroupId = hashParams.get("groupId");
+
+    if (!mobileToken || !mobileParticipantName || !mobileGroupId) {
+      return;
+    }
+
+    setParticipantName(mobileParticipantName);
+    setToken(mobileToken);
+    setRole(mobileRole === "teacher" ? "teacher" : "student");
+    setGroupId(mobileGroupId);
+    setErrorMessage(null);
+    setAutoJoinAttempt(false);
+    setStartMediaOnLoad(hashParams.get("autoStartMedia") === "1");
+    setPhase("room");
+    setInitialized(true);
+
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  }, [initialized, meetingId]);
 
   useEffect(() => {
     if (!meetingId || initialized) return;
@@ -225,6 +255,7 @@ function MeetContent() {
         participantName={participantName}
         role={role}
         groupId={groupId}
+        startMediaOnLoad={startMediaOnLoad}
         onLeave={() => {
           window.location.href = "/lobby";
         }}

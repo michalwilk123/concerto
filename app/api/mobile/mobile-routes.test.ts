@@ -33,11 +33,10 @@ test("mobile file download route requires requireGroupMember", () => {
   assert.ok(src.includes("requireGroupMember"), "should use requireGroupMember");
 });
 
-test("mobile meeting join always uses student role", () => {
+test("mobile meeting join derives the real meeting role", () => {
   const src = readRoute("meetings/[meetingId]/join/route.ts");
   assert.ok(src.includes("requireAuth"), "should use requireAuth");
-  assert.ok(src.includes('"student"'), "should hardcode student role");
-  assert.ok(!src.includes("determineRole"), "should not call determineRole");
+  assert.ok(src.includes("determineRole"), "should derive role from membership");
 });
 
 test("mobile meeting rejoin requires auth (not guest)", () => {
