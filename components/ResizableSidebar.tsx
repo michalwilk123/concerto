@@ -89,6 +89,7 @@ export function ResizableSidebar({
 
   return (
     <div
+      className="meeting-sidebar"
       style={{
         width,
         flexShrink: 0,
@@ -102,6 +103,7 @@ export function ResizableSidebar({
     >
       {/* Drag handle */}
       <div
+        className="sidebar-drag-handle"
         onMouseDown={handleMouseDown}
         style={{
           position: "absolute",

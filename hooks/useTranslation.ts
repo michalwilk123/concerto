@@ -1,8 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useMessages } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
+
+type TranslationLanguage = { code: string; label: string; isDefault: boolean };
+
+let cachedLanguages: TranslationLanguage[] | null = null;
+let languagesRequest: Promise<TranslationLanguage[]> | null = null;
+
+function loadAvailableLanguages() {
+  if (cachedLanguages) {
+    return Promise.resolve(cachedLanguages);
+  }
+
+  if (!languagesRequest) {
+    languagesRequest = fetch("/api/translations/languages")
+      .then((r) => r.json())
+      .then((data) => {
+        const locales = Array.isArray(data?.locales) ? (data.locales as TranslationLanguage[]) : [];
+        cachedLanguages = locales;
+        return locales;
+      })
+      .catch(() => [])
+      .finally(() => {
+        languagesRequest = null;
+      });
+  }
+
+  return languagesRequest;
+}
 
 export function invalidateTranslationCache() {
   // With next-intl, translations are server-loaded.
@@ -26,20 +53,28 @@ function flattenMessages(obj: Record<string, unknown>, prefix = ""): Record<stri
 export function useTranslation() {
   const locale = useLocale();
   const nestedMessages = useMessages();
-  const flat = flattenMessages(nestedMessages as Record<string, unknown>);
+  const flat = useMemo(
+    () => flattenMessages(nestedMessages as Record<string, unknown>),
+    [nestedMessages],
+  );
   const router = useRouter();
   const pathname = usePathname();
-  const [availableLanguages, setAvailableLanguages] = useState<
-    { code: string; label: string; isDefault: boolean }[]
-  >([]);
+  const [availableLanguages, setAvailableLanguages] = useState<TranslationLanguage[]>(
+    () => cachedLanguages ?? [],
+  );
 
   useEffect(() => {
-    fetch("/api/translations/languages")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.locales) setAvailableLanguages(data.locales);
-      })
-      .catch(() => {});
+    let cancelled = false;
+
+    loadAvailableLanguages().then((languages) => {
+      if (!cancelled) {
+        setAvailableLanguages(languages);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function t(key: string, params?: Record<string, string>): string {
@@ -60,7 +95,7 @@ export function useTranslation() {
   return {
     t,
     currentLanguage: locale,
-    availableLanguages: availableLanguages.map((l) => l.code),
+    availableLanguages,
     setLanguage,
   };
 }

@@ -155,21 +155,12 @@ function releaseWsIp(ws) {
   ws.ipReleased = true;
 }
 
-async function isAuthorizedSocket(sql, request) {
-  if (!hasAllowedOrigin(request.headers.origin)) {
-    return false;
-  }
-
-  const sessionToken = getSessionToken(request.headers.cookie);
-  if (!sessionToken) {
-    return false;
-  }
-
-  // Cookie is signed: "token.hmac_signature" — unsign before DB lookup
-  const dotIndex = sessionToken.lastIndexOf(".");
+async function lookupSession(sql, rawToken) {
+  // Signed format: "token.hmac_signature" — unsign before DB lookup
+  const dotIndex = rawToken.lastIndexOf(".");
   if (dotIndex < 0) return false;
-  const token = sessionToken.slice(0, dotIndex);
-  const signature = sessionToken.slice(dotIndex + 1);
+  const token = rawToken.slice(0, dotIndex);
+  const signature = rawToken.slice(dotIndex + 1);
 
   const secret = process.env.BETTER_AUTH_SECRET;
   const hmac = createHMAC("SHA-256", "base64urlnopad");
@@ -188,6 +179,26 @@ async function isAuthorizedSocket(sql, request) {
 	`;
 
   return authenticated.length > 0;
+}
+
+async function isAuthorizedSocket(sql, request) {
+  // Try cookie-based auth first
+  const sessionToken = getSessionToken(request.headers.cookie);
+  if (sessionToken) {
+    if (!hasAllowedOrigin(request.headers.origin)) {
+      return false;
+    }
+    return lookupSession(sql, sessionToken);
+  }
+
+  // Fallback: query-param token for mobile clients (skip origin check)
+  const requestUrl = new URL(request.url || "/", `http://${request.headers.host}`);
+  const queryToken = requestUrl.searchParams.get("token");
+  if (queryToken) {
+    return lookupSession(sql, queryToken);
+  }
+
+  return false;
 }
 
 function rejectUnauthorizedSocket(socket) {

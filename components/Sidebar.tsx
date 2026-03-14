@@ -1,12 +1,11 @@
 "use client";
 
 import { Files, MessageSquare, UserCheck, Users } from "lucide-react";
-import { useEffect, useState } from "react";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
 import { ResizableSidebar, type SidebarTabConfig } from "@/components/ResizableSidebar";
 import { useTranslation } from "@/hooks/useTranslation";
-import { roomApi, type WaitingParticipant } from "@/lib/api-client";
+import { useWaitingRoom } from "@/hooks/useWaitingRoom";
 import { useRoomStore } from "@/stores/room-store";
 import type { RoomParticipant } from "@/types/room";
 import { isTeacher } from "@/types/room";
@@ -32,30 +31,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const { role, meetingId, groupId, participantName } = useRoomStore();
   const { t } = useTranslation();
-  const [waiting, setWaiting] = useState<WaitingParticipant[]>([]);
-
-  useEffect(() => {
-    if (!isTeacher(role) || !meetingId) return;
-    let cancelled = false;
-
-    const poll = async () => {
-      try {
-        const result = await roomApi.listWaiting(meetingId);
-        if (!cancelled) {
-          setWaiting(result.waiting);
-        }
-      } catch {
-        // ignore, keep polling
-      }
-    };
-
-    poll();
-    const interval = setInterval(poll, 3000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [role, meetingId]);
+  const { waiting, removeParticipant } = useWaitingRoom(meetingId ?? "", role);
 
   if (!isOpen) return null;
 
@@ -122,9 +98,7 @@ export default function Sidebar({
         <WaitingRoomPanel
           meetingId={meetingId}
           waiting={waiting}
-          onParticipantHandled={(name) =>
-            setWaiting((prev) => prev.filter((p) => p.participantName !== name))
-          }
+          onParticipantHandled={removeParticipant}
         />
       )}
     </ResizableSidebar>

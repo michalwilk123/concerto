@@ -1,0 +1,140 @@
+import Constants from "expo-constants";
+import { useAuthStore } from "@/stores/auth-store";
+import type {
+  Group,
+  Meeting,
+  MobileMeetingJoinResponse,
+  StatusPollResponse,
+  ChatMessage,
+  FileWithUrl,
+  FolderDoc,
+} from "@/lib/types";
+
+function inferDevBaseUrl() {
+  const expoConstants = Constants as typeof Constants & {
+    expoGoConfig?: { debuggerHost?: string | null };
+  };
+  const hostUri =
+    Constants.expoConfig?.hostUri ??
+    expoConstants.expoGoConfig?.debuggerHost ??
+    null;
+
+  if (!hostUri) {
+    return null;
+  }
+
+  const [host] = hostUri.split(":");
+  return host ? `http://${host}:3000` : null;
+}
+
+const configuredBaseUrl =
+  Constants.expoConfig?.extra?.apiBaseUrl ??
+  process.env.EXPO_PUBLIC_API_BASE_URL ??
+  inferDevBaseUrl() ??
+  "http://localhost:3000";
+
+export const BASE_URL = configuredBaseUrl.replace(/\/$/, "");
+
+function describeNetworkError(error: unknown, url: string) {
+  const message = error instanceof Error ? error.message : String(error);
+  return `Network request failed for ${url}. BASE_URL=${BASE_URL}. Original error: ${message}`;
+}
+
+export async function fetchWithAuth(
+  path: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const token = useAuthStore.getState().token;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const url = `${BASE_URL}${path}`;
+
+  try {
+    return await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    console.error("[expo api] fetch failed", {
+      url,
+      method: options.method ?? "GET",
+      baseUrl: BASE_URL,
+      error,
+    });
+    throw new Error(describeNetworkError(error, url));
+  }
+}
+
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetchWithAuth(path, options);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.message || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export const groupsApi = {
+  list: () => apiFetch<Group[]>("/api/groups"),
+};
+
+export const filesApi = {
+  listFiles: (groupId: string, folderId?: string | null) => {
+    const params = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
+    return apiFetch<FileWithUrl[]>(`/api/mobile/groups/${groupId}/files${params}`);
+  },
+  listFolders: (groupId: string, parentId?: string | null) => {
+    const params = parentId ? `?parentId=${encodeURIComponent(parentId)}` : "";
+    return apiFetch<FolderDoc[]>(`/api/mobile/groups/${groupId}/folders${params}`);
+  },
+  downloadUrl: (groupId: string, fileId: string) =>
+    `${BASE_URL}/api/mobile/groups/${groupId}/files/${encodeURIComponent(fileId)}`,
+};
+
+export const meetingsApi = {
+  list: (groupId: string) =>
+    apiFetch<Meeting[]>(`/api/meetings?groupId=${groupId}`),
+  join: (meetingId: string, participantName: string) =>
+    apiFetch<MobileMeetingJoinResponse>(
+      `/api/mobile/meetings/${meetingId}/join`,
+      {
+        method: "POST",
+        body: JSON.stringify({ participantName }),
+      }
+    ),
+  pollStatus: (meetingId: string, participantName: string) =>
+    apiFetch<StatusPollResponse>(
+      `/api/mobile/meetings/${meetingId}/status`,
+      {
+        method: "POST",
+        body: JSON.stringify({ participantName }),
+      }
+    ),
+  chatHistory: (meetingId: string) =>
+    apiFetch<ChatMessage[]>(`/api/mobile/meetings/${meetingId}/chat`),
+  sendChat: (meetingId: string, content: string) =>
+    apiFetch<ChatMessage>(`/api/mobile/meetings/${meetingId}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
+  toggleReaction: (messageId: string, emoji: string) =>
+    apiFetch<{ reactions: ChatMessage["reactions"] }>(
+      `/api/mobile/chat/reactions`,
+      {
+        method: "POST",
+        body: JSON.stringify({ messageId, emoji }),
+      }
+    ),
+  meetingFiles: (meetingId: string, folderId?: string | null) => {
+    const params = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
+    return apiFetch<FileWithUrl[]>(`/api/mobile/meetings/${meetingId}/files${params}`);
+  },
+};

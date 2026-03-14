@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins/admin";
+import { bearer } from "better-auth/plugins/bearer";
 import { db } from "@/db";
 
 function normalizeOrigin(value: string): string | null {
@@ -36,5 +37,5 @@ export const auth = betterAuth({
       isActive: { type: "boolean", defaultValue: false, input: false },
     },
   },
-  plugins: [admin({ defaultRole: "student" }), nextCookies()],
+  plugins: [admin({ defaultRole: "student" }), bearer(), nextCookies()],
 });

@@ -216,3 +216,9 @@ input::placeholder {
 .lk-participant-tile[data-lk-video-muted="true"][data-lk-source="camera"] video {
   display: none;
 }
+
+@media (max-width: 768px) {
+  .sidebar-toggle-btn {
+    display: none !important;
+  }
+}

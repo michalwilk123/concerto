@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Globe, Link as LinkIcon, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -14,19 +13,11 @@ import type { Role } from "@/types/room";
 import ConcertoLogo from "./ConcertoLogo";
 
 function LanguageSelector() {
-  const { currentLanguage, setLanguage } = useTranslation();
-  const [locales, setLocales] = useState<{ code: string; label: string }[]>([]);
-
-  useEffect(() => {
-    fetch("/api/translations/languages")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.locales) setLocales(data.locales);
-      })
-      .catch(() => {});
-  }, []);
-
-  const options = locales.length > 0 ? locales : [{ code: currentLanguage, label: currentLanguage }];
+  const { currentLanguage, setLanguage, availableLanguages } = useTranslation();
+  const options =
+    availableLanguages.length > 0
+      ? availableLanguages
+      : [{ code: currentLanguage, label: currentLanguage, isDefault: true }];
   const isDisabled = options.length <= 1;
 
   return (
@@ -360,6 +351,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
         <RoleBadge role={participantRole} />
 
         <button
+          className="sidebar-toggle-btn"
           onClick={onSidebarToggle}
           style={{
             padding: "var(--space-sm)",

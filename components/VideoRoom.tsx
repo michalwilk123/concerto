@@ -18,15 +18,22 @@ import {
   RtkSettings,
 } from "@cloudflare/realtimekit-react-ui";
 import { useEffect, useRef, useState } from "react";
+import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
+import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useWaitingRoom } from "@/hooks/useWaitingRoom";
 import { meetingsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { useRoomStore } from "@/stores/room-store";
 import type { Role, RoomParticipant } from "@/types/room";
 import { isTeacher, presetToRole } from "@/types/room";
 import { AppHeader } from "./AppHeader";
+import MobileTabBar from "./MobileTabBar";
+import ParticipantMenu from "./ParticipantMenu";
 import Sidebar from "./Sidebar";
 import { useToast } from "./Toast";
+import WaitingRoomPanel from "./WaitingRoomPanel";
 
 interface VideoRoomProps {
   token: string;
@@ -73,6 +80,7 @@ function RoomContent({
   const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab, initialize, setRole } =
     useRoomStore();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const { data: session } = useSession();
   const [roomDescription, setRoomDescription] = useState("");
   const [lastSavedRoomDescription, setLastSavedRoomDescription] = useState("");
@@ -82,6 +90,7 @@ function RoomContent({
 
   const currentRole: Role = selfPresetName ? presetToRole(selfPresetName) : role;
   const isTeacherRole = isTeacher(currentRole);
+  const { waiting, removeParticipant } = useWaitingRoom(meetingId, currentRole);
   const isAdmin = session?.user.role === "admin";
 
   const copyRoomLink = () => {
@@ -116,6 +125,11 @@ function RoomContent({
   useEffect(() => {
     setRole(currentRole);
   }, [currentRole, setRole]);
+
+  useEffect(() => {
+    if (isMobile) setActiveTab("video");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const persistMeetingName = async () => {
     if (!isAdmin) return;
@@ -191,6 +205,7 @@ function RoomContent({
         style={{
           flex: 1,
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           overflow: "hidden",
         }}
       >
@@ -203,7 +218,14 @@ function RoomContent({
             minWidth: 0,
           }}
         >
-          <div style={{ flex: 1, overflow: "hidden" }}>
+          {/* Video grid — hidden via display:none when viewing a tab on mobile */}
+          <div
+            style={{
+              flex: 1,
+              overflow: "hidden",
+              display: isMobile && activeTab !== "video" ? "none" : "block",
+            }}
+          >
             <div style={{ position: "relative", height: "100%", width: "100%" }}>
               <RtkGrid meeting={meeting} style={{ height: "100%", width: "100%" }} />
               <div
@@ -231,6 +253,56 @@ function RoomContent({
               </div>
             </div>
           </div>
+
+          {/* Mobile tab panels */}
+          {isMobile && activeTab === "participants" && (
+            <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+              <ParticipantMenu participants={sidebarParticipants} />
+            </div>
+          )}
+          {isMobile && activeTab === "files" && meetingId && groupId && (
+            <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+              <FileBrowserPanel
+                key={`files-${meetingId}`}
+                meetingId={meetingId}
+                groupId={groupId}
+                allowManage={isTeacherRole}
+                showCreateFolderButton={isTeacherRole}
+                compact
+                ancestors={[]}
+              />
+            </div>
+          )}
+          {isMobile && activeTab === "waitingRoom" && meetingId && (
+            <WaitingRoomPanel
+              meetingId={meetingId}
+              waiting={waiting}
+              onParticipantHandled={removeParticipant}
+            />
+          )}
+          {/* Mobile chat — always mounted to preserve WebSocket */}
+          {isMobile && meetingId && (
+            <div
+              style={{
+                flex: activeTab === "chat" ? 1 : 0,
+                display: activeTab === "chat" ? "flex" : "none",
+                minHeight: 0,
+              }}
+            >
+              <MeetChatPanel meetingId={meetingId} participantName={participantName} />
+            </div>
+          )}
+
+          {/* Mobile tab bar */}
+          {isMobile && (
+            <MobileTabBar
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              isTeacher={isTeacherRole}
+              waitingCount={waiting.length}
+            />
+          )}
+
           <div
             style={{
               display: "flex",
@@ -287,13 +359,16 @@ function RoomContent({
           </div>
         </div>
 
-        <Sidebar
-          participants={sidebarParticipants}
-          onClose={() => setSidebarOpen(false)}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          isOpen={sidebarOpen}
-        />
+        {/* Desktop sidebar — not rendered on mobile */}
+        {!isMobile && (
+          <Sidebar
+            participants={sidebarParticipants}
+            onClose={() => setSidebarOpen(false)}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            isOpen={sidebarOpen}
+          />
+        )}
       </div>
 
       <RtkDialog open={settingsOpen} onRtkDialogClose={() => setSettingsOpen(false)}>
