@@ -394,17 +394,19 @@ export default function VideoRoom(props: VideoRoomProps) {
   } = props;
   const [meeting, initMeeting] = useRealtimeKitClient();
   const [hasAudioOutput, setHasAudioOutput] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const { t } = useTranslation();
-  const toast = useToast();
   const roomStateNotifiedRef = useRef(false);
+  const autoStartAppliedRef = useRef(false);
 
   useEffect(() => {
     if (!meeting) {
       let cancelled = false;
       const run = async () => {
         const initialMediaDefaults = {
-          audio: startMediaOnLoad,
-          video: startMediaOnLoad,
+          audio: false,
+          video: false,
         };
 
         try {
@@ -429,18 +431,19 @@ export default function VideoRoom(props: VideoRoomProps) {
               authToken: token,
               defaults: {
                 audio: false,
-                video: startMediaOnLoad,
+                video: false,
               },
             }).catch((retryError) => {
+              if (cancelled) return;
               console.error("RealtimeKit retry init failed:", retryError);
-              toast.error(getErrorMessage(retryError));
+              setInitError(getErrorMessage(retryError));
             });
             console.log("[RTK][VideoRoom] initMeeting retry completed");
             return;
           }
 
           console.error("RealtimeKit init failed:", error);
-          toast.error(getErrorMessage(error));
+          setInitError(getErrorMessage(error));
         }
       };
       // This effect performs external meeting initialization and may update state from async results.
@@ -450,10 +453,28 @@ export default function VideoRoom(props: VideoRoomProps) {
         cancelled = true;
       };
     }
-  }, [initMeeting, meeting, meetingId, startMediaOnLoad, token, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retryKey]);
 
   useEffect(() => {
     if (!meeting) return;
+
+    const enableLocalMedia = async () => {
+      if (!startMediaOnLoad || autoStartAppliedRef.current) return;
+      autoStartAppliedRef.current = true;
+
+      try {
+        await meeting.self.enableAudio();
+      } catch (error) {
+        console.error("[RTK][VideoRoom] enableAudio failed", error);
+      }
+
+      try {
+        await meeting.self.enableVideo();
+      } catch (error) {
+        console.error("[RTK][VideoRoom] enableVideo failed", error);
+      }
+    };
 
     console.log("[RTK][VideoRoom] meeting instance ready", {
       selfId: meeting.self.id,
@@ -466,6 +487,7 @@ export default function VideoRoom(props: VideoRoomProps) {
         roomState: meeting.self.roomState,
         roomJoined: meeting.self.roomJoined,
       });
+      void enableLocalMedia();
     };
 
     const onWaitlisted = () => {
@@ -505,6 +527,7 @@ export default function VideoRoom(props: VideoRoomProps) {
       meeting.joinRoom();
     } else {
       console.log("[RTK][VideoRoom] joinRoom skipped because already joined");
+      void enableLocalMedia();
     }
 
     return () => {
@@ -514,7 +537,7 @@ export default function VideoRoom(props: VideoRoomProps) {
       meeting.self.removeListener("mediaPermissionUpdate", onMediaPermissionUpdate);
       meeting.meta.removeListener("socketConnectionUpdate", onSocketConnectionUpdate);
     };
-  }, [meeting, onRoomStateChange]);
+  }, [meeting, onRoomStateChange, startMediaOnLoad]);
 
   return (
     <RealtimeKitProvider
@@ -524,13 +547,39 @@ export default function VideoRoom(props: VideoRoomProps) {
           style={{
             height: "100%",
             display: "flex",
+            flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
+            gap: 12,
             background: "var(--bg-primary)",
             color: "var(--text-secondary)",
           }}
         >
-          {t("video.connecting")}
+          {initError ? (
+            <>
+              <span style={{ color: "var(--error, #e53935)" }}>{initError}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setInitError(null);
+                  setRetryKey((k) => k + 1);
+                }}
+                style={{
+                  background: "var(--accent-purple, #7c3aed)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 20px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                }}
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            t("video.connecting")
+          )}
         </div>
       }
     >

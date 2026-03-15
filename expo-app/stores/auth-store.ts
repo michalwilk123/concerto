@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
-import { BASE_URL } from "@/lib/api";
+import { BASE_URL } from "@/lib/base-url";
 
 const TOKEN_KEY = "auth_token";
 

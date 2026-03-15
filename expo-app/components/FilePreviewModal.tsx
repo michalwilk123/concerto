@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import {
   Modal,
   View,
@@ -10,8 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { VideoView, useVideoPlayer } from "expo-video";
-import { WebView } from "react-native-webview";
+
 import { File as ExpoFile, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { colors, spacing } from "@/constants/theme";
@@ -19,15 +18,9 @@ import { useAuthStore } from "@/stores/auth-store";
 import { resolveApiUrl } from "@/lib/api";
 import type { FileWithUrl } from "@/lib/types";
 
+const VideoPreviewLazy = lazy(() => import("./VideoPreviewComponent"));
+const PdfPreviewLazy = lazy(() => import("./PdfPreviewComponent"));
 
-function VideoPreview({ uri, authHeader }: { uri: string; authHeader: string }) {
-  const player = useVideoPlayer(
-    { uri, headers: { Authorization: authHeader } },
-    (p) => { p.loop = false; }
-  );
-
-  return <VideoView player={player} nativeControls style={styles.video} />;
-}
 
 
 function ImagePreview({ uri, authHeader }: { uri: string; authHeader: string }) {
@@ -110,52 +103,6 @@ function TextPreview({ uri, authHeader }: { uri: string; authHeader: string }) {
   );
 }
 
-function PdfPreview({ uri, authHeader }: { uri: string; authHeader: string }) {
-  const [localUri, setLocalUri] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    ExpoFile.downloadFileAsync(uri, Paths.cache, {
-      headers: { Authorization: authHeader },
-      idempotent: true,
-    })
-      .then((result) => {
-        setLocalUri(result.uri);
-        setLoading(false);
-      })
-      .catch((e) => {
-        setError(e.message || "Failed to load PDF");
-        setLoading(false);
-      });
-  }, [uri, authHeader]);
-
-  if (loading) {
-    return (
-      <ActivityIndicator
-        color={colors.accentPurple}
-        size="large"
-        style={{ marginTop: 60 }}
-      />
-    );
-  }
-  if (error || !localUri) {
-    return (
-      <Text style={{ color: colors.accentRed, padding: spacing.lg }}>
-        {error}
-      </Text>
-    );
-  }
-
-  return (
-    <WebView
-      source={{ uri: localUri }}
-      originWhitelist={["*"]}
-      allowFileAccess
-      style={{ flex: 1 }}
-    />
-  );
-}
 
 function FallbackPreview({
   file,
@@ -249,7 +196,11 @@ export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
     }
 
     if (file.mimeType.startsWith("video/")) {
-      return <VideoPreview uri={uri} authHeader={authHeader} />;
+      return (
+        <Suspense fallback={<ActivityIndicator color={colors.accentPurple} size="large" style={{ marginTop: 60 }} />}>
+          <VideoPreviewLazy uri={uri} authHeader={authHeader} />
+        </Suspense>
+      );
     }
 
     if (
@@ -261,7 +212,11 @@ export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
     }
 
     if (file.mimeType === "application/pdf") {
-      return <PdfPreview uri={uri} authHeader={authHeader} />;
+      return (
+        <Suspense fallback={<ActivityIndicator color={colors.accentPurple} size="large" style={{ marginTop: 60 }} />}>
+          <PdfPreviewLazy uri={uri} authHeader={authHeader} />
+        </Suspense>
+      );
     }
 
     return <FallbackPreview file={file} uri={uri} authHeader={authHeader} />;
@@ -324,11 +279,5 @@ const styles = StyleSheet.create({
   image: {
     flex: 1,
     width: "100%",
-  },
-  video: {
-    width: "100%",
-    height: 300,
-    alignSelf: "center",
-    marginTop: spacing.xl,
   },
 });
