@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useRouter } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { type FormEvent, useState, Suspense } from "react";
 import { Eye, EyeOff } from "lucide-react";
@@ -10,7 +10,7 @@ import { signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 
 function LoginForm() {
-  const router = useRouter();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [error, setError] = useState("");
@@ -38,14 +38,14 @@ function LoginForm() {
       );
       setLoading(false);
     } else {
+      // Hard navigation: matches lib/logout.ts pattern. Soft router.replace
+      // didn't reliably leave /login — the destination re-checks useSession()
+      // and could bounce back. A full reload makes middleware re-evaluate
+      // with the fresh session cookie and rebuilds useSession() cleanly.
       const user = result.data?.user as { isActive?: boolean } | undefined;
       const isUserActive = user?.isActive ?? true;
-      setLoading(false);
-      if (user && !isUserActive) {
-        router.replace("/waiting-approval");
-        return;
-      }
-      router.replace("/dashboard");
+      const target = user && !isUserActive ? "waiting-approval" : "dashboard";
+      window.location.assign(`/${locale}/${target}`);
     }
   };
 
