@@ -36,8 +36,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 
-  // Redirect unauthenticated users from dashboard to login
-  if (!sessionCookie && strippedPath === "/dashboard") {
+  // Redirect unauthenticated users from protected pages to login
+  const isProtectedPath =
+    strippedPath === "/dashboard" ||
+    strippedPath.startsWith("/dashboard/") ||
+    strippedPath === "/waiting-approval";
+  if (!sessionCookie && isProtectedPath) {
     const locale = normalizeSupportedLocaleCode(localeMatch?.[1] ?? defaultLocale);
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }

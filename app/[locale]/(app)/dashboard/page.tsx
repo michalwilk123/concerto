@@ -6,6 +6,7 @@ import { LoadingIndicator } from "@/components/ui/loading-state";
 import { groupsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
+import { logger } from "@/lib/logger";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function DashboardRedirectPage() {
@@ -14,6 +15,7 @@ export default function DashboardRedirectPage() {
   const { t } = useTranslation();
   const isUserActive = (session?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
   const [noGroups, setNoGroups] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (isPending) return;
@@ -35,8 +37,21 @@ export default function DashboardRedirectPage() {
           setNoGroups(true);
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        logger.error("[dashboard] failed to load groups", error);
+        setLoadError(true);
+      });
   }, [isPending, session, router, isUserActive]);
+
+  if (loadError) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, padding: 32 }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: "1rem" }}>
+          {t("dashboard.loadFailed")}
+        </p>
+      </div>
+    );
+  }
 
   if (noGroups) {
     return (

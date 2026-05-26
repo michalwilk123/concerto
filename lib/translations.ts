@@ -109,6 +109,7 @@ export const defaultTranslations: Record<string, string> = {
   "meetings.enableApproval": "Require approval to join",
   "meetings.disableApproval": "Disable approval requirement",
   "meetings.updateFailed": "Failed to update meeting",
+  "meetings.deleteFailed": "Failed to delete meeting",
 
   // Create meeting
   "createMeeting.title": "Create Meeting",
@@ -215,6 +216,7 @@ export const defaultTranslations: Record<string, string> = {
   "dashboard.openChatSidebar": "Open chat sidebar",
   "dashboard.closeChatSidebar": "Close chat sidebar",
   "dashboard.noGroups": "You are not assigned to any group. Please contact your administrator.",
+  "dashboard.loadFailed": "Could not load your groups. Please refresh the page or try again later.",
 
   // Manage panel
   "manage.title": "Manage",

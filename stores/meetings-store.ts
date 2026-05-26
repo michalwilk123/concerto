@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { meetingsApi } from "@/lib/api-client";
+import { logger } from "@/lib/logger";
 import type { Meeting } from "@/types/meeting";
 
 interface MeetingsState {
@@ -23,7 +24,7 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
       const meetings = await meetingsApi.list(groupId);
       set({ meetings });
     } catch (error) {
-      console.error("Failed to fetch meetings:", error);
+      logger.error("[meetings] fetchMeetings failed", error);
     } finally {
       set({ isLoading: false });
     }
@@ -34,7 +35,8 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
       const updated = await meetingsApi.patch(id, data);
       set({ meetings: get().meetings.map((m) => (m.id === id ? updated : m)) });
     } catch (error) {
-      console.error("Failed to update meeting:", error);
+      logger.error("[meetings] patchMeeting failed", error);
+      throw error;
     }
   },
 
@@ -43,7 +45,8 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
       await meetingsApi.delete(id);
       set({ meetings: get().meetings.filter((m) => m.id !== id) });
     } catch (error) {
-      console.error("Failed to delete meeting:", error);
+      logger.error("[meetings] deleteMeeting failed", error);
+      throw error;
     }
   },
 }));

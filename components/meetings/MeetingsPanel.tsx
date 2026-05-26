@@ -55,6 +55,7 @@ export function MeetingsPanel({
   const { meetings, isLoading, fetchMeetings, patchMeeting, deleteMeeting } = useMeetingsStore();
   const { t } = useTranslation();
   const [showCreateMeeting, setShowCreateMeeting] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     fetchMeetings(groupId);
@@ -111,6 +112,18 @@ export function MeetingsPanel({
         </div>
       </div>
 
+      {actionError && (
+        <p
+          style={{
+            color: "var(--accent-red)",
+            fontSize: "0.85rem",
+            margin: "0 0 12px",
+          }}
+        >
+          {actionError}
+        </p>
+      )}
+
       {meetings.length === 0 ? (
         <EmptyState
           icon={<Video size={48} />}
@@ -134,9 +147,30 @@ export function MeetingsPanel({
                   console.error("Failed to rejoin meeting:", err);
                 }
               }}
-              onTogglePublic={(isPublic) => patchMeeting(m.id, { isPublic })}
-              onToggleApproval={(requiresApproval) => patchMeeting(m.id, { requiresApproval })}
-              onDelete={() => deleteMeeting(m.id)}
+              onTogglePublic={async (isPublic) => {
+                setActionError("");
+                try {
+                  await patchMeeting(m.id, { isPublic });
+                } catch {
+                  setActionError(t("meetings.updateFailed"));
+                }
+              }}
+              onToggleApproval={async (requiresApproval) => {
+                setActionError("");
+                try {
+                  await patchMeeting(m.id, { requiresApproval });
+                } catch {
+                  setActionError(t("meetings.updateFailed"));
+                }
+              }}
+              onDelete={async () => {
+                setActionError("");
+                try {
+                  await deleteMeeting(m.id);
+                } catch {
+                  setActionError(t("meetings.deleteFailed"));
+                }
+              }}
             />
           ))}
         </div>

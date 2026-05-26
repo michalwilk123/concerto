@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { recordingsApi } from "@/lib/api-client";
+import { logger } from "@/lib/logger";
 import type { Recording } from "@/types/recording";
 
 interface RecordingsState {
@@ -18,7 +19,7 @@ export const useRecordingsStore = create<RecordingsState>((set) => ({
       const recordings = await recordingsApi.list(groupId);
       set({ recordings });
     } catch (error) {
-      console.error("Failed to fetch recordings:", error);
+      logger.error("[recordings] fetchRecordings failed", error);
     } finally {
       set({ isLoading: false });
     }

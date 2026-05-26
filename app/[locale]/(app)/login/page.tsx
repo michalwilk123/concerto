@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { type FormEvent, useState, Suspense } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { InlineButton } from "@/components/ui/inline-button";
-import { authClient, signIn } from "@/lib/auth-client";
+import { signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 
 function LoginForm() {
@@ -38,15 +38,14 @@ function LoginForm() {
       );
       setLoading(false);
     } else {
-      const session = await authClient.getSession();
-      const isUserActive =
-        (session.data?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
+      const user = result.data?.user as { isActive?: boolean } | undefined;
+      const isUserActive = user?.isActive ?? true;
       setLoading(false);
-      if (session.data?.user && !isUserActive) {
-        router.push("/waiting-approval");
+      if (user && !isUserActive) {
+        router.replace("/waiting-approval");
         return;
       }
-      router.push("/dashboard");
+      router.replace("/dashboard");
     }
   };
 

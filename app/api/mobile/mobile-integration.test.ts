@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { after, before } from "node:test";
+import { afterAll, beforeAll, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { NextRequest } from "next/server";
@@ -32,7 +32,7 @@ let teacherBearerToken: string;
 
 // ─── Setup & teardown ────────────────────────────────────────────────────────
 
-before(async () => {
+beforeAll(async () => {
   // Create test user via Better Auth
   const signUpRes = await auth.api.signUpEmail({
     body: { email: TEST_EMAIL, password: TEST_PASSWORD, name: TEST_NAME },
@@ -88,7 +88,7 @@ before(async () => {
   });
 });
 
-after(async () => {
+afterAll(async () => {
   await db.delete(chatReaction).where(
     eq(chatReaction.messageId,
       db.select({ id: chatMessage.id }).from(chatMessage).where(eq(chatMessage.meetingId, MEETING_ID))

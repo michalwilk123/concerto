@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { groupsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
+import { logger } from "@/lib/logger";
 import { useFileManagerStore } from "@/stores/file-manager-store";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { Group } from "@/types/group";
@@ -40,7 +41,9 @@ export function DashboardSidebar({
     groupsApi
       .list()
       .then(setGroups)
-      .catch(() => {});
+      .catch((error) => {
+        logger.warn("[dashboard-sidebar] failed to load groups", error);
+      });
   }, [session]);
 
   const activeItem = activeTab || "files";

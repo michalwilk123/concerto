@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { file as fileTable, folder as folderTable, group } from "@/db/schema";

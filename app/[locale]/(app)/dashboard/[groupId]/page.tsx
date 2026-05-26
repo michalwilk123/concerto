@@ -17,6 +17,7 @@ import { useRouter } from "@/i18n/navigation";
 import { filesApi, foldersApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
+import { logger } from "@/lib/logger";
 import { useFileManagerStore } from "@/stores/file-manager-store";
 import type { FolderDoc } from "@/types/files";
 
@@ -99,7 +100,9 @@ export default function DashboardGroupPage() {
       .then(() => {
         fetchContents(folderId);
       })
-      .catch(() => {});
+      .catch((error) => {
+        logger.warn("[dashboard] file seeding failed", error);
+      });
   }, [user, isPrivileged, groupId, fetchContents, folderId]);
 
   const handleSelectMeeting = useCallback(

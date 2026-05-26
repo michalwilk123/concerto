@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { filesApi, foldersApi, meetingFilesApi, meetingFoldersApi } from "@/lib/api-client";
+import { logger } from "@/lib/logger";
 import type { FileWithUrl, FolderDoc } from "@/types/files";
 
 interface FileManagerState {
@@ -89,13 +90,14 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
           currentFolder = currentMeetingId
             ? await meetingFoldersApi.get(folderId)
             : await foldersApi.get(folderId);
-        } catch {
-          // ignore
+        } catch (error) {
+          logger.warn("[file-manager] currentFolder fetch failed", error);
         }
       }
 
       set({ files, folders, currentFolder, isLoading: false, hasFetched: true });
-    } catch {
+    } catch (error) {
+      logger.error("[file-manager] fetchContents failed", error);
       set({ isLoading: false });
     }
   },
@@ -107,8 +109,8 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     try {
       const { totalBytes } = await filesApi.getStorage(groupId);
       set({ storageUsed: totalBytes });
-    } catch {
-      // ignore
+    } catch (error) {
+      logger.warn("[file-manager] fetchStorage failed", error);
     }
   },
 
