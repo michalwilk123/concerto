@@ -13,7 +13,7 @@ export default {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#16161a",
     },
     ios: {
       supportsTablet: true,
@@ -24,11 +24,11 @@ export default {
           "Allow Concerto to access your microphone for RealtimeKit meetings.",
       },
       bitcode: false,
-      bundleIdentifier: "com.anonymous.expoapp",
+      bundleIdentifier: "com.micwilk.concerto",
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
+        backgroundColor: "#16161a",
         foregroundImage: "./assets/android-icon-foreground.png",
         backgroundImage: "./assets/android-icon-background.png",
         monochromeImage: "./assets/android-icon-monochrome.png",
@@ -47,14 +47,17 @@ export default {
         "android.permission.WAKE_LOCK",
         "android.permission.BLUETOOTH",
       ],
-      package: "com.anonymous.expoapp",
+      package: "com.micwilk.concerto",
     },
     web: {
       favicon: "./assets/favicon.png",
     },
-    plugins: ["expo-router"],
+    plugins: ["expo-router", "./plugins/with-android-kotlin-opt-ins"],
     extra: {
       apiBaseUrl,
+      eas: {
+        projectId: "efec3908-e9a7-439b-93b0-c176ae1f52db",
+      },
     },
   },
 };

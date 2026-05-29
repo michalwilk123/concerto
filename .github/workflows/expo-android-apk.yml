@@ -1,0 +1,63 @@
+name: Expo Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "expo-app-v*"
+    paths:
+      - "expo-app/**"
+      - ".github/workflows/expo-android-apk.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build installable APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: expo-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build APK
+        run: eas build --platform android --profile apk --non-interactive --wait --json > eas-build.json
+
+      - name: Download APK
+        run: |
+          apk_url="$(jq -r '.[0].artifacts.buildUrl' eas-build.json)"
+          curl --fail --location "$apk_url" --output concerto.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: concerto-android-apk
+          path: expo-app/concerto.apk
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/expo-app-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: expo-app/concerto.apk

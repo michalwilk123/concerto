@@ -26,6 +26,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refreshSession: () => Promise<void>;
   clearError: () => void;
 }
@@ -165,6 +166,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     set({ token: null, user: null, error: null });
     void syncAppData(null);
+  },
+
+  deleteAccount: async () => {
+    const { token } = get();
+    if (!token) {
+      throw new Error("Not signed in");
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const res = await fetch(`${BASE_URL}/api/account/delete`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to delete account");
+      }
+
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      set({ token: null, user: null, isLoading: false, error: null });
+      void syncAppData(null);
+    } catch (e: any) {
+      const message =
+        e instanceof TypeError
+          ? describeNetworkError(e, `${BASE_URL}/api/account/delete`)
+          : e.message;
+      console.error("[expo auth] delete account failed", { baseUrl: BASE_URL, error: e });
+      set({ isLoading: false, error: message });
+      throw new Error(message);
+    }
   },
 
   refreshSession: async () => {

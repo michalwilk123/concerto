@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "@/stores/auth-store";
@@ -14,12 +15,34 @@ import { colors, spacing, radius } from "@/constants/theme";
 
 function CustomDrawerContent() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, deleteAccount } = useAuthStore();
   const { groups, selectedGroupId, isLoading, selectGroup } = useGroupsStore();
 
   const handleLogout = async () => {
     await logout();
     router.replace("/(auth)/login");
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This permanently deletes your account and all your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              router.replace("/(auth)/login");
+            } catch (e: any) {
+              Alert.alert("Could not delete account", e?.message ?? "Please try again.");
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -83,6 +106,9 @@ function CustomDrawerContent() {
       <View style={styles.footer}>
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Sign Out</Text>
+        </Pressable>
+        <Pressable style={styles.logoutButton} onPress={handleDeleteAccount}>
+          <Text style={styles.deleteText}>Delete Account</Text>
         </Pressable>
       </View>
     </DrawerContentScrollView>
@@ -211,6 +237,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   logoutText: {
+    fontSize: 14,
+    fontFamily: "DMSans_500Medium",
+    color: colors.textSecondary,
+  },
+  deleteText: {
     fontSize: 14,
     fontFamily: "DMSans_500Medium",
     color: colors.accentRed,
