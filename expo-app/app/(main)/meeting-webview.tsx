@@ -6,7 +6,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { useAuthStore } from "@/stores/auth-store";
 import { BASE_URL, meetingsApi } from "@/lib/api";
@@ -22,6 +23,7 @@ type MeetingPhase =
 
 export default function MeetingWebViewScreen() {
   const { meetingId } = useLocalSearchParams<{ meetingId: string }>();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const participantName = user?.name?.trim() ?? "";
@@ -154,7 +156,7 @@ export default function MeetingWebViewScreen() {
 
   if (phase !== "ready" || !meetingUrl) {
     return (
-      <View style={styles.stateContainer}>
+      <SafeAreaView style={styles.stateContainer}>
         <ActivityIndicator color={colors.accentPurple} size="large" />
         <Text style={styles.stateTitle}>
           {phase === "waiting_for_host"
@@ -177,12 +179,17 @@ export default function MeetingWebViewScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         ) : null}
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.meetingHeader}>
+        <Pressable style={styles.leaveButton} onPress={() => router.back()} hitSlop={8}>
+          <Text style={styles.leaveButtonText}>Back</Text>
+        </Pressable>
+      </View>
       <WebView
         source={{
           uri: meetingUrl,
@@ -196,7 +203,7 @@ export default function MeetingWebViewScreen() {
         mediaCapturePermissionGrantType="grant"
         onPermissionRequest={(request: any) => request.grant(request.resources)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -204,6 +211,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,
+  },
+  meetingHeader: {
+    backgroundColor: colors.bgPrimary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  leaveButton: {
+    alignSelf: "flex-start",
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  leaveButtonText: {
+    fontSize: 15,
+    fontFamily: "DMSans_600SemiBold",
+    color: colors.accentPurple,
   },
   stateContainer: {
     flex: 1,

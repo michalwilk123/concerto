@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { ActivityIndicator, View } from "react-native";
 import {
   useFonts,
   DMSans_400Regular,
@@ -11,6 +12,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/auth-store";
+import { colors } from "@/constants/theme";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,9 +33,11 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!fontsLoaded || !isInitialized) return;
-    SplashScreen.hideAsync();
+    void SplashScreen.hideAsync();
+  }, []);
 
+  useEffect(() => {
+    if (!isInitialized) return;
     const inAuthGroup = segments[0] === "(auth)";
     const currentSegment = segments.at(-1);
 
@@ -46,14 +50,25 @@ export default function RootLayout() {
     } else {
       if (inAuthGroup) router.replace("/(main)/meetings");
     }
-  }, [fontsLoaded, isInitialized, token, user?.isActive, segments]);
-
-  if (!fontsLoaded || !isInitialized) return null;
+  }, [isInitialized, token, user?.isActive, segments, router]);
 
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <Slot />
+      {fontsLoaded && isInitialized ? (
+        <Slot />
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.bgPrimary,
+          }}
+        >
+          <ActivityIndicator color={colors.accentPurple} size="large" />
+        </View>
+      )}
     </SafeAreaProvider>
   );
 }

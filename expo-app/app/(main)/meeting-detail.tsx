@@ -26,17 +26,17 @@ function formatFileSize(bytes: number): string {
 }
 
 function getFileIcon(mimeType: string): string {
-  if (mimeType.startsWith("image/")) return "\u{1F5BC}";
-  if (mimeType.startsWith("video/")) return "\u{1F3AC}";
-  if (mimeType.startsWith("audio/")) return "\u{1F3B5}";
-  if (mimeType === "application/pdf") return "\u{1F4C4}";
+  if (mimeType.startsWith("image/")) return "IMG";
+  if (mimeType.startsWith("video/")) return "VID";
+  if (mimeType.startsWith("audio/")) return "AUD";
+  if (mimeType === "application/pdf") return "PDF";
   if (mimeType.includes("spreadsheet") || mimeType.includes("excel"))
-    return "\u{1F4CA}";
+    return "XLS";
   if (mimeType.includes("presentation") || mimeType.includes("powerpoint"))
-    return "\u{1F4CA}";
+    return "PPT";
   if (mimeType.includes("document") || mimeType.includes("word"))
-    return "\u{1F4DD}";
-  return "\u{1F4CE}";
+    return "DOC";
+  return "FILE";
 }
 
 export default function MeetingDetailScreen() {
@@ -102,6 +102,10 @@ export default function MeetingDetailScreen() {
     });
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "details", label: "Details" },
     { key: "chat", label: "Chat" },
@@ -110,6 +114,12 @@ export default function MeetingDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.backBar}>
+        <Pressable style={styles.backButton} onPress={handleBack} hitSlop={8}>
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+      </View>
+
       {/* Tab bar */}
       <View style={styles.tabBar}>
         {tabs.map((tab) => (
@@ -202,6 +212,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bgPrimary,
   },
+  backBar: {
+    backgroundColor: colors.bgSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  backButtonText: {
+    fontSize: 15,
+    fontFamily: "DMSans_600SemiBold",
+    color: colors.accentPurple,
+  },
 
   // Tab bar
   tabBar: {
@@ -279,7 +307,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   fileIconContainer: {
-    width: 36,
+    width: 42,
     height: 36,
     borderRadius: radius.md,
     backgroundColor: colors.bgTertiary,
@@ -288,7 +316,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   fileIcon: {
-    fontSize: 18,
+    fontSize: 10,
+    fontFamily: "DMSans_700Bold",
+    color: colors.accentPurple,
   },
   fileBody: {
     flex: 1,

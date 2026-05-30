@@ -42,6 +42,7 @@ interface VideoRoomProps {
   role: Role;
   groupId: string;
   startMediaOnLoad?: boolean;
+  mobileMode?: boolean;
   onLeave: () => void;
   onEndMeeting: () => Promise<void> | void;
   onRoomStateChange: (roomState: string) => void;
@@ -71,6 +72,7 @@ function RoomContent({
   onLeave,
   onEndMeeting,
   hasAudioOutput,
+  mobileMode = false,
 }: Omit<VideoRoomProps, "token" | "onRoomStateChange"> & { hasAudioOutput: boolean }) {
   const { meeting } = useRealtimeKitMeeting();
   const selfPresetName = useRealtimeKitSelector((m) => m.self.presetName);
@@ -188,19 +190,21 @@ function RoomContent({
         background: "var(--bg-primary)",
       }}
     >
-      <AppHeader
-        mode="room"
-        meetingId={meetingId}
-        roomDescription={roomDescription}
-        onRoomDescriptionChange={setRoomDescription}
-        participantName={participantName}
-        participantRole={currentRole}
-        canEditDescription={isAdmin}
-        onRoomDescriptionBlur={persistMeetingName}
-        sidebarOpen={sidebarOpen}
-        onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-        onCopyLink={copyRoomLink}
-      />
+      {!mobileMode && (
+        <AppHeader
+          mode="room"
+          meetingId={meetingId}
+          roomDescription={roomDescription}
+          onRoomDescriptionChange={setRoomDescription}
+          participantName={participantName}
+          participantRole={currentRole}
+          canEditDescription={isAdmin}
+          onRoomDescriptionBlur={persistMeetingName}
+          sidebarOpen={sidebarOpen}
+          onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
+          onCopyLink={copyRoomLink}
+        />
+      )}
 
       <div
         style={{
@@ -389,6 +393,7 @@ export default function VideoRoom(props: VideoRoomProps) {
     role,
     groupId,
     startMediaOnLoad = false,
+    mobileMode = false,
     onLeave,
     onEndMeeting,
   } = props;
@@ -591,6 +596,7 @@ export default function VideoRoom(props: VideoRoomProps) {
         onLeave={onLeave}
         onEndMeeting={onEndMeeting}
         hasAudioOutput={hasAudioOutput}
+        mobileMode={mobileMode}
       />
     </RealtimeKitProvider>
   );

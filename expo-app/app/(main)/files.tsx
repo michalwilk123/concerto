@@ -27,14 +27,14 @@ function formatFileSize(bytes: number): string {
 }
 
 function getFileIcon(mimeType: string): string {
-  if (mimeType.startsWith("image/")) return "\u{1F5BC}";
-  if (mimeType.startsWith("video/")) return "\u{1F3AC}";
-  if (mimeType.startsWith("audio/")) return "\u{1F3B5}";
-  if (mimeType === "application/pdf") return "\u{1F4C4}";
-  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return "\u{1F4CA}";
-  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "\u{1F4CA}";
-  if (mimeType.includes("document") || mimeType.includes("word")) return "\u{1F4DD}";
-  return "\u{1F4CE}";
+  if (mimeType.startsWith("image/")) return "IMG";
+  if (mimeType.startsWith("video/")) return "VID";
+  if (mimeType.startsWith("audio/")) return "AUD";
+  if (mimeType === "application/pdf") return "PDF";
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return "XLS";
+  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "PPT";
+  if (mimeType.includes("document") || mimeType.includes("word")) return "DOC";
+  return "FILE";
 }
 
 export default function FilesScreen() {
@@ -127,6 +127,13 @@ export default function FilesScreen() {
 
       {folderPath.length > 1 && (
         <View style={styles.breadcrumbBar}>
+          <Pressable
+            style={styles.upButton}
+            onPress={() => navigateUp(selectedGroupId)}
+            hitSlop={8}
+          >
+            <Text style={styles.upButtonText}>Back</Text>
+          </Pressable>
           {folderPath.map((entry, index) => (
             <View key={entry.id ?? "root"} style={styles.breadcrumbItem}>
               {index > 0 && (
@@ -167,7 +174,7 @@ export default function FilesScreen() {
               onPress={() => handleFolderPress(item.data)}
             >
               <View style={styles.iconContainer}>
-                <Text style={styles.icon}>{"\u{1F4C1}"}</Text>
+                <Text style={styles.icon}>DIR</Text>
               </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowName} numberOfLines={1}>
@@ -269,6 +276,19 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSubtle,
     flexWrap: "wrap",
   },
+  upButton: {
+    minHeight: 36,
+    justifyContent: "center",
+    paddingRight: spacing.md,
+    marginRight: spacing.sm,
+    borderRightWidth: 1,
+    borderRightColor: colors.borderSubtle,
+  },
+  upButtonText: {
+    fontSize: 14,
+    fontFamily: "DMSans_600SemiBold",
+    color: colors.accentPurple,
+  },
   breadcrumbItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -299,7 +319,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   iconContainer: {
-    width: 36,
+    width: 42,
     height: 36,
     borderRadius: radius.md,
     backgroundColor: colors.bgTertiary,
@@ -308,7 +328,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   icon: {
-    fontSize: 18,
+    fontSize: 10,
+    fontFamily: "DMSans_700Bold",
+    color: colors.accentPurple,
   },
   rowBody: {
     flex: 1,

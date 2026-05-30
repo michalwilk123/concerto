@@ -48,6 +48,7 @@ function MeetContent() {
   const [autoJoinAttempt, setAutoJoinAttempt] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [startMediaOnLoad, setStartMediaOnLoad] = useState(false);
+  const [mobileMode, setMobileMode] = useState(false);
   // Track the join mode so polling can re-trigger join correctly
   const joinModeRef = useRef<"joining" | "guestJoining">("joining");
 
@@ -78,6 +79,7 @@ function MeetContent() {
     setErrorMessage(null);
     setAutoJoinAttempt(false);
     setStartMediaOnLoad(hashParams.get("autoStartMedia") === "1");
+    setMobileMode(hashParams.get("mobileMode") === "1");
     setPhase("room");
     setInitialized(true);
 
@@ -256,6 +258,7 @@ function MeetContent() {
         role={role}
         groupId={groupId}
         startMediaOnLoad={startMediaOnLoad}
+        mobileMode={mobileMode}
         onLeave={() => {
           window.location.href = "/lobby";
         }}
