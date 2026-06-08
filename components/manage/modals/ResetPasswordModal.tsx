@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
@@ -52,6 +53,22 @@ export function ResetPasswordModal({ user, onClose, onSuccess }: ResetPasswordMo
     }
   };
 
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("manage.cancel"),
+      onClick: handleClose,
+    },
+    {
+      id: "reset",
+      label: t("manage.resetPasswordButton"),
+      tone: "primary",
+      onClick: handleSubmit,
+      loading: saving,
+      disabled: !password || !confirm,
+    },
+  ];
+
   return (
     <Modal open={!!user} onClose={handleClose} maxWidth={400}>
       {user && (
@@ -74,10 +91,7 @@ export function ResetPasswordModal({ user, onClose, onSuccess }: ResetPasswordMo
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
-            <div>
-              <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-                {t("manage.newPasswordLabel")}
-              </Typography>
+            <Field label={t("manage.newPasswordLabel")} required>
               <TextInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -85,11 +99,8 @@ export function ResetPasswordModal({ user, onClose, onSuccess }: ResetPasswordMo
                 placeholder={t("manage.newPasswordPlaceholder")}
                 style={{ width: "100%", fontSize: "0.84rem" }}
               />
-            </div>
-            <div>
-              <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-                {t("manage.confirmPasswordLabel")}
-              </Typography>
+            </Field>
+            <Field label={t("manage.confirmPasswordLabel")} required>
               <TextInput
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -98,23 +109,10 @@ export function ResetPasswordModal({ user, onClose, onSuccess }: ResetPasswordMo
                 style={{ width: "100%", fontSize: "0.84rem" }}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
-            </div>
+            </Field>
           </div>
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <InlineButton variant="secondary" size="sm" onClick={handleClose}>
-              {t("manage.cancel")}
-            </InlineButton>
-            <InlineButton
-              variant="primary"
-              size="sm"
-              onClick={handleSubmit}
-              loading={saving}
-              disabled={!password || !confirm}
-            >
-              {t("manage.resetPasswordButton")}
-            </InlineButton>
-          </div>
+          <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
         </div>
       )}
     </Modal>

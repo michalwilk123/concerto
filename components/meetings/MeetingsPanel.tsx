@@ -1,29 +1,40 @@
 "use client";
 
-import {
-  CalendarDays,
-  Globe,
-  Lock,
-  Plus,
-  RotateCcw,
-  Shield,
-  ShieldOff,
-  Trash2,
-  Video,
-} from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CreateMeetingModal } from "@/components/CreateMeetingModal";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EntityListRow } from "@/components/ui/entity-list-row";
-import { IconButton } from "@/components/ui/icon-button";
-import { InlineButton } from "@/components/ui/inline-button";
-import { LoadingIndicator } from "@/components/ui/loading-state";
+import { EntityGridRow } from "@/components/ui/entity-list-row";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Typography } from "@/components/ui/typography";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useRouter } from "@/i18n/navigation";
 import { roomApi } from "@/lib/api-client";
 import { useMeetingsStore } from "@/stores/meetings-store";
-import { useTranslation } from "@/hooks/useTranslation";
 import type { Meeting } from "@/types/meeting";
+import {
+  MANAGE_TABLE_MAX_WIDTH,
+  MANAGE_TABLE_MIN_WIDTH,
+} from "@/components/manage/table-layout";
+
+// Column tracks sum to 920 so the table lines up with the manage tables
+// (920 + 40px padding === MANAGE_TABLE_MIN_WIDTH). The two setting selects only
+// hold short values (Yes/No, Anyone/Group only), so their columns are narrow and
+// the freed width goes to the Name column.
+const MEETINGS_TABLE_COLUMNS = "380px 150px 100px 100px 190px";
+
+// Fixed width for the two setting selects so they hug their short values
+// (Yes/No, Anyone/Group only) instead of stretching to fill the column.
+const SETTING_SELECT_WIDTH = 92;
 
 interface MeetingsPanelProps {
   groupId: string;
@@ -61,15 +72,13 @@ export function MeetingsPanel({
     fetchMeetings(groupId);
   }, [groupId, fetchMeetings]);
 
-  if (isLoading) {
-    return (
-      <LoadingIndicator
-        message={t("meetings.loadingMessage")}
-        size={28}
-        containerStyle={{ height: "60vh" }}
-      />
-    );
-  }
+  const headers = [
+    t("meetings.tableName"),
+    t("meetings.tableCreated"),
+    t("meetings.tableNeedsApproval"),
+    t("meetings.tableCanBeSeen"),
+    t("meetings.tableActions"),
+  ];
 
   return (
     <div>
@@ -85,6 +94,8 @@ export function MeetingsPanel({
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 16,
+          maxWidth: MANAGE_TABLE_MAX_WIDTH,
+          margin: "0 auto 16px",
         }}
       >
         <Typography as="h2" variant="titleMd">
@@ -92,21 +103,9 @@ export function MeetingsPanel({
         </Typography>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isPrivileged && (
-            <InlineButton
-              variant="accent"
-              size="sm"
-              onClick={() => setShowCreateMeeting(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                fontSize: "0.84rem",
-              }}
-            >
-              <Plus size={16} />
+            <Button variant="primary" size="sm" onClick={() => setShowCreateMeeting(true)}>
               {t("meetings.createButton")}
-            </InlineButton>
+            </Button>
           )}
           {headerExtra}
         </div>
@@ -117,231 +116,228 @@ export function MeetingsPanel({
           style={{
             color: "var(--accent-red)",
             fontSize: "0.85rem",
-            margin: "0 0 12px",
+            margin: "0 auto 12px",
+            maxWidth: MANAGE_TABLE_MAX_WIDTH,
           }}
         >
           {actionError}
         </p>
       )}
 
-      {meetings.length === 0 ? (
-        <EmptyState
-          icon={<Video size={48} />}
-          title={t("meetings.emptyTitle")}
-          subtitle={t("meetings.emptySubtitle")}
-        />
-      ) : (
-        <div style={{ display: "grid", gap: 8 }}>
-          {meetings.map((m) => (
-            <MeetingItem
-              key={m.id}
-              meeting={m}
-              isSelected={selectedMeetingId === m.id}
-              isPrivileged={isPrivileged}
-              onSelect={onSelectMeeting ? () => onSelectMeeting(m.id) : undefined}
-              onRejoin={async () => {
-                try {
-                  const { meetingId } = await roomApi.rejoin({ meetingId: m.id, groupId });
-                  router.push(`/meet/${meetingId}`);
-                } catch (err) {
-                  console.error("Failed to rejoin meeting:", err);
-                }
-              }}
-              onTogglePublic={async (isPublic) => {
-                setActionError("");
-                try {
-                  await patchMeeting(m.id, { isPublic });
-                } catch {
-                  setActionError(t("meetings.updateFailed"));
-                }
-              }}
-              onToggleApproval={async (requiresApproval) => {
-                setActionError("");
-                try {
-                  await patchMeeting(m.id, { requiresApproval });
-                } catch {
-                  setActionError(t("meetings.updateFailed"));
-                }
-              }}
-              onDelete={async () => {
-                setActionError("");
-                try {
-                  await deleteMeeting(m.id);
-                } catch {
-                  setActionError(t("meetings.deleteFailed"));
-                }
-              }}
-            />
-          ))}
-        </div>
-      )}
+      <DataTableShell
+        name="meetings"
+        headers={headers}
+        headerLabels={headers}
+        columns={MEETINGS_TABLE_COLUMNS}
+        minTableWidth={MANAGE_TABLE_MIN_WIDTH}
+        containerStyle={{ maxWidth: MANAGE_TABLE_MAX_WIDTH, margin: "0 auto" }}
+        isLoading={isLoading}
+        hasRows={meetings.length > 0}
+        emptyState={
+          <EmptyState
+            icon={<Video size={32} />}
+            title={t("meetings.emptyTitle")}
+            subtitle={t("meetings.emptySubtitle")}
+            padding="48px 20px"
+          />
+        }
+      >
+        {meetings.map((m, i) => (
+          <MeetingRow
+            key={m.id}
+            meeting={m}
+            isLast={i === meetings.length - 1}
+            isSelected={selectedMeetingId === m.id}
+            isPrivileged={isPrivileged}
+            onSelect={onSelectMeeting ? () => onSelectMeeting(m.id) : undefined}
+            onRejoin={async () => {
+              try {
+                const { meetingId } = await roomApi.rejoin({ meetingId: m.id, groupId });
+                router.push(`/meet/${meetingId}`);
+              } catch (err) {
+                console.error("Failed to rejoin meeting:", err);
+              }
+            }}
+            onPatch={async (patch) => {
+              setActionError("");
+              try {
+                await patchMeeting(m.id, patch);
+              } catch {
+                setActionError(t("meetings.updateFailed"));
+              }
+            }}
+            onDelete={async () => {
+              setActionError("");
+              try {
+                await deleteMeeting(m.id);
+              } catch {
+                setActionError(t("meetings.deleteFailed"));
+              }
+            }}
+          />
+        ))}
+      </DataTableShell>
     </div>
   );
 }
 
-function MeetingItem({
+function MeetingRow({
   meeting,
+  isLast,
   isSelected,
   isPrivileged = true,
   onSelect,
   onRejoin,
-  onTogglePublic,
-  onToggleApproval,
+  onPatch,
   onDelete,
 }: {
   meeting: Meeting;
+  isLast: boolean;
   isSelected?: boolean;
   isPrivileged?: boolean;
   onSelect?: () => void;
   onRejoin: () => void;
-  onTogglePublic: (isPublic: boolean) => void;
-  onToggleApproval: (requiresApproval: boolean) => void;
+  onPatch: (patch: { isPublic?: boolean; requiresApproval?: boolean }) => void;
   onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { t } = useTranslation();
 
+  const actionItems: ButtonGroupItem[] = [
+    {
+      id: "rejoin",
+      label: t("meetings.rejoin"),
+      ariaLabel: t("meetings.rejoinTitle"),
+      quiet: true,
+      onClick: onRejoin,
+    },
+  ];
+
+  if (isPrivileged) {
+    if (confirmDelete) {
+      actionItems.push({
+        id: "confirmDelete",
+        label: t("meetings.confirm"),
+        tone: "danger",
+        onClick: () => {
+          onDelete();
+          setConfirmDelete(false);
+        },
+      });
+      actionItems.push({
+        id: "cancelDelete",
+        label: t("meetings.cancel"),
+        onClick: () => setConfirmDelete(false),
+      });
+    } else {
+      actionItems.push({
+        id: "delete",
+        label: t("meetings.deleteButton"),
+        ariaLabel: t("meetings.deleteTitle"),
+        quiet: true,
+        tone: "danger",
+        onClick: () => setConfirmDelete(true),
+      });
+    }
+  }
+
   return (
-    <EntityListRow
-      onClick={onSelect}
-      selected={isSelected}
-      icon={
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: "var(--accent-purple)",
-            color: "#fff",
-          }}
-        >
-          <Video size={16} />
-        </div>
-      }
-      title={meeting.name}
-      subtitle={
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <CalendarDays size={12} />
-          <Typography as="span" variant="meta" tone="tertiary" style={{ color: "inherit" }}>
-            {formatDate(meeting.createdAt)}
-          </Typography>
-        </span>
-      }
-      actions={
-        <>
-          {isPrivileged && (
-            <IconButton
-              variant="square"
-              size="md"
-              onClick={() => onTogglePublic(!meeting.isPublic)}
-              title={meeting.isPublic ? t("meetings.makePrivate") : t("meetings.makePublic")}
-              style={{
-                width: 32,
-                height: 32,
-                border: "1px solid var(--border-default)",
-                background: "var(--bg-primary)",
-                color: meeting.isPublic ? "var(--accent-purple)" : "var(--text-tertiary)",
-                flexShrink: 0,
-              }}
-            >
-              {meeting.isPublic ? <Globe size={16} /> : <Lock size={16} />}
-            </IconButton>
-          )}
-
-          {isPrivileged && (
-            <IconButton
-              variant="square"
-              size="md"
-              onClick={() => onToggleApproval(!meeting.requiresApproval)}
-              title={
-                meeting.requiresApproval
-                  ? t("meetings.disableApproval")
-                  : t("meetings.enableApproval")
-              }
-              style={{
-                width: 32,
-                height: 32,
-                border: "1px solid var(--border-default)",
-                background: "var(--bg-primary)",
-                color: meeting.requiresApproval ? "var(--accent-purple)" : "var(--text-tertiary)",
-                flexShrink: 0,
-              }}
-            >
-              {meeting.requiresApproval ? <Shield size={16} /> : <ShieldOff size={16} />}
-            </IconButton>
-          )}
-
-          <InlineButton
-            variant="secondary"
-            size="xs"
-            onClick={onRejoin}
-            title={t("meetings.rejoinTitle")}
+    <EntityGridRow
+      columns={MEETINGS_TABLE_COLUMNS}
+      isLast={isLast}
+      style={{
+        cursor: onSelect ? "pointer" : undefined,
+        background: isSelected ? "var(--bg-tertiary)" : undefined,
+      }}
+    >
+      <Typography variant="bodySm" weight={500} truncate>
+        {onSelect ? (
+          <button
+            type="button"
+            onClick={onSelect}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "6px 10px",
-              color: "var(--text-secondary)",
-              fontSize: "0.78rem",
-              flexShrink: 0,
+              appearance: "none",
+              background: "none",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              font: "inherit",
+              color: "inherit",
+              textAlign: "left",
+              cursor: "pointer",
+              width: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            <RotateCcw size={14} />
-            {t("meetings.rejoin")}
-          </InlineButton>
+            {meeting.name}
+          </button>
+        ) : (
+          meeting.name
+        )}
+      </Typography>
 
-          {isPrivileged && (confirmDelete ? (
-            <>
-              <InlineButton
-                variant="danger"
-                size="xs"
-                onClick={() => {
-                  onDelete();
-                  setConfirmDelete(false);
-                }}
-                style={{
-                  padding: "6px 10px",
-                  fontSize: "0.78rem",
-                }}
-              >
-                {t("meetings.confirm")}
-              </InlineButton>
-              <InlineButton
-                variant="secondary"
-                size="xs"
-                onClick={() => setConfirmDelete(false)}
-                style={{
-                  padding: "6px 10px",
-                  color: "var(--text-secondary)",
-                  fontSize: "0.78rem",
-                }}
-              >
-                {t("meetings.cancel")}
-              </InlineButton>
-            </>
-          ) : (
-            <IconButton
-              variant="square"
-              size="md"
-              onClick={() => setConfirmDelete(true)}
-              title={t("meetings.deleteTitle")}
-              style={{
-                width: 32,
-                height: 32,
-                border: "1px solid var(--border-default)",
-                background: "var(--bg-primary)",
-                color: "var(--text-secondary)",
-                flexShrink: 0,
-              }}
-            >
-              <Trash2 size={16} />
-            </IconButton>
-          ))}
-        </>
-      }
-    />
+      <Typography variant="meta" tone="tertiary">
+        {formatDate(meeting.createdAt)}
+      </Typography>
+
+      {/* Needs approval → requiresApproval */}
+      {isPrivileged ? (
+        <div style={{ width: SETTING_SELECT_WIDTH }} onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={meeting.requiresApproval ? "yes" : "no"}
+            onValueChange={(value) => onPatch({ requiresApproval: value === "yes" })}
+          >
+            <SelectTrigger variant="compact" aria-label={t("meetings.tableNeedsApproval")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yes">{t("meetings.approvalYes")}</SelectItem>
+              <SelectItem value="no">{t("meetings.approvalNo")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <Typography variant="bodySm" tone="secondary">
+          {meeting.requiresApproval ? t("meetings.approvalYes") : t("meetings.approvalNo")}
+        </Typography>
+      )}
+
+      {/* Can be seen → isPublic */}
+      {isPrivileged ? (
+        <div style={{ width: SETTING_SELECT_WIDTH }} onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={meeting.isPublic ? "anyone" : "group"}
+            onValueChange={(value) => onPatch({ isPublic: value === "anyone" })}
+          >
+            <SelectTrigger variant="compact" aria-label={t("meetings.tableCanBeSeen")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="anyone">{t("meetings.visibilityAnyone")}</SelectItem>
+              <SelectItem value="group">{t("meetings.visibilityGroup")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <Typography variant="bodySm" tone="secondary">
+          {meeting.isPublic ? t("meetings.visibilityAnyone") : t("meetings.visibilityGroup")}
+        </Typography>
+      )}
+
+      <div
+        style={{ display: "flex", justifyContent: "center" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ButtonGroup
+          variant="toolbar"
+          size="sm"
+          collapse="never"
+          aria-label={t("meetings.tableActions")}
+          items={actionItems}
+        />
+      </div>
+    </EntityGridRow>
   );
 }

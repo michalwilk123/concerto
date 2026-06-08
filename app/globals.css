@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @source "../app/**/*.{js,ts,jsx,tsx}";
@@ -5,12 +6,20 @@
 
 /* Accordion animations */
 @keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
 }
 @keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 
 @utility animate-accordion-down {
@@ -19,8 +28,30 @@
 @utility animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
 }
-
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+@theme {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--bg-secondary);
+  --color-card-foreground: var(--text-primary);
+  --color-popover: var(--bg-secondary);
+  --color-popover-foreground: var(--text-primary);
+  --color-primary: var(--accent-purple);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--bg-tertiary);
+  --color-secondary-foreground: var(--text-primary);
+  --color-muted: var(--bg-tertiary);
+  --color-muted-foreground: var(--text-tertiary);
+  --color-accent: var(--bg-elevated);
+  --color-accent-foreground: var(--text-primary);
+  --color-destructive: var(--accent-red);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--border-subtle);
+  --color-input: var(--border-default);
+  --color-ring: var(--accent-purple);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
 
 :root {
   /* Surfaces */
@@ -41,9 +72,10 @@
   /* Accents */
   --accent-green: #3d9b4f;
   --accent-red: #e53935;
-  --accent-blue: #8b5cf6;
   --accent-orange: #f59e0b;
   --accent-purple: #8b5cf6;
+  /* DEPRECATED: alias of --accent-purple. Kept only for legacy InlineButton callers; remove once migrated. */
+  --accent-blue: var(--accent-purple);
   --accent-silver: #9ca3c2;
   --accent-gray: #666;
 
@@ -102,7 +134,7 @@
 
 a {
   font-weight: 500;
-  color: var(--accent-blue);
+  color: var(--accent-purple);
   text-decoration: inherit;
 }
 a:hover {
@@ -136,26 +168,7 @@ h2 {
 }
 
 button {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
   font-family: inherit;
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-button:hover {
-  background-color: var(--bg-elevated);
-  border-color: var(--border-default);
-}
-button:focus-visible {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
 }
 
 input,
@@ -174,7 +187,7 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--accent-blue);
+  border-color: var(--accent-purple);
 }
 input::placeholder {
   color: var(--text-tertiary);
@@ -215,6 +228,75 @@ input::placeholder {
 /* Hide frozen last frame when camera is off, show person silhouette placeholder instead */
 .lk-participant-tile[data-lk-video-muted="true"][data-lk-source="camera"] video {
   display: none;
+}
+
+.app-header {
+  min-width: 0;
+  gap: 12px;
+  overflow: hidden;
+  padding-inline: 20px;
+}
+
+.app-header-brand-wrap {
+  min-width: 0;
+  flex: 0 1 128px;
+  overflow: hidden;
+}
+
+.app-header-brand {
+  width: 128px;
+  overflow: hidden;
+  flex-shrink: 1;
+}
+
+.app-header-actions {
+  min-width: 0;
+  /* Don't shrink the action cluster — the brand/logo yields space first (it can
+     shrink to its 32px icon). Shrinking here clipped the auth buttons off-screen
+     because the language selector inside is flex-shrink:0. */
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.app-language-selector {
+  width: 132px;
+  min-width: 112px;
+  padding-inline: 10px;
+}
+
+.app-header-auth-buttons {
+  flex: 0 1 auto;
+}
+
+@media (max-width: 640px) {
+  .app-header-auth-buttons {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding-inline: 8px;
+    gap: 8px;
+  }
+
+  .app-header-brand-wrap,
+  .app-header-brand {
+    width: 32px;
+    flex-basis: 32px;
+  }
+
+  .app-header-actions {
+    gap: 6px;
+    flex: 1 1 auto;
+  }
+
+  .app-language-selector {
+    width: 116px;
+    min-width: 104px;
+    padding-inline: 8px;
+  }
 }
 
 @media (max-width: 768px) {

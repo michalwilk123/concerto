@@ -58,8 +58,16 @@ export function Typography<E extends ElementType = "span">({
 }: TypographyProps<E>) {
   const Component = (as ?? "span") as ElementType;
 
+  // When truncating a plain-string child, surface the full text as a native
+  // tooltip so the part hidden behind the ellipsis stays reachable on hover.
+  const autoTitle =
+    truncate && typeof children === "string" && (rest as { title?: string }).title === undefined
+      ? children
+      : undefined;
+
   return (
     <Component
+      title={autoTitle}
       style={{
         ...variantStyles[variant],
         ...toneStyles[tone],

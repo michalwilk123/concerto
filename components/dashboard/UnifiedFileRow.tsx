@@ -1,12 +1,22 @@
 "use client";
 
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { Folder, GripVertical, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, ChevronRight, Folder, GripVertical } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getFileIcon } from "@/lib/file-icons";
+import { logVisualBoolean, logVisualRange } from "@/lib/visual-debug";
 import type { FileWithUrl, FolderDoc } from "@/types/files";
+
+// Sum of fixed/min track widths in the non-compact grid template below.
+const ROW_MIN_GRID_WIDTH = 28 + 28 + 0 + 110 + 110 + 70 + 144;
+
+// Indent applied to the name cell per nesting level in the inline folder tree.
+const TREE_INDENT = 16;
+// Fixed width reserved for the expand chevron / file spacer so names line up.
+const CHEVRON_WIDTH = 18;
 
 interface UnifiedFileRowProps {
   type: "file" | "folder";
@@ -15,6 +25,10 @@ interface UnifiedFileRowProps {
   isDragOverlay?: boolean;
   readOnly: boolean;
   compact?: boolean;
+  depth?: number;
+  expanded?: boolean;
+  childrenLoading?: boolean;
+  onToggleExpand?: () => void;
   onCheckboxChange: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete: () => void;
@@ -28,7 +42,11 @@ function formatSize(bytes: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function UnifiedFileRow({
@@ -38,6 +56,10 @@ export function UnifiedFileRow({
   isDragOverlay = false,
   readOnly,
   compact = false,
+  depth = 0,
+  expanded = false,
+  childrenLoading = false,
+  onToggleExpand,
   onCheckboxChange,
   onClick,
   onDelete,
@@ -52,8 +74,78 @@ export function UnifiedFileRow({
   const dndId = `${type}:${item.id}`;
   const isFolder = type === "folder";
   const file = !isFolder ? (item as FileWithUrl) : null;
+  const rowRef = useRef<HTMLDivElement>(null);
 
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+  useEffect(() => {
+    if (compact || isDragOverlay) return;
+    const row = rowRef.current;
+    if (!row) return;
+    let animationFrame = 0;
+
+    const logLayout = () => {
+      const rect = row.getBoundingClientRect();
+      if (!row.isConnected || rect.width === 0 || rect.height === 0) return;
+
+      // The grid has a hard min-width floor; in a narrow pane it overflows the row box.
+      logVisualBoolean(
+        "UnifiedFileRow",
+        "row overflows its container",
+        row.scrollWidth > row.clientWidth + 1,
+        false,
+        {
+          scrollWidth: row.scrollWidth,
+          clientWidth: row.clientWidth,
+          gridMinWidth: ROW_MIN_GRID_WIDTH,
+        },
+      );
+      logVisualRange("UnifiedFileRow", {
+        label: "row width vs grid min",
+        value: rect.width,
+        min: ROW_MIN_GRID_WIDTH,
+        max: window.innerWidth,
+      });
+      // Fixed 44px row height — content taller than this clips.
+      logVisualRange("UnifiedFileRow", {
+        label: "row height",
+        value: rect.height,
+        min: 40,
+        max: 48,
+      });
+      const nameSpan = row.querySelector("[data-file-name]");
+      if (nameSpan) {
+        logVisualRange(
+          "UnifiedFileRow",
+          {
+            label: "name truncated (hidden px)",
+            value: Math.max(0, nameSpan.scrollWidth - nameSpan.clientWidth),
+            min: 0,
+            max: 0,
+          },
+          { name: item.name },
+        );
+      }
+    };
+
+    const scheduleLogLayout = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(logLayout);
+    };
+
+    scheduleLogLayout();
+    const resizeObserver = new ResizeObserver(scheduleLogLayout);
+    resizeObserver.observe(row);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+    };
+  }, [compact, isDragOverlay, item.name]);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
     id: dndId,
     disabled: compact || isDragOverlay || isEditing,
     data: { type, item },
@@ -65,7 +157,8 @@ export function UnifiedFileRow({
     data: { type: "folder", folderId: item.id },
   });
 
-  const combinedRef = (el: HTMLElement | null) => {
+  const combinedRef = (el: HTMLDivElement | null) => {
+    rowRef.current = el;
     setDragRef(el);
     if (isFolder) setDropRef(el);
   };
@@ -107,13 +200,54 @@ export function UnifiedFileRow({
     }
   };
 
-  const showActions = !readOnly && (hovered || isSelected) && !isEditing;
+  const showActions = !readOnly && !isEditing;
+
+  // Inline tree controls (non-compact only): per-depth indent plus an expand
+  // chevron for folders, or a matching spacer for files so names stay aligned.
+  const showTreeControls = !compact;
+  const Chevron = expanded ? ChevronDown : ChevronRight;
+  const chevronOrSpacer = !showTreeControls ? null : isFolder && onToggleExpand ? (
+    <button
+      type="button"
+      aria-label={expanded ? "Collapse folder" : "Expand folder"}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggleExpand();
+      }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: CHEVRON_WIDTH,
+        height: CHEVRON_WIDTH,
+        flexShrink: 0,
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        cursor: "pointer",
+        color: childrenLoading ? "var(--text-tertiary)" : "var(--text-secondary)",
+        opacity: childrenLoading ? 0.5 : 1,
+      }}
+    >
+      <Chevron size={14} />
+    </button>
+  ) : (
+    <span style={{ width: CHEVRON_WIDTH, flexShrink: 0 }} />
+  );
 
   const nameCell = (
     <div
-      style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        minWidth: 0,
+        flex: 1,
+        paddingLeft: showTreeControls ? depth * TREE_INDENT : 0,
+      }}
       onClick={isEditing ? undefined : onClick}
     >
+      {chevronOrSpacer}
       <Icon
         size={16}
         style={{ color: iconColor, flexShrink: 0 }}
@@ -142,6 +276,8 @@ export function UnifiedFileRow({
         />
       ) : (
         <span
+          data-file-name
+          title={item.name}
           style={{
             fontSize: "0.875rem",
             fontWeight: isFolder ? 500 : 400,
@@ -159,48 +295,43 @@ export function UnifiedFileRow({
   );
 
   const actionButtons = (
-    <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-      {showActions && onRename && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditValue(item.name);
-            setIsEditing(true);
-          }}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 4,
-            cursor: "pointer",
-            color: "var(--text-secondary)",
-            borderRadius: "var(--radius-sm)",
-            display: "flex",
-            alignItems: "center",
-          }}
-          title={t("fileItem.rename")}
-        >
-          <Pencil size={13} />
-        </button>
-      )}
+    // Stop row-action clicks from bubbling to the row's onClick (open/navigate);
+    // ButtonGroup item handlers receive no event, so propagation is stopped here on the wrapper.
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        gap: 2,
+        flexShrink: 0,
+        paddingLeft: 8,
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
       {showActions && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 4,
-            cursor: "pointer",
-            color: "var(--accent-red)",
-            borderRadius: "var(--radius-sm)",
-            display: "flex",
-            alignItems: "center",
-          }}
-          title={t("files.delete")}
-        >
-          <Trash2 size={14} />
-        </button>
+        <>
+          {onRename ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditValue(item.name);
+                setIsEditing(true);
+              }}
+            >
+              {t("fileItem.rename")}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            {t("files.delete")}
+          </Button>
+        </>
       )}
     </div>
   );
@@ -234,7 +365,10 @@ export function UnifiedFileRow({
         <ConfirmDialog
           open={showDeleteConfirm}
           onCancel={() => setShowDeleteConfirm(false)}
-          onConfirm={() => { setShowDeleteConfirm(false); onDelete(); }}
+          onConfirm={() => {
+            setShowDeleteConfirm(false);
+            onDelete();
+          }}
           title={isFolder ? t("folders.deleteTitle") : t("fileItem.deleteTitle")}
           message={
             isFolder
@@ -254,7 +388,7 @@ export function UnifiedFileRow({
         ref={combinedRef}
         style={{
           display: "grid",
-          gridTemplateColumns: "28px 28px 1fr 110px 110px 70px 60px",
+          gridTemplateColumns: "28px 28px minmax(0, 1fr) 110px 110px 70px 144px",
           alignItems: "center",
           gap: 0,
           height: 44,
@@ -290,13 +424,21 @@ export function UnifiedFileRow({
         {/* Checkbox */}
         <div
           style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-          onClick={(e) => { e.stopPropagation(); if (!isEditing) onCheckboxChange(e); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isEditing) onCheckboxChange(e);
+          }}
         >
           <input
             type="checkbox"
             checked={isSelected}
             onChange={() => {}}
-            style={{ cursor: "pointer", width: 15, height: 15, accentColor: "var(--accent-primary)" }}
+            style={{
+              cursor: "pointer",
+              width: 15,
+              height: 15,
+              accentColor: "var(--accent-primary)",
+            }}
           />
         </div>
 
@@ -304,20 +446,42 @@ export function UnifiedFileRow({
         {nameCell}
 
         {/* Date */}
-        <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div
+          style={{
+            fontSize: "0.8125rem",
+            color: "var(--text-secondary)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {formatDate(item.createdAt)}
         </div>
 
         {/* Author */}
-        <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {!isFolder && (item as FileWithUrl).uploadedByName
-            ? (item as FileWithUrl).uploadedByName
-            : t("fileList.unknownAuthor")}
+        <div
+          title={file?.uploadedByName || t("fileList.unknownAuthor")}
+          style={{
+            fontSize: "0.8125rem",
+            color: "var(--text-secondary)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {file?.uploadedByName || t("fileList.unknownAuthor")}
         </div>
 
         {/* Size */}
-        <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", textAlign: "right", paddingRight: 4 }}>
-          {!isFolder ? formatSize((item as FileWithUrl).size) : ""}
+        <div
+          style={{
+            fontSize: "0.8125rem",
+            color: "var(--text-secondary)",
+            textAlign: "right",
+            paddingRight: 4,
+          }}
+        >
+          {!isFolder ? formatSize((item as FileWithUrl).size) : "-"}
         </div>
 
         {/* Actions */}
@@ -327,7 +491,10 @@ export function UnifiedFileRow({
       <ConfirmDialog
         open={showDeleteConfirm}
         onCancel={() => setShowDeleteConfirm(false)}
-        onConfirm={() => { setShowDeleteConfirm(false); onDelete(); }}
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          onDelete();
+        }}
         title={isFolder ? t("folders.deleteTitle") : t("fileItem.deleteTitle")}
         message={
           isFolder

@@ -16,7 +16,7 @@ services:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=https://${DOMAIN}
-      - HOSTNAME=0.0.0.0
+      - HOST=0.0.0.0
       - RTK_ORG_ID=${RTK_ORG_ID}
       - RTK_API_KEY=${RTK_API_KEY}
       - RTK_ACCOUNT_ID=${RTK_ACCOUNT_ID}

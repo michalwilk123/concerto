@@ -27,7 +27,8 @@ services:
       # so that Next.js can read them from .env.local (mounted via volumes: - .:/app)
       DATABASE_URL: "postgresql://concerto:concerto@postgres:5432/concerto"
       BETTER_AUTH_SECRET: "dev-secret-change-in-production"
-      BETTER_AUTH_URL: "http://localhost:3000"
+      BETTER_AUTH_URL: "http://127.0.0.1:3000"
+      HOST: "0.0.0.0"
       TRUSTED_ORIGINS: "${TRUSTED_ORIGINS:-}"
       R2_ACCOUNT_ID: "${R2_ACCOUNT_ID:-}"
       R2_ACCESS_KEY_ID: "${R2_ACCESS_KEY_ID:-}"

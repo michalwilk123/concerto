@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Typography } from "@/components/ui/typography";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { useTranslation } from "@/hooks/useTranslation";
 import { type AdminUser, adminApi, groupsApi } from "@/lib/api-client";
 import type { Group } from "@/types/group";
@@ -77,21 +77,17 @@ export function ManagePanel() {
   return (
     <div style={{ padding: "32px 40px" }}>
       {/* Tab bar */}
-      <div
-        style={{
-          display: "flex",
-          gap: 0,
-          marginBottom: 28,
-          borderBottom: "1px solid var(--border-subtle)",
-        }}
-      >
-        <TabButton active={tab === "users"} onClick={() => setTab("users")}>
-          {t("manage.tabUsers")}
-        </TabButton>
-        <TabButton active={tab === "groups"} onClick={() => setTab("groups")}>
-          {t("manage.tabGroups")}
-        </TabButton>
-      </div>
+      <ButtonGroup
+        variant="segmented"
+        collapse="never"
+        items={[
+          { id: "users", label: t("manage.tabUsers") },
+          { id: "groups", label: t("manage.tabGroups") },
+        ]}
+        activeId={tab}
+        onSelect={(id) => setTab(id as Tab)}
+        className="mb-7 w-fit"
+      />
 
       {/* Active table */}
       {tab === "users" && <UsersTable openModal={openModal} refreshKey={refreshKey} />}
@@ -154,35 +150,5 @@ export function ManagePanel() {
         onClose={closeModal}
       />
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "10px 20px",
-        background: "none",
-        border: "none",
-        borderBottom: active ? "2px solid var(--accent-primary)" : "2px solid transparent",
-        color: active ? "var(--text-primary)" : "var(--text-tertiary)",
-        fontWeight: active ? 600 : 500,
-        fontSize: "0.88rem",
-        cursor: "pointer",
-        transition: "color 0.15s, border-color 0.15s",
-      }}
-    >
-      {children}
-    </button>
   );
 }

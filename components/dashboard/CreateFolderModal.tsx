@@ -2,8 +2,8 @@
 
 import { FolderPlus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
 import { IconButton } from "@/components/ui/icon-button";
-import { InlineButton } from "@/components/ui/inline-button";
 import { Modal } from "@/components/ui/modal";
 import { TextInput } from "@/components/ui/text-input";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -44,6 +44,20 @@ function CreateFolderForm({ onClose, onSubmit }: CreateFolderFormProps) {
     onClose();
   };
 
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("createFolder.cancel"),
+      onClick: onClose,
+    },
+    {
+      id: "create",
+      label: t("createFolder.create"),
+      type: "submit",
+      tone: "primary",
+    },
+  ];
+
   return (
     <>
       <div
@@ -81,13 +95,8 @@ function CreateFolderForm({ onClose, onSubmit }: CreateFolderFormProps) {
           variant="default"
           style={{ width: "100%", boxSizing: "border-box" }}
         />
-        <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <InlineButton type="button" variant="secondary" onClick={onClose}>
-            {t("createFolder.cancel")}
-          </InlineButton>
-          <InlineButton type="submit" variant="accent" style={{ fontWeight: 600 }}>
-            {t("createFolder.create")}
-          </InlineButton>
+        <div style={{ marginTop: 16 }}>
+          <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
         </div>
       </form>
     </>

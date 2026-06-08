@@ -1,16 +1,23 @@
 "use client";
 
-import { FolderOpen, HardDrive, Languages, Music, Settings } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { FolderOpen, HardDrive, Languages, Music } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useRouter } from "@/i18n/navigation";
 import { groupsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
 import { logger } from "@/lib/logger";
 import { useFileManagerStore } from "@/stores/file-manager-store";
-import { useTranslation } from "@/hooks/useTranslation";
 import type { Group } from "@/types/group";
 
 interface DashboardSidebarProps {
@@ -26,7 +33,6 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const isPrivileged = session?.user?.role === "teacher" || session?.user?.role === "admin";
   const isAdmin = session?.user?.role === "admin";
   const { storageUsed, fetchStorage } = useFileManagerStore();
   const [groups, setGroups] = useState<Group[]>([]);
@@ -47,6 +53,31 @@ export function DashboardSidebar({
   }, [session]);
 
   const activeItem = activeTab || "files";
+
+  const navItems: ButtonGroupItem[] = [
+    {
+      id: "files",
+      label: t("common.navigation.myFiles"),
+      icon: <FolderOpen size={18} />,
+      onClick: () => router.push(buildDashboardUrl(groupId)),
+    },
+    {
+      id: "meetings",
+      label: t("common.navigation.meetings"),
+      icon: <Music size={18} />,
+      onClick: () => router.push(buildDashboardUrl(groupId, { tab: "meetings" })),
+    },
+    ...(isAdmin
+      ? [
+          {
+            id: "translations",
+            label: t("common.navigation.translations"),
+            icon: <Languages size={18} />,
+            onClick: () => router.push(buildDashboardUrl(groupId, { tab: "translations" })),
+          },
+        ]
+      : []),
+  ];
 
   const storageLimit = 1024 * 1024 * 1024; // 1GB
   const usedPercentage = Math.min((storageUsed / storageLimit) * 100, 100);
@@ -87,34 +118,13 @@ export function DashboardSidebar({
             </Select>
           </div>
         )}
-        <SidebarButton
-          icon={<FolderOpen size={18} />}
-          label={t("sidebar.myFiles")}
-          active={activeItem === "files"}
-          onClick={() => router.push(buildDashboardUrl(groupId))}
+        <ButtonGroup
+          variant="nav"
+          orientation="vertical"
+          collapse="never"
+          activeId={activeItem}
+          items={navItems}
         />
-        <SidebarButton
-          icon={<Music size={18} />}
-          label={t("sidebar.meetings")}
-          active={activeItem === "meetings"}
-          onClick={() => router.push(buildDashboardUrl(groupId, { tab: "meetings" }))}
-        />
-        {isAdmin && (
-          <SidebarButton
-            icon={<Settings size={18} />}
-            label={t("sidebar.manage")}
-            active={activeItem === "manage"}
-            onClick={() => router.push(buildDashboardUrl(groupId, { tab: "manage" }))}
-          />
-        )}
-        {isAdmin && (
-          <SidebarButton
-            icon={<Languages size={18} />}
-            label={t("sidebar.translations")}
-            active={activeItem === "translations"}
-            onClick={() => router.push(buildDashboardUrl(groupId, { tab: "translations" }))}
-          />
-        )}
 
         <div
           style={{
@@ -139,42 +149,5 @@ export function DashboardSidebar({
         </div>
       </nav>
     </aside>
-  );
-}
-
-function SidebarButton({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "flex",
-        width: "100%",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 12px",
-        borderRadius: "var(--radius-md)",
-        background: active ? "var(--bg-tertiary)" : "transparent",
-        border: "none",
-        color: active ? "var(--text-primary)" : "var(--text-secondary)",
-        cursor: "pointer",
-        fontSize: "0.84rem",
-        fontWeight: 500,
-        transition: "background 0.15s",
-      }}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

@@ -3,7 +3,7 @@
 import { Shield, ShieldOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { useTranslation } from "@/hooks/useTranslation";
 import { meetingsApi, roomApi } from "@/lib/api-client";
 import { useRoomStore } from "@/stores/room-store";
@@ -108,28 +108,24 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
           {t("participants.count", { count: String(participants.length) })}
         </div>
         {isTeacherRole && (
-          <button
-            onClick={handleToggleApproval}
-            disabled={togglingApproval}
-            title={requiresApproval ? t("meetings.disableApproval") : t("meetings.enableApproval")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "3px 8px",
-              background: requiresApproval ? "rgba(139,92,246,0.15)" : "var(--bg-tertiary)",
-              border: `1px solid ${requiresApproval ? "var(--accent-purple)" : "var(--border-subtle)"}`,
-              borderRadius: "var(--radius-sm)",
-              color: requiresApproval ? "var(--accent-purple)" : "var(--text-tertiary)",
-              fontSize: "0.7rem",
-              cursor: togglingApproval ? "wait" : "pointer",
-              opacity: togglingApproval ? 0.6 : 1,
-              transition: "all 0.15s ease",
-            }}
-          >
-            {requiresApproval ? <Shield size={11} /> : <ShieldOff size={11} />}
-            {requiresApproval ? t("meetings.disableApproval") : t("meetings.enableApproval")}
-          </button>
+          <ButtonGroup
+            variant="toolbar"
+            size="sm"
+            items={[
+              {
+                id: "toggleApproval",
+                label: requiresApproval
+                  ? t("meetings.disableApproval")
+                  : t("meetings.enableApproval"),
+                icon: requiresApproval ? <Shield size={11} /> : <ShieldOff size={11} />,
+                tone: requiresApproval ? "primary" : "neutral",
+                quiet: true,
+                disabled: togglingApproval,
+                loading: togglingApproval,
+                onClick: handleToggleApproval,
+              },
+            ]}
+          />
         )}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
@@ -180,14 +176,18 @@ export default function ParticipantMenu({ participants }: ParticipantMenuProps) 
                   }}
                 >
                   {participantRole !== "teacher" && (
-                    <InlineButton
-                      variant="danger"
+                    <ButtonGroup
+                      variant="toolbar"
                       size="sm"
-                      onClick={() => setKickTarget(participant.name)}
-                      style={{ borderRadius: "var(--radius-sm)" }}
-                    >
-                      {t("participants.kick")}
-                    </InlineButton>
+                      items={[
+                        {
+                          id: "kick",
+                          label: t("participants.kick"),
+                          tone: "danger",
+                          onClick: () => setKickTarget(participant.name),
+                        },
+                      ]}
+                    />
                   )}
                 </div>
               )}

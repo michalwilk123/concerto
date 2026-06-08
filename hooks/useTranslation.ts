@@ -1,84 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useLocale, useMessages } from "next-intl";
-import { useRouter, usePathname } from "@/i18n/navigation";
-
-type TranslationLanguage = { code: string; label: string; isDefault: boolean };
-
-let cachedLanguages: TranslationLanguage[] | null = null;
-let languagesRequest: Promise<TranslationLanguage[]> | null = null;
-
-function loadAvailableLanguages() {
-  if (cachedLanguages) {
-    return Promise.resolve(cachedLanguages);
-  }
-
-  if (!languagesRequest) {
-    languagesRequest = fetch("/api/translations/languages")
-      .then((r) => r.json())
-      .then((data) => {
-        const locales = Array.isArray(data?.locales) ? (data.locales as TranslationLanguage[]) : [];
-        cachedLanguages = locales;
-        return locales;
-      })
-      .catch(() => [])
-      .finally(() => {
-        languagesRequest = null;
-      });
-  }
-
-  return languagesRequest;
-}
-
-export function invalidateTranslationCache() {
-  // With next-intl, translations are server-loaded.
-  // After admin saves, call POST /api/translations/revalidate then router.refresh().
-  // This is a no-op placeholder; consumers should call it alongside router.refresh().
-}
-
-function flattenMessages(obj: Record<string, unknown>, prefix = ""): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-    if (typeof value === "string") {
-      result[fullKey] = value;
-    } else if (value && typeof value === "object") {
-      Object.assign(result, flattenMessages(value as Record<string, unknown>, fullKey));
-    }
-  }
-  return result;
-}
+import { useRouter } from "@/i18n/navigation";
+import { LOCALE_COOKIE } from "@/i18n/config";
+import { useTranslationContext } from "@/components/TranslationProvider";
 
 export function useTranslation() {
-  const locale = useLocale();
-  const nestedMessages = useMessages();
-  const flat = useMemo(
-    () => flattenMessages(nestedMessages as Record<string, unknown>),
-    [nestedMessages],
-  );
+  const { locale, messages, languages } = useTranslationContext();
   const router = useRouter();
-  const pathname = usePathname();
-  const [availableLanguages, setAvailableLanguages] = useState<TranslationLanguage[]>(
-    () => cachedLanguages ?? [],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    loadAvailableLanguages().then((languages) => {
-      if (!cancelled) {
-        setAvailableLanguages(languages);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function t(key: string, params?: Record<string, string>): string {
-    let value = flat[key] ?? key;
+    let value = messages[key] ?? key;
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         value = value.replace(`{${k}}`, v);
@@ -88,14 +19,15 @@ export function useTranslation() {
   }
 
   function setLanguage(code: string) {
-    document.cookie = `NEXT_LOCALE=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
-    router.replace(pathname, { locale: code });
+    document.cookie = `${LOCALE_COOKIE}=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
+    // Re-run server components (incl. root layout) so the new locale's messages load.
+    router.refresh();
   }
 
   return {
     t,
     currentLanguage: locale,
-    availableLanguages,
+    availableLanguages: languages,
     setLanguage,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
 import { Modal } from "@/components/ui/modal";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -25,6 +25,21 @@ export function DeleteConfirmModal({
   loading,
 }: DeleteConfirmModalProps) {
   const { t } = useTranslation();
+
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("manage.cancel"),
+      onClick: onClose,
+    },
+    {
+      id: "confirm",
+      label: t("manage.confirm"),
+      tone: "danger",
+      onClick: onConfirm,
+      loading,
+    },
+  ];
 
   return (
     <Modal open={open} onClose={onClose} maxWidth={400}>
@@ -51,14 +66,7 @@ export function DeleteConfirmModal({
             {warning}
           </Typography>
         )}
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <InlineButton variant="secondary" size="sm" onClick={onClose}>
-            {t("manage.cancel")}
-          </InlineButton>
-          <InlineButton variant="danger" size="sm" onClick={onConfirm} loading={loading}>
-            {t("manage.confirm")}
-          </InlineButton>
-        </div>
+        <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
       </div>
     </Modal>
   );

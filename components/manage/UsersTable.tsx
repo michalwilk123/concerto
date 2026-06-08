@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, ChevronUp, KeyRound, Pencil, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Users, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntityGridRow } from "@/components/ui/entity-list-row";
@@ -13,6 +14,7 @@ import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
 import { type AdminUser, adminApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
+import { MANAGE_TABLE_MAX_WIDTH, MANAGE_TABLE_MIN_WIDTH } from "./table-layout";
 
 const ROLE_COLORS: Record<string, string> = {
   admin: "linear-gradient(135deg, #f59e0b, #d97706)",
@@ -20,11 +22,9 @@ const ROLE_COLORS: Record<string, string> = {
   student: "linear-gradient(135deg, #a78bfa, #7c3aed)",
 };
 
-const STATUS_DOT = {
-  active: "#22c55e",
-  inactive: "#6b7280",
-  banned: "#ef4444",
-};
+const USER_TABLE_COLUMNS = "150px 220px 100px 110px 110px 230px";
+const USER_TABLE_MIN_WIDTH = MANAGE_TABLE_MIN_WIDTH;
+const USER_TABLE_MAX_WIDTH = MANAGE_TABLE_MAX_WIDTH;
 
 type SortField = "name" | "email" | "role" | "createdAt" | "isActive";
 type SortDir = "asc" | "desc";
@@ -76,8 +76,7 @@ function SortHeader({
       }}
     >
       {label}
-      {isActive &&
-        (currentDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+      {isActive && (currentDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
     </button>
   );
 }
@@ -124,6 +123,7 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
   }, [page, limit, debouncedSearch, sortField, sortDir, t]);
 
   useEffect(() => {
+    void refreshKey;
     fetchUsers();
   }, [fetchUsers, refreshKey]);
 
@@ -149,19 +149,63 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
   const totalPages = Math.ceil(total / limit);
 
   const sortableHeaders = [
-    <SortHeader key="name" label={t("manage.tableName")} field="name" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
-    <SortHeader key="email" label={t("manage.tableEmail")} field="email" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
-    <SortHeader key="role" label={t("manage.tableRole")} field="role" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
-    <SortHeader key="status" label={t("manage.tableStatus")} field="isActive" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
-    <SortHeader key="created" label={t("manage.tableCreated")} field="createdAt" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
+    <SortHeader
+      key="name"
+      label={t("manage.tableName")}
+      field="name"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
+    <SortHeader
+      key="email"
+      label={t("manage.tableEmail")}
+      field="email"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
+    <SortHeader
+      key="role"
+      label={t("manage.tableRole")}
+      field="role"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
+    <SortHeader
+      key="status"
+      label={t("manage.tableStatus")}
+      field="isActive"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
+    <SortHeader
+      key="created"
+      label={t("manage.tableCreated")}
+      field="createdAt"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
     t("manage.tableActions"),
   ];
 
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <div style={{ position: "relative", flex: 1, maxWidth: 360 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+          margin: "0 auto 20px",
+          maxWidth: USER_TABLE_MAX_WIDTH,
+        }}
+      >
+        <div style={{ position: "relative", flex: "1 1 240px", maxWidth: 360, minWidth: 240 }}>
           <Search
             size={15}
             style={{
@@ -196,24 +240,39 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
             <X size={14} />
           </InlineButton>
         )}
-        <div style={{ marginLeft: "auto" }}>
-          <InlineButton
-            variant="primary"
+        <div style={{ marginLeft: "auto", flex: "0 0 auto" }}>
+          <ButtonGroup
+            variant="toolbar"
             size="sm"
-            onClick={() => openModal({ type: "createUser" })}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
-          >
-            <Plus size={15} />
-            {t("manage.createUserButton")}
-          </InlineButton>
+            aria-label={t("manage.createUserButton")}
+            items={[
+              {
+                id: "create-user",
+                label: t("manage.createUserButton"),
+                tone: "primary",
+                onClick: () => openModal({ type: "createUser" }),
+              },
+            ]}
+          />
         </div>
       </div>
 
       {error && <InlineErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       <DataTableShell
+        name="users"
         headers={sortableHeaders}
-        columns="2fr 2.5fr 100px 110px 110px 110px"
+        headerLabels={[
+          t("manage.tableName"),
+          t("manage.tableEmail"),
+          t("manage.tableRole"),
+          t("manage.tableStatus"),
+          t("manage.tableCreated"),
+          t("manage.tableActions"),
+        ]}
+        columns={USER_TABLE_COLUMNS}
+        minTableWidth={USER_TABLE_MIN_WIDTH}
+        containerStyle={{ maxWidth: USER_TABLE_MAX_WIDTH, margin: "0 auto" }}
         isLoading={users === null}
         hasRows={(users?.length ?? 0) > 0}
         emptyState={
@@ -228,7 +287,7 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
         {(users ?? []).map((u, i) => (
           <EntityGridRow
             key={u.id}
-            columns="2fr 2.5fr 100px 110px 110px 110px"
+            columns={USER_TABLE_COLUMNS}
             isLast={i === (users?.length ?? 0) - 1}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -253,6 +312,7 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
                 {!u.image && u.name.charAt(0).toUpperCase()}
               </div>
               <span
+                title={u.name}
                 style={{
                   fontSize: "0.84rem",
                   fontWeight: 500,
@@ -267,6 +327,7 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
             </div>
 
             <span
+              title={u.email}
               style={{
                 fontSize: "0.8rem",
                 color: "var(--text-secondary)",
@@ -285,7 +346,7 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div>
               <button
                 type="button"
                 onClick={() => {
@@ -293,67 +354,57 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
                 }}
                 title={t("manage.toggleActive")}
                 style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: u.banned
-                    ? STATUS_DOT.banned
-                    : u.isActive
-                      ? STATUS_DOT.active
-                      : STATUS_DOT.inactive,
-                  boxShadow: u.banned
-                    ? "0 0 6px rgba(239,68,68,0.4)"
-                    : u.isActive
-                      ? "0 0 6px rgba(34,197,94,0.3)"
-                      : "none",
+                  background: "transparent",
                   border: "none",
+                  color: "var(--text-secondary)",
                   cursor: session && u.id !== session.user.id ? "pointer" : "default",
                   padding: 0,
+                  font: "inherit",
+                  fontSize: "0.8rem",
                 }}
-              />
-              <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-                {u.banned
-                  ? t("manage.statusBanned")
-                  : u.isActive
-                    ? t("manage.statusActive")
-                    : t("manage.statusInactive")}
-              </span>
+              >
+                {u.isActive && !u.banned ? "Yes" : "No"}
+              </button>
             </div>
 
             <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>
               {formatDate(u.createdAt)}
             </span>
 
-            <div style={{ display: "flex", gap: 4 }}>
-              <InlineButton
-                variant="ghost"
-                size="xs"
-                onClick={() => openModal({ type: "editUser", user: u })}
-                title={t("manage.editUserAction")}
-                style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-              >
-                <Pencil size={14} />
-              </InlineButton>
-              <InlineButton
-                variant="ghost"
-                size="xs"
-                onClick={() => openModal({ type: "resetPassword", user: u })}
-                title={t("manage.resetPasswordAction")}
-                style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-              >
-                <KeyRound size={14} />
-              </InlineButton>
-              {session && u.id !== session.user.id && (
-                <InlineButton
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => openModal({ type: "deleteUser", user: u })}
-                  title={t("manage.deleteUserAction")}
-                  style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-                >
-                  <Trash2 size={14} />
-                </InlineButton>
-              )}
+            <div style={{ display: "flex", justifyContent: "flex-start" }}>
+              <ButtonGroup
+                variant="toolbar"
+                size="sm"
+                aria-label={t("manage.tableActions")}
+                items={[
+                  {
+                    id: "edit",
+                    label: t("common.edit"),
+                    ariaLabel: t("manage.editUserAction"),
+                    quiet: true,
+                    onClick: () => openModal({ type: "editUser", user: u }),
+                  },
+                  {
+                    id: "reset",
+                    label: t("manage.resetPasswordAction"),
+                    ariaLabel: t("manage.resetPasswordAction"),
+                    quiet: true,
+                    onClick: () => openModal({ type: "resetPassword", user: u }),
+                  },
+                  ...(session && u.id !== session.user.id
+                    ? [
+                        {
+                          id: "delete",
+                          label: t("files.delete"),
+                          ariaLabel: t("manage.deleteUserAction"),
+                          quiet: true,
+                          tone: "danger",
+                          onClick: () => openModal({ type: "deleteUser", user: u }),
+                        } as ButtonGroupItem,
+                      ]
+                    : []),
+                ]}
+              />
             </div>
           </EntityGridRow>
         ))}

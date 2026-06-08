@@ -934,6 +934,8 @@ export interface LocaleEntry {
   code: string;
   label: string;
   isDefault: boolean;
+  enabled: boolean;
+  rtl: boolean;
   overrides: Record<string, string>;
 }
 

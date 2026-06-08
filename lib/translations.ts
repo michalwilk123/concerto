@@ -1,4 +1,19 @@
 export const defaultTranslations: Record<string, string> = {
+  // Common labels
+  "common.actions.closeSidebar": "Close sidebar",
+  "common.actions.copyRoomLink": "Copy room link",
+  "common.actions.logout": "Logout",
+  "common.actions.openSidebar": "Open sidebar",
+  "common.auth.register": "Register",
+  "common.auth.signIn": "Sign In",
+  "common.edit": "Edit",
+  "common.navigation.dashboard": "Dashboard",
+  "common.navigation.manage": "Manage",
+  "common.navigation.meetings": "Meetings",
+  "common.navigation.myFiles": "My Files",
+  "common.navigation.translations": "Translations",
+  "common.reset": "Reset",
+
   // Auth
   "auth.login.title": "Sign In",
   "auth.login.signInFailed": "Sign in failed",
@@ -39,6 +54,7 @@ export const defaultTranslations: Record<string, string> = {
   "sidebar.translations": "Translations",
   "sidebar.storage": "Storage",
   "sidebar.storageUsed": "{used} of {limit} used",
+  "sidebar.video": "Video",
   "sidebar.participants": "Participants",
   "sidebar.files": "Files",
   "sidebar.chat": "Chat",
@@ -59,7 +75,8 @@ export const defaultTranslations: Record<string, string> = {
   "files.createFolderFailed": "Failed to create folder",
   "files.renameSuccess": "File renamed",
   "files.renameFailed": "Failed to rename file",
-  "files.renameNameUnavailable": 'The name "{name}" cannot be used. A file with this name already exists.',
+  "files.renameNameUnavailable":
+    'The name "{name}" cannot be used. A file with this name already exists.',
   "files.empty": "No files yet",
   "files.uploadHint": "Drop files here or click to upload",
   "files.uploading": "Uploading...",
@@ -104,12 +121,26 @@ export const defaultTranslations: Record<string, string> = {
   "meetings.deleteTitle": "Delete meeting record",
   "meetings.confirm": "Confirm",
   "meetings.cancel": "Cancel",
+  "meetings.deleteButton": "Delete",
+  "meetings.makePublicButton": "Make public",
+  "meetings.makePrivateButton": "Make private",
+  "meetings.enableApprovalButton": "Require approval",
+  "meetings.disableApprovalButton": "Disable approval",
   "meetings.makePublic": "Make public (anyone with link can join)",
   "meetings.makePrivate": "Make private (group members only)",
   "meetings.enableApproval": "Require approval to join",
   "meetings.disableApproval": "Disable approval requirement",
   "meetings.updateFailed": "Failed to update meeting",
   "meetings.deleteFailed": "Failed to delete meeting",
+  "meetings.tableName": "Name",
+  "meetings.tableCreated": "Created",
+  "meetings.tableNeedsApproval": "Needs approval",
+  "meetings.tableCanBeSeen": "Can be seen",
+  "meetings.tableActions": "Actions",
+  "meetings.approvalYes": "Yes",
+  "meetings.approvalNo": "No",
+  "meetings.visibilityAnyone": "Anyone",
+  "meetings.visibilityGroup": "Group only",
 
   // Create meeting
   "createMeeting.title": "Create Meeting",
@@ -340,6 +371,7 @@ export const defaultTranslations: Record<string, string> = {
   "fileList.colDate": "Date",
   "fileList.colAuthor": "Author",
   "fileList.colSize": "Size",
+  "fileList.colActions": "Actions",
   "fileList.unknownAuthor": "—",
   "fileList.moveSuccess": "Moved successfully",
   "fileList.moveFailed": "Move failed",
@@ -354,16 +386,62 @@ export const defaultTranslations: Record<string, string> = {
   "fileList.folderRenameFailed": "Failed to rename folder",
 
   // Translations panel
-  "translations.title": "Edit Concerto interface text",
-  "translations.save": "Save",
-  "translations.saving": "Saving...",
   "translations.saveSuccess": "Translations saved",
   "translations.saveFailed": "Failed to save translations",
-  "translations.newTranslation": "New Translation",
   "translations.deleteTitle": "Delete Translation",
-  "translations.deleteMessage": "Are you sure you want to delete \"{name}\"?",
+  "translations.deleteMessage": 'Are you sure you want to delete "{name}"?',
   "translations.deleteButton": "Delete",
-  "translations.addTranslation": "Add Translation",
+
+  // Translations — language list
+  "translations.languagesTitle": "Languages",
+  "translations.addLanguage": "Add language",
+  "translations.colLanguage": "Language",
+  "translations.colCode": "Code",
+  "translations.colProgress": "Progress",
+  "translations.colStatus": "Status",
+  "translations.colActions": "Actions",
+  "translations.editTranslations": "Edit translations",
+  "translations.defaultSourceBadge": "default",
+  "translations.enable": "Enable",
+  "translations.disable": "Disable",
+  "translations.rename": "Change name",
+  "translations.delete": "Delete",
+  "translations.emptyTitle": "No languages yet",
+
+  // Translations — add / edit language
+  "translations.addLanguageTitle": "Add language",
+  "translations.renameTitle": "Edit language",
+  "translations.codeLabel": "Code",
+  "translations.codePlaceholder": "e.g. pl",
+  "translations.labelLabel": "Display name",
+  "translations.labelPlaceholder": "e.g. Polski",
+  "translations.rtlLabel": "Right-to-left (RTL)",
+  "translations.create": "Create",
+  "translations.codeInvalid": "Use 2–10 lowercase letters.",
+  "translations.codeDuplicate": "A language with this code already exists.",
+  "translations.presetLabel": "Quick pick",
+
+  // Translations — editor
+  "translations.back": "Back to languages",
+  "translations.editingTitle": "Editing {label}",
+  "translations.searchPlaceholder": "Search translations…",
+  "translations.sectionAll": "All sections",
+  "translations.untranslatedOnly": "Untranslated only",
+  "translations.noMatches": "No translations match your filters",
+  "translations.saveCount": "Save ({count})",
+  "translations.readOnlyBanner": "This is the default source language and is read-only.",
+
+  // Translations — save summary
+  "translations.summaryTitle": "Review {count} change(s) in {label}",
+  "translations.summaryCleared": "Cleared, will use English",
+  "translations.confirm": "Confirm",
+  "translations.edit": "Edit",
+
+  // Translations — unsaved guard
+  "translations.unsavedTitle": "Unsaved changes",
+  "translations.unsavedMessage": "You have {count} unsaved change(s). Leave anyway?",
+  "translations.leave": "Leave",
+  "translations.keepEditing": "Keep editing",
 };
 
 export type TranslationKey = keyof typeof defaultTranslations;

@@ -1,45 +1,44 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-
-const sizeMap: Record<string, number> = {
-  xs: 24,
-  sm: 28,
-  md: 32,
-  lg: 48,
-};
+import { cn } from "@/lib/utils";
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "circle" | "square";
   size?: "xs" | "sm" | "md" | "lg";
-  color?: string;
+  tone?: "neutral" | "primary" | "danger";
   children: ReactNode;
 }
 
 export function IconButton({
   variant = "circle",
   size = "md",
-  color,
+  tone = "neutral",
   children,
-  style,
+  className,
   ...rest
 }: IconButtonProps) {
-  const dim = sizeMap[size];
+  const sizeClass = {
+    xs: "h-6 w-6 [&_svg]:size-3.5",
+    sm: "h-7 w-7 [&_svg]:size-4",
+    md: "h-8 w-8 [&_svg]:size-4",
+    lg: "h-12 w-12 [&_svg]:size-5",
+  }[size];
+  const toneClass = {
+    neutral:
+      "border-transparent bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+    primary: "border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
+    danger:
+      "border-transparent bg-transparent text-destructive hover:bg-destructive hover:text-destructive-foreground",
+  }[tone];
+
   return (
     <button
-      style={{
-        width: dim,
-        height: dim,
-        borderRadius: variant === "circle" ? "50%" : "var(--radius-sm)",
-        border: "none",
-        background: color ?? "transparent",
-        color: color ? "white" : "var(--text-tertiary)",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 0,
-        flexShrink: 0,
-        ...style,
-      }}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center border p-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+        variant === "circle" ? "rounded-full" : "rounded-sm",
+        sizeClass,
+        toneClass,
+        className,
+      )}
       {...rest}
     >
       {children}

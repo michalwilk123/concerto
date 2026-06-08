@@ -1,14 +1,16 @@
 "use client";
 
 import { Globe, Link as LinkIcon, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
-import { IconButton } from "@/components/ui/icon-button";
-import { InlineButton } from "@/components/ui/inline-button";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { TextInput } from "@/components/ui/text-input";
+import { useTranslation } from "@/hooks/useTranslation";
+import { Link } from "@/i18n/navigation";
 import { useSession } from "@/lib/auth-client";
 import { logoutAndRedirect } from "@/lib/logout";
-import { useTranslation } from "@/hooks/useTranslation";
+import { logElementVisuals } from "@/lib/visual-debug";
 import type { Role } from "@/types/room";
 import ConcertoLogo from "./ConcertoLogo";
 
@@ -19,29 +21,64 @@ function LanguageSelector() {
       ? availableLanguages
       : [{ code: currentLanguage, label: currentLanguage, isDefault: true }];
   const isDisabled = options.length <= 1;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const selectRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const select = selectRef.current;
+    if (!wrap || !select) return;
+
+    const logLayout = () => {
+      logElementVisuals("LanguageSelector", "wrapper", wrap, {
+        height: { min: 34, max: 38 },
+        width: { min: 56, max: 220 },
+        childCount: { min: 2, max: 2 },
+        shouldOverflowX: false,
+        shouldOverflowY: false,
+        shouldClipText: false,
+      });
+      logElementVisuals("LanguageSelector", "native select", select, {
+        height: { min: 30, max: 38 },
+        width: { min: 40, max: 200 },
+        shouldOverflowY: false,
+        shouldClipText: false,
+      });
+    };
+
+    logLayout();
+    const resizeObserver = new ResizeObserver(logLayout);
+    resizeObserver.observe(wrap);
+    resizeObserver.observe(select);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   return (
     <div
+      ref={wrapRef}
+      className="app-language-selector"
       style={{
         display: "flex",
         alignItems: "center",
         gap: 6,
-        padding: "0 10px",
         height: 36,
         border: "1px solid var(--border-subtle)",
         borderRadius: "var(--radius-md)",
         background: "var(--bg-tertiary)",
+        flexShrink: 0,
       }}
     >
       <Globe size={13} style={{ color: "var(--text-tertiary)", flexShrink: 0, opacity: 0.8 }} />
       <select
+        ref={selectRef}
+        className="app-language-select"
         value={currentLanguage}
         onChange={(e) => setLanguage(e.target.value)}
         aria-label="Select language"
         disabled={isDisabled}
         style={{
           height: "100%",
-          minWidth: 88,
+          width: "100%",
           border: "none",
           outline: "none",
           background: "transparent",
@@ -98,6 +135,44 @@ function AppModeHeader() {
   const { data: session, isPending } = useSession();
   const user = session?.user;
   const isAdmin = user?.role === "admin";
+  const headerRef = useRef<HTMLElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const authRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    const actions = actionsRef.current;
+    if (!header || !actions) return;
+
+    const logLayout = () => {
+      logElementVisuals("AppHeader", "header", header, {
+        height: { min: 54, max: 58 },
+        childCount: { min: 2, max: 2 },
+        shouldOverflowX: false,
+        shouldOverflowY: false,
+      });
+      logElementVisuals("AppHeader", "actions", actions, {
+        height: { min: 32, max: 40 },
+        width: { min: 116, max: window.innerWidth },
+        shouldOverflowX: false,
+        shouldOverflowY: false,
+      });
+      if (authRef.current) {
+        logElementVisuals("AppHeader", "auth buttons", authRef.current, {
+          height: { min: 30, max: 34 },
+          shouldOverflowX: false,
+          shouldOverflowY: false,
+        });
+      }
+    };
+
+    logLayout();
+    const resizeObserver = new ResizeObserver(logLayout);
+    resizeObserver.observe(header);
+    resizeObserver.observe(actions);
+    if (authRef.current) resizeObserver.observe(authRef.current);
+    return () => resizeObserver.disconnect();
+  });
 
   const handleLogout = async () => {
     await logoutAndRedirect();
@@ -105,11 +180,12 @@ function AppModeHeader() {
 
   return (
     <header
+      ref={headerRef}
+      className="app-header"
       style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 20px",
         height: 56,
         background: "rgba(var(--bg-secondary-rgb, 30, 30, 30), 0.85)",
         backdropFilter: "blur(12px)",
@@ -121,8 +197,9 @@ function AppModeHeader() {
         boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div className="app-header-brand-wrap" style={{ display: "flex", alignItems: "center" }}>
         <Link
+          className="app-header-brand"
           href="/dashboard"
           style={{
             display: "flex",
@@ -136,7 +213,11 @@ function AppModeHeader() {
           <ConcertoLogo size="sm" />
         </Link>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div
+        ref={actionsRef}
+        className="app-header-actions"
+        style={{ display: "flex", alignItems: "center" }}
+      >
         <LanguageSelector />
         {isPending ? null : user ? (
           <>
@@ -147,56 +228,45 @@ function AppModeHeader() {
                 color="linear-gradient(135deg, #22c55e, #16a34a)"
               />
             )}
-            <InlineButton
-              variant="secondary"
-              size="sm"
-              onClick={handleLogout}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 12px",
-                fontSize: "0.8rem",
-                border: "1px solid var(--border-subtle)",
-              }}
-            >
-              {t("appHeader.logout")}
-            </InlineButton>
+            {isAdmin && (
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/dashboard/manage">{t("common.navigation.manage")}</Link>
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={handleLogout}>
+              {t("common.actions.logout")}
+            </Button>
           </>
         ) : (
-          <>
-            <Link
-              href="/login"
-              style={{
-                padding: "6px 12px",
-                fontSize: "0.8rem",
-                fontWeight: 500,
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "var(--radius-md)",
-                color: "var(--text-secondary)",
-                textDecoration: "none",
-                transition: "background 0.15s",
-              }}
-            >
-              {t("appHeader.signIn")}
-            </Link>
-            <Link
-              href="/register"
-              style={{
-                padding: "6px 12px",
-                fontSize: "0.8rem",
-                fontWeight: 500,
-                background: "var(--accent-purple)",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                color: "white",
-                textDecoration: "none",
-                transition: "opacity 0.15s",
-              }}
-            >
-              {t("appHeader.register")}
-            </Link>
-          </>
+          <ButtonGroup
+            ref={authRef}
+            className="app-header-auth-buttons"
+            size="sm"
+            variant="toolbar"
+            items={[
+              {
+                id: "signIn",
+                label: t("common.auth.signIn"),
+                asChild: true,
+                children: (
+                  <Link href="/login" style={{ color: "inherit" }}>
+                    {t("common.auth.signIn")}
+                  </Link>
+                ),
+              },
+              {
+                id: "register",
+                label: t("common.auth.register"),
+                tone: "primary",
+                asChild: true,
+                children: (
+                  <Link href="/register" style={{ color: "inherit" }}>
+                    {t("common.auth.register")}
+                  </Link>
+                ),
+              },
+            ]}
+          />
         )}
       </div>
     </header>
@@ -205,6 +275,9 @@ function AppModeHeader() {
 
 function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
   const { t } = useTranslation();
+  const headerRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
   const {
     meetingId,
     roomDescription,
@@ -218,8 +291,41 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
     onCopyLink,
   } = props;
 
+  useEffect(() => {
+    const header = headerRef.current;
+    const title = titleRef.current;
+    const actions = actionsRef.current;
+    if (!header || !title || !actions) return;
+
+    const logLayout = () => {
+      logElementVisuals("RoomHeader", "header", header, {
+        height: { min: 56, max: 112 },
+        childCount: { min: 3, max: 3 },
+        shouldOverflowX: false,
+        shouldOverflowY: false,
+      });
+      logElementVisuals("RoomHeader", "title block", title, {
+        width: { min: 80, max: window.innerWidth },
+        shouldOverflowY: false,
+      });
+      logElementVisuals("RoomHeader", "actions", actions, {
+        height: { min: 32, max: 44 },
+        shouldOverflowX: window.innerWidth < 720,
+        shouldOverflowY: false,
+      });
+    };
+
+    logLayout();
+    const resizeObserver = new ResizeObserver(logLayout);
+    resizeObserver.observe(header);
+    resizeObserver.observe(title);
+    resizeObserver.observe(actions);
+    return () => resizeObserver.disconnect();
+  });
+
   return (
     <header
+      ref={headerRef}
       style={{
         padding: "var(--space-md) var(--space-lg)",
         background: "rgba(var(--bg-secondary-rgb, 30, 30, 30), 0.85)",
@@ -250,7 +356,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
         <ConcertoLogo size="md" />
       </Link>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div ref={titleRef} style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             display: "flex",
@@ -274,21 +380,15 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           >
             {meetingId}
           </code>
-          <IconButton
-            variant="square"
-            size="xs"
+          <Button
+            variant="ghost"
+            size="sm"
+            iconStart={<LinkIcon size={14} />}
             onClick={onCopyLink}
-            title={t("appHeader.copyRoomLink")}
-            style={{
-              padding: "var(--space-xs)",
-              borderRadius: "var(--radius-sm)",
-              transition: "color 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-tertiary)")}
+            title={t("common.actions.copyRoomLink")}
           >
-            <LinkIcon size={14} />
-          </IconButton>
+            {t("common.actions.copyRoomLink")}
+          </Button>
         </div>
         <TextInput
           variant="transparent"
@@ -313,6 +413,7 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
       </div>
 
       <div
+        ref={actionsRef}
         style={{
           display: "flex",
           alignItems: "center",
@@ -320,29 +421,9 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
           flexShrink: 0,
         }}
       >
-        <Link
-          href="/dashboard"
-          style={{
-            padding: "6px 12px",
-            fontSize: "0.84rem",
-            fontWeight: 500,
-            borderRadius: "var(--radius-md)",
-            textDecoration: "none",
-            color: "var(--text-secondary)",
-            background: "transparent",
-            transition: "background 0.15s, color 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-tertiary)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
-        >
-          {t("appHeader.dashboard")}
-        </Link>
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/dashboard">{t("common.navigation.dashboard")}</Link>
+        </Button>
 
         <LanguageSelector />
         <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
@@ -350,26 +431,16 @@ function RoomHeader(props: Extract<AppHeaderProps, { mode: "room" }>) {
         </span>
         <RoleBadge role={participantRole} />
 
-        <button
+        <Button
           className="sidebar-toggle-btn"
+          variant="secondary"
+          size="sm"
           onClick={onSidebarToggle}
-          style={{
-            padding: "var(--space-sm)",
-            background: sidebarOpen ? "var(--bg-elevated)" : "transparent",
-            border: sidebarOpen ? "1px solid var(--border-default)" : "1px solid transparent",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--text-secondary)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "background 0.15s",
-          }}
-          title={sidebarOpen ? t("appHeader.closeSidebar") : t("appHeader.openSidebar")}
+          iconStart={sidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+          title={sidebarOpen ? t("common.actions.closeSidebar") : t("common.actions.openSidebar")}
         >
-          {sidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-        </button>
-
+          {sidebarOpen ? t("common.actions.closeSidebar") : t("common.actions.openSidebar")}
+        </Button>
       </div>
     </header>
   );

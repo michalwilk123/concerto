@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
@@ -41,6 +42,22 @@ export function CreateGroupModal({ open, onClose, onSuccess }: CreateGroupModalP
     }
   };
 
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("groups.cancel"),
+      onClick: handleClose,
+    },
+    {
+      id: "create",
+      label: t("groups.create"),
+      tone: "primary",
+      onClick: handleSubmit,
+      loading: saving,
+      disabled: !name.trim(),
+    },
+  ];
+
   return (
     <Modal open={open} onClose={handleClose} maxWidth={400}>
       <div style={{ padding: 24 }}>
@@ -58,31 +75,17 @@ export function CreateGroupModal({ open, onClose, onSuccess }: CreateGroupModalP
           </Typography>
         )}
 
-        <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-          {t("groups.groupNameLabel")}
-        </Typography>
-        <TextInput
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("groups.groupNamePlaceholder")}
-          style={{ width: "100%", marginBottom: 20, fontSize: "0.84rem" }}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-        />
+        <Field label={t("groups.groupNameLabel")} required style={{ marginBottom: 20 }}>
+          <TextInput
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("groups.groupNamePlaceholder")}
+            style={{ width: "100%", fontSize: "0.84rem" }}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          />
+        </Field>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <InlineButton variant="secondary" size="sm" onClick={handleClose}>
-            {t("groups.cancel")}
-          </InlineButton>
-          <InlineButton
-            variant="primary"
-            size="sm"
-            onClick={handleSubmit}
-            loading={saving}
-            disabled={!name.trim()}
-          >
-            {t("groups.create")}
-          </InlineButton>
-        </div>
+        <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
       </div>
     </Modal>
   );

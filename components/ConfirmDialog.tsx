@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
 import { Modal } from "@/components/ui/modal";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -44,6 +44,20 @@ export default function ConfirmDialog({
 
   const accentColor = variant === "danger" ? "var(--accent-red)" : "var(--accent-orange)";
   const accentBg = variant === "danger" ? "rgba(244, 67, 54, 0.10)" : "rgba(255, 152, 0, 0.10)";
+
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: resolvedCancelLabel,
+      onClick: onCancel,
+    },
+    {
+      id: "confirm",
+      label: resolvedConfirmLabel,
+      tone: "danger",
+      onClick: onConfirm,
+    },
+  ];
 
   return (
     <Modal open={open} onClose={onCancel} maxWidth={380}>
@@ -98,31 +112,9 @@ export default function ConfirmDialog({
         ref={actionsRef}
         style={{
           padding: "var(--space-md) var(--space-xl) var(--space-xl)",
-          display: "flex",
-          gap: "var(--space-sm)",
-          justifyContent: "flex-end",
         }}
       >
-        <InlineButton
-          variant="secondary"
-          size="md"
-          onClick={onCancel}
-          style={{ padding: "var(--space-sm) var(--space-lg)" }}
-        >
-          {resolvedCancelLabel}
-        </InlineButton>
-        <InlineButton
-          variant={variant}
-          size="md"
-          onClick={onConfirm}
-          style={{
-            padding: "var(--space-sm) var(--space-lg)",
-            fontWeight: 600,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          {resolvedConfirmLabel}
-        </InlineButton>
+        <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
       </div>
     </Modal>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntityGridRow } from "@/components/ui/entity-list-row";
@@ -12,10 +13,17 @@ import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
 import { groupsApi } from "@/lib/api-client";
 import type { Group } from "@/types/group";
+import { MANAGE_TABLE_MAX_WIDTH, MANAGE_TABLE_MIN_WIDTH } from "./table-layout";
 
 type GroupWithCount = Group & { memberCount: number };
 type SortField = "name" | "memberCount" | "createdAt";
 type SortDir = "asc" | "desc";
+
+// Column tracks sum to 920 so the table matches the users table width
+// (920 + 40px padding === MANAGE_TABLE_MIN_WIDTH).
+const GROUP_TABLE_COLUMNS = "320px 160px 180px 260px";
+const GROUP_TABLE_MIN_WIDTH = MANAGE_TABLE_MIN_WIDTH;
+const GROUP_TABLE_MAX_WIDTH = MANAGE_TABLE_MAX_WIDTH;
 
 type OpenModalFn = (modal: { type: string; group?: Group }) => void;
 
@@ -64,8 +72,7 @@ function SortHeader({
       }}
     >
       {label}
-      {isActive &&
-        (currentDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+      {isActive && (currentDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
     </button>
   );
 }
@@ -99,6 +106,7 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
   }, [t]);
 
   useEffect(() => {
+    void refreshKey;
     fetchGroups();
   }, [fetchGroups, refreshKey]);
 
@@ -122,24 +130,55 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
       let cmp = 0;
       if (sortField === "name") cmp = a.name.localeCompare(b.name);
       else if (sortField === "memberCount") cmp = a.memberCount - b.memberCount;
-      else if (sortField === "createdAt") cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      else if (sortField === "createdAt")
+        cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return sortDir === "asc" ? cmp : -cmp;
     });
     return result;
   }, [groups, search, sortField, sortDir]);
 
   const sortableHeaders = [
-    <SortHeader key="name" label={t("groups.tableName")} field="name" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
-    <SortHeader key="members" label={t("groups.tableMembers")} field="memberCount" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
-    <SortHeader key="created" label={t("groups.tableCreated")} field="createdAt" currentField={sortField} currentDir={sortDir} onSort={handleSort} />,
+    <SortHeader
+      key="name"
+      label={t("groups.tableName")}
+      field="name"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
+    <SortHeader
+      key="members"
+      label={t("groups.tableMembers")}
+      field="memberCount"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
+    <SortHeader
+      key="created"
+      label={t("groups.tableCreated")}
+      field="createdAt"
+      currentField={sortField}
+      currentDir={sortDir}
+      onSort={handleSort}
+    />,
     t("groups.tableActions"),
   ];
 
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <div style={{ position: "relative", flex: 1, maxWidth: 360 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+          margin: "0 auto 20px",
+          maxWidth: GROUP_TABLE_MAX_WIDTH,
+        }}
+      >
+        <div style={{ position: "relative", flex: "1 1 240px", maxWidth: 360, minWidth: 240 }}>
           <Search
             size={15}
             style={{
@@ -170,24 +209,37 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
             <X size={14} />
           </InlineButton>
         )}
-        <div style={{ marginLeft: "auto" }}>
-          <InlineButton
-            variant="primary"
+        <div style={{ marginLeft: "auto", flex: "0 0 auto" }}>
+          <ButtonGroup
+            variant="toolbar"
             size="sm"
-            onClick={() => openModal({ type: "createGroup" })}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
-          >
-            <Plus size={15} />
-            {t("groups.createButton")}
-          </InlineButton>
+            aria-label={t("groups.createButton")}
+            items={[
+              {
+                id: "create-group",
+                label: t("groups.createButton"),
+                tone: "primary",
+                onClick: () => openModal({ type: "createGroup" }),
+              },
+            ]}
+          />
         </div>
       </div>
 
       {error && <InlineErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       <DataTableShell
+        name="groups"
         headers={sortableHeaders}
-        columns="2fr 1fr 1fr 190px"
+        headerLabels={[
+          t("groups.tableName"),
+          t("groups.tableMembers"),
+          t("groups.tableCreated"),
+          t("groups.tableActions"),
+        ]}
+        columns={GROUP_TABLE_COLUMNS}
+        minTableWidth={GROUP_TABLE_MIN_WIDTH}
+        containerStyle={{ maxWidth: GROUP_TABLE_MAX_WIDTH, margin: "0 auto" }}
         isLoading={filtered === null}
         hasRows={(filtered?.length ?? 0) > 0}
         emptyState={
@@ -200,8 +252,12 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
         }
       >
         {(filtered ?? []).map((g, i) => (
-          <EntityGridRow key={g.id} columns="2fr 1fr 1fr 190px" isLast={i === (filtered?.length ?? 0) - 1}>
-            <Typography variant="bodySm" weight={500}>
+          <EntityGridRow
+            key={g.id}
+            columns={GROUP_TABLE_COLUMNS}
+            isLast={i === (filtered?.length ?? 0) - 1}
+          >
+            <Typography variant="bodySm" weight={500} truncate>
               {g.name}
             </Typography>
             <Typography variant="caption" tone="secondary">
@@ -210,42 +266,37 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
             <Typography variant="meta" tone="tertiary">
               {formatDate(g.createdAt)}
             </Typography>
-            <div style={{ display: "flex", gap: 4 }}>
-              <InlineButton
-                variant="ghost"
-                size="xs"
-                onClick={() => openModal({ type: "manageMembers", group: g })}
-                title={t("groups.manageMembers")}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: "0.76rem",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  whiteSpace: "nowrap",
-                  gap: 4,
-                }}
-              >
-                <Users size={14} />
-                {t("groups.manage")}
-              </InlineButton>
-              <InlineButton
-                variant="ghost"
-                size="xs"
-                onClick={() => openModal({ type: "editGroup", group: g })}
-                title={t("groups.renameGroupAction")}
-                style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-              >
-                <Pencil size={14} />
-              </InlineButton>
-              <InlineButton
-                variant="ghost"
-                size="xs"
-                onClick={() => openModal({ type: "deleteGroup", group: g })}
-                title={t("groups.deleteGroupAction")}
-                style={{ padding: "4px 6px", color: "var(--text-tertiary)" }}
-              >
-                <Trash2 size={14} />
-              </InlineButton>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <ButtonGroup
+                variant="toolbar"
+                size="sm"
+                collapse="never"
+                aria-label={t("groups.tableActions")}
+                items={[
+                  {
+                    id: "manage",
+                    label: t("groups.manage"),
+                    ariaLabel: t("groups.manageMembers"),
+                    quiet: true,
+                    onClick: () => openModal({ type: "manageMembers", group: g }),
+                  },
+                  {
+                    id: "edit",
+                    label: t("fileItem.rename"),
+                    ariaLabel: t("groups.renameGroupAction"),
+                    quiet: true,
+                    onClick: () => openModal({ type: "editGroup", group: g }),
+                  },
+                  {
+                    id: "delete",
+                    label: t("files.delete"),
+                    ariaLabel: t("groups.deleteGroupAction"),
+                    quiet: true,
+                    tone: "danger",
+                    onClick: () => openModal({ type: "deleteGroup", group: g }),
+                  },
+                ]}
+              />
             </div>
           </EntityGridRow>
         ))}

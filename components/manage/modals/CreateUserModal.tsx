@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
@@ -56,6 +57,22 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
 
   const canSubmit = name.trim() && email.trim() && password.length >= 6;
 
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("manage.cancel"),
+      onClick: handleClose,
+    },
+    {
+      id: "create",
+      label: t("manage.createUserButton"),
+      tone: "primary",
+      onClick: handleSubmit,
+      loading: saving,
+      disabled: !canSubmit,
+    },
+  ];
+
   return (
     <Modal open={open} onClose={handleClose} maxWidth={440}>
       <div style={{ padding: 24 }}>
@@ -74,21 +91,15 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
-          <div>
-            <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-              {t("manage.nameLabel")}
-            </Typography>
+          <Field label={t("manage.nameLabel")} required>
             <TextInput
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("manage.namePlaceholder")}
               style={{ width: "100%", fontSize: "0.84rem" }}
             />
-          </div>
-          <div>
-            <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-              {t("manage.emailLabel")}
-            </Typography>
+          </Field>
+          <Field label={t("manage.emailLabel")} required>
             <TextInput
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -96,11 +107,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
               type="email"
               style={{ width: "100%", fontSize: "0.84rem" }}
             />
-          </div>
-          <div>
-            <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-              {t("manage.passwordLabel")}
-            </Typography>
+          </Field>
+          <Field label={t("manage.passwordLabel")} required>
             <TextInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -108,11 +116,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
               type="password"
               style={{ width: "100%", fontSize: "0.84rem" }}
             />
-          </div>
-          <div>
-            <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-              {t("manage.roleLabel")}
-            </Typography>
+          </Field>
+          <Field label={t("manage.roleLabel")}>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -123,7 +128,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
                 <SelectItem value="student">{t("manage.roleStudent")}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </Field>
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <input
               type="checkbox"
@@ -137,20 +142,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           </label>
         </div>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <InlineButton variant="secondary" size="sm" onClick={handleClose}>
-            {t("manage.cancel")}
-          </InlineButton>
-          <InlineButton
-            variant="primary"
-            size="sm"
-            onClick={handleSubmit}
-            loading={saving}
-            disabled={!canSubmit}
-          >
-            {t("manage.createUserButton")}
-          </InlineButton>
-        </div>
+        <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
       </div>
     </Modal>
   );

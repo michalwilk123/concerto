@@ -2,10 +2,10 @@
 
 import { Download, Film, Play } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntityListRow } from "@/components/ui/entity-list-row";
 import { IconButton } from "@/components/ui/icon-button";
-import { InlineButton } from "@/components/ui/inline-button";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import { recordingsApi } from "@/lib/api-client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -100,19 +100,18 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
               src={"data:text/vtt,WEBVTT"}
             />
           </video>
-          <InlineButton
-            variant="secondary"
-            size="xs"
-            onClick={() => setPlayingUrl(null)}
-            style={{
-              padding: "4px 10px",
-              margin: 6,
-              color: "var(--text-secondary)",
-              fontSize: "0.78rem",
-            }}
-          >
-            {t("recordings.closePlayer")}
-          </InlineButton>
+          <ButtonGroup
+            variant="toolbar"
+            size="sm"
+            className="m-1.5"
+            items={[
+              {
+                id: "closePlayer",
+                label: t("recordings.closePlayer"),
+                onClick: () => setPlayingUrl(null),
+              },
+            ]}
+          />
         </div>
       )}
 
@@ -143,31 +142,37 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
               }
               title={rec.name}
               subtitle={
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                <span
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    display: "block",
+                  }}
+                >
                   {formatSize(rec.size)} &middot; {formatDate(rec.lastModified)}
                 </span>
               }
               actions={
-                <a
-                  href={rec.url}
-                  download
-                  title={t("recordings.downloadTitle")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 28,
-                    height: 28,
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-default)",
-                    background: "var(--bg-primary)",
-                    color: "var(--text-secondary)",
-                    textDecoration: "none",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Download size={14} />
-                </a>
+                <ButtonGroup
+                  variant="toolbar"
+                  size="sm"
+                  items={[
+                    {
+                      id: "download",
+                      label: t("recordings.downloadTitle"),
+                      ariaLabel: t("recordings.downloadTitle"),
+                      quiet: true,
+                      asChild: true,
+                      children: (
+                        <a href={rec.url} download>
+                          <Download size={14} />
+                          <span>{t("recordings.downloadTitle")}</span>
+                        </a>
+                      ),
+                    },
+                  ]}
+                />
               }
               style={{ padding: "8px 12px", gap: 8 }}
             />

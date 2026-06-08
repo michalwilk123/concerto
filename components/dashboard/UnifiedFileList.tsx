@@ -1,8 +1,15 @@
 "use client";
 
+import { Fragment } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { FileWithUrl, FolderDoc } from "@/types/files";
 import { UnifiedFileRow } from "./UnifiedFileRow";
+
+interface FolderChildren {
+  folders: FolderDoc[];
+  files: FileWithUrl[];
+  loading: boolean;
+}
 
 interface UnifiedFileListProps {
   folders: FolderDoc[];
@@ -10,6 +17,9 @@ interface UnifiedFileListProps {
   selectedItems: Set<string>;
   readOnly: boolean;
   compact?: boolean;
+  expandedFolders?: Set<string>;
+  folderChildren?: Record<string, FolderChildren>;
+  onToggleExpand?: (folderId: string) => void;
   onNavigateToFolder: (folderId: string) => void;
   onPreviewFile: (file: FileWithUrl) => void;
   onDeleteFile: (id: string) => void;
@@ -26,6 +36,9 @@ export function UnifiedFileList({
   selectedItems,
   readOnly,
   compact = false,
+  expandedFolders,
+  folderChildren,
+  onToggleExpand,
   onNavigateToFolder,
   onPreviewFile,
   onDeleteFile,
@@ -36,6 +49,8 @@ export function UnifiedFileList({
   onSelectAll,
 }: UnifiedFileListProps) {
   const { t } = useTranslation();
+  // Inline tree is only enabled in the non-compact dashboard view.
+  const treeEnabled = !compact && !!expandedFolders && !!folderChildren && !!onToggleExpand;
 
   const isEmpty = folders.length === 0 && files.length === 0;
   const allKeys = [
@@ -46,7 +61,7 @@ export function UnifiedFileList({
 
   const headerStyle: React.CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "28px 28px 1fr 110px 110px 70px 36px",
+    gridTemplateColumns: "28px 28px minmax(0, 1fr) 110px 110px 70px 144px",
     alignItems: "center",
     gap: 0,
     height: 36,
@@ -67,6 +82,66 @@ export function UnifiedFileList({
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  };
+
+  const hintStyle = (depth: number): React.CSSProperties => ({
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingRight: 8,
+    paddingLeft: 8 + depth * 16 + 34,
+    fontSize: "0.8125rem",
+    color: "var(--text-tertiary)",
+  });
+
+  const renderFileRow = (file: FileWithUrl, depth: number) => (
+    <UnifiedFileRow
+      key={`file:${file.id}`}
+      type="file"
+      item={file}
+      isSelected={selectedItems.has(`file:${file.id}`)}
+      readOnly={readOnly}
+      compact={compact}
+      depth={depth}
+      onCheckboxChange={(e) => onToggleSelect(`file:${file.id}`, e)}
+      onClick={() => onPreviewFile(file)}
+      onDelete={() => onDeleteFile(file.id)}
+      onRename={(name) => onRenameFile(file.id, name)}
+    />
+  );
+
+  const renderFolderNode = (folder: FolderDoc, depth: number) => {
+    const expanded = expandedFolders!.has(folder.id);
+    const child = folderChildren![folder.id];
+    const isLoading = !child || child.loading;
+    const isEmptyChild =
+      !!child && !child.loading && child.folders.length === 0 && child.files.length === 0;
+    return (
+      <Fragment key={`folder:${folder.id}`}>
+        <UnifiedFileRow
+          type="folder"
+          item={folder}
+          isSelected={selectedItems.has(`folder:${folder.id}`)}
+          readOnly={readOnly}
+          compact={compact}
+          depth={depth}
+          expanded={expanded}
+          childrenLoading={!!child?.loading}
+          onToggleExpand={() => onToggleExpand!(folder.id)}
+          onCheckboxChange={(e) => onToggleSelect(`folder:${folder.id}`, e)}
+          onClick={() => onNavigateToFolder(folder.id)}
+          onDelete={() => onDeleteFolder(folder.id)}
+          onRename={(name) => onRenameFolder(folder.id, name)}
+        />
+        {expanded && (
+          <>
+            {child?.folders.map((f) => renderFolderNode(f, depth + 1))}
+            {child?.files.map((f) => renderFileRow(f, depth + 1))}
+            {isLoading && <div style={hintStyle(depth + 1)}>…</div>}
+            {isEmptyChild && <div style={hintStyle(depth + 1)}>{t("fileList.empty")}</div>}
+          </>
+        )}
+      </Fragment>
+    );
   };
 
   return (
@@ -91,7 +166,7 @@ export function UnifiedFileList({
           <div style={colHeaderStyle}>{t("fileList.colDate")}</div>
           <div style={colHeaderStyle}>{t("fileList.colAuthor")}</div>
           <div style={{ ...colHeaderStyle, textAlign: "right", paddingRight: 4 }}>{t("fileList.colSize")}</div>
-          <div />
+          <div style={{ ...colHeaderStyle, paddingLeft: 8 }}>{t("fileList.colActions")}</div>
         </div>
       )}
 
@@ -101,6 +176,11 @@ export function UnifiedFileList({
           <div style={{ textAlign: "center", padding: compact ? "24px 0" : "48px 0", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
             {t("fileList.empty")}
           </div>
+        ) : treeEnabled ? (
+          <>
+            {folders.map((folder) => renderFolderNode(folder, 0))}
+            {files.map((file) => renderFileRow(file, 0))}
+          </>
         ) : (
           <>
             {folders.map((folder) => (

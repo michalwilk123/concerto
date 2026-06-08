@@ -1,6 +1,15 @@
 "use client";
 
-import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, pointerWithin, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { FolderPlus } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
@@ -14,6 +23,7 @@ import { UnifiedFileRow } from "@/components/dashboard/UnifiedFileRow";
 import { FilePreviewModal } from "@/components/dashboard/preview/FilePreviewModal";
 import { useToast } from "@/components/Toast";
 import { InlineButton } from "@/components/ui/inline-button";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { meetingFoldersApi } from "@/lib/api-client";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
 import { useFileManagerStore } from "@/stores/file-manager-store";
@@ -47,9 +57,13 @@ export function FileBrowserPanel({
   const router = useRouter();
   const toast = useToast();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const effectiveCompact = compact || isMobile;
   const [showCreateFolder, setShowCreateFolder] = useState(false);
-  const [activeDragItem, setActiveDragItem] = useState<{ type: "file" | "folder"; item: FileWithUrl | FolderDoc } | null>(null);
-
+  const [activeDragItem, setActiveDragItem] = useState<{
+    type: "file" | "folder";
+    item: FileWithUrl | FolderDoc;
+  } | null>(null);
   // Local state for meeting-mode navigation
   const [localFolderId, setLocalFolderId] = useState<string | null>(null);
   const [localAncestors, setLocalAncestors] = useState<FolderDoc[]>([]);
@@ -64,6 +78,9 @@ export function FileBrowserPanel({
     isLoading,
     hasFetched,
     selectedItems,
+    expandedFolders,
+    folderChildren,
+    toggleFolderExpanded,
     setCurrentGroupId,
     setCurrentMeetingId,
     setCurrentFolderId,
@@ -101,7 +118,7 @@ export function FileBrowserPanel({
       setCurrentFolderId(initialFolderId);
       fetchContents(initialFolderId);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meetingId, initialFolderId, groupId]);
 
   // Clean up meeting context on unmount
@@ -112,18 +129,38 @@ export function FileBrowserPanel({
     };
   }, [meetingId]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   // Active folder/ancestors: meeting mode uses local state, group mode uses props/store
-  const activeFolderId = meetingId ? localFolderId : (folderIdProp !== undefined ? folderIdProp : currentFolderId);
+  const activeFolderId = meetingId
+    ? localFolderId
+    : folderIdProp !== undefined
+      ? folderIdProp
+      : currentFolderId;
   const activeAncestors = meetingId ? localAncestors : ancestorsProp;
 
-  const allKeys = [
-    ...folders.map((f) => `folder:${f.id}`),
-    ...files.map((f) => `file:${f.id}`),
-  ];
+  // Keys of every currently-visible item, in render order. In the non-compact
+  // tree view this includes the children of expanded folders so range-select and
+  // select-all operate over what's actually on screen.
+  const buildVisibleKeys = (): string[] => {
+    const keys: string[] = [];
+    const walkFolder = (f: FolderDoc) => {
+      keys.push(`folder:${f.id}`);
+      if (expandedFolders.has(f.id)) {
+        const child = folderChildren[f.id];
+        if (child) {
+          child.folders.forEach(walkFolder);
+          child.files.forEach((file) => keys.push(`file:${file.id}`));
+        }
+      }
+    };
+    folders.forEach(walkFolder);
+    files.forEach((file) => keys.push(`file:${file.id}`));
+    return keys;
+  };
+  const allKeys = effectiveCompact
+    ? [...folders.map((f) => `folder:${f.id}`), ...files.map((f) => `file:${f.id}`)]
+    : buildVisibleKeys();
 
   const handleNavigateToFolder = async (folderId: string | null) => {
     if (meetingId) {
@@ -230,7 +267,9 @@ export function FileBrowserPanel({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const data = event.active.data.current as { type: "file" | "folder"; item: FileWithUrl | FolderDoc } | undefined;
+    const data = event.active.data.current as
+      | { type: "file" | "folder"; item: FileWithUrl | FolderDoc }
+      | undefined;
     if (data) setActiveDragItem(data);
   };
 
@@ -285,52 +324,65 @@ export function FileBrowserPanel({
   };
 
   const dragCount = activeDragItem
-    ? selectedItems.has(`${activeDragItem.type}:${activeDragItem.item.id}`) && selectedItems.size > 1
+    ? selectedItems.has(`${activeDragItem.type}:${activeDragItem.item.id}`) &&
+      selectedItems.size > 1
       ? selectedItems.size
       : 1
     : 0;
 
   return (
     <>
-      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div style={{ padding: compact ? "var(--space-md)" : 0 }}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div style={{ padding: effectiveCompact ? "var(--space-md)" : 0 }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 8,
-              marginBottom: compact ? 12 : 24,
+              marginBottom: effectiveCompact ? 12 : 24,
               overflow: "hidden",
             }}
           >
             <Breadcrumbs
               groupId={groupId}
               ancestors={activeAncestors}
-              compact={compact}
+              compact={effectiveCompact}
               onNavigate={meetingId ? (folderId) => handleNavigateToFolder(folderId) : undefined}
             />
             {(canUpload || allowManage) && (
-              <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8, flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: effectiveCompact ? 4 : 8,
+                  flexShrink: 0,
+                }}
+              >
                 {canUpload && (
                   <FileUploader
                     groupId={groupId}
                     meetingId={meetingId}
                     folderId={activeFolderId}
-                    compact={compact}
+                    compact={effectiveCompact}
                     onUploadComplete={handleUploadComplete}
                   />
                 )}
                 {allowManage && showCreateFolderButton && (
                   <InlineButton
                     variant="accent"
-                    size={compact ? "sm" : "md"}
+                    size={effectiveCompact ? "sm" : "md"}
                     onClick={() => setShowCreateFolder(true)}
-                    style={{ display: "flex", alignItems: "center", gap: compact ? 0 : 8 }}
+                    style={{ display: "flex", alignItems: "center", gap: effectiveCompact ? 0 : 8 }}
                     title={t("files.newFolder")}
                   >
-                    <FolderPlus size={compact ? 14 : 16} />
-                    {!compact && t("files.newFolder")}
+                    <FolderPlus size={effectiveCompact ? 14 : 16} />
+                    {t("files.newFolder")}
                   </InlineButton>
                 )}
               </div>
@@ -340,21 +392,26 @@ export function FileBrowserPanel({
           {isLoading && !hasFetched ? (
             <LoadingSkeleton />
           ) : (
-            <UnifiedFileList
-              folders={folders}
-              files={files}
-              selectedItems={selectedItems}
-              readOnly={!allowManage}
-              compact={compact}
-              onNavigateToFolder={(id) => handleNavigateToFolder(id)}
-              onPreviewFile={(file) => setPreviewFile(file)}
-              onDeleteFile={handleDeleteFile}
-              onDeleteFolder={handleDeleteFolder}
-              onRenameFile={handleRenameFile}
-              onRenameFolder={handleRenameFolder}
-              onToggleSelect={handleToggleSelect}
-              onSelectAll={handleSelectAll}
-            />
+            <div>
+              <UnifiedFileList
+                folders={folders}
+                files={files}
+                selectedItems={selectedItems}
+                readOnly={!allowManage}
+                compact={effectiveCompact}
+                expandedFolders={expandedFolders}
+                folderChildren={folderChildren}
+                onToggleExpand={toggleFolderExpanded}
+                onNavigateToFolder={(id) => handleNavigateToFolder(id)}
+                onPreviewFile={(file) => setPreviewFile(file)}
+                onDeleteFile={handleDeleteFile}
+                onDeleteFolder={handleDeleteFolder}
+                onRenameFile={handleRenameFile}
+                onRenameFolder={handleRenameFolder}
+                onToggleSelect={handleToggleSelect}
+                onSelectAll={handleSelectAll}
+              />
+            </div>
           )}
         </div>
 
@@ -372,21 +429,23 @@ export function FileBrowserPanel({
                 onDelete={() => {}}
               />
               {dragCount > 1 && (
-                <div style={{
-                  position: "absolute",
-                  top: -6,
-                  right: -6,
-                  background: "var(--accent-primary)",
-                  color: "#fff",
-                  borderRadius: "50%",
-                  width: 20,
-                  height: 20,
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    right: -6,
+                    background: "var(--accent-primary)",
+                    color: "#fff",
+                    borderRadius: "50%",
+                    width: 20,
+                    height: 20,
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   {dragCount}
                 </div>
               )}

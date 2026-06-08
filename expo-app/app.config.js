@@ -20,6 +20,7 @@ export default {
       supportsTablet: false,
       buildNumber: "1",
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
           "Allow Concerto Meetings to access your camera so you can be seen during meetings.",
         NSMicrophoneUsageDescription:

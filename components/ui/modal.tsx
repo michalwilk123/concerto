@@ -2,6 +2,7 @@
 
 import { type ReactNode, useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { logElementVisuals, logVisualBoolean, logVisualRange } from "@/lib/visual-debug";
 
 interface ModalProps {
   open: boolean;
@@ -26,6 +27,50 @@ export function Modal({ open, onClose, children, maxWidth = 400 }: ModalProps) {
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const logLayout = () => {
+      // The panel has overflow:hidden and no maxHeight — if content is taller than
+      // the viewport it gets clipped with no way to scroll. Flag that.
+      const maxAllowedHeight = window.innerHeight;
+      logVisualRange("Modal", {
+        label: "panel height (clips viewport if exceeded)",
+        value: panel.offsetHeight,
+        min: 0,
+        max: maxAllowedHeight,
+      });
+      logVisualRange("Modal", {
+        label: "panel width",
+        value: panel.offsetWidth,
+        min: 0,
+        max: maxWidth,
+      });
+      logVisualBoolean(
+        "Modal",
+        "content clipped (taller than viewport)",
+        panel.scrollHeight > panel.clientHeight + 1 || panel.offsetHeight > window.innerHeight,
+        false,
+        { scrollHeight: panel.scrollHeight, clientHeight: panel.clientHeight, viewport: window.innerHeight },
+      );
+      logElementVisuals("Modal", "panel", panel, {
+        shouldOverflowX: false,
+        shouldOverflowY: false,
+      });
+    };
+
+    logLayout();
+    const resizeObserver = new ResizeObserver(logLayout);
+    resizeObserver.observe(panel);
+    window.addEventListener("resize", logLayout);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", logLayout);
+    };
+  }, [open, maxWidth]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {

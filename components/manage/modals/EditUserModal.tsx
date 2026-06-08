@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Typography } from "@/components/ui/typography";
@@ -36,6 +37,21 @@ export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) 
     }
   };
 
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("manage.cancel"),
+      onClick: onClose,
+    },
+    {
+      id: "save",
+      label: t("manage.saveChanges"),
+      tone: "primary",
+      onClick: handleSave,
+      loading: saving,
+    },
+  ];
+
   return (
     <Modal open={!!user} onClose={onClose} maxWidth={420}>
       {user && (
@@ -57,10 +73,7 @@ export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) 
             </Typography>
           )}
 
-          <Typography as="span" variant="label" tone="secondary" style={{ display: "block", marginBottom: 6 }}>
-            {t("manage.roleLabel")}
-          </Typography>
-          <div style={{ marginBottom: 20 }}>
+          <Field label={t("manage.roleLabel")} style={{ marginBottom: 20 }}>
             <Select value={role || "student"} onValueChange={setRole}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -71,7 +84,7 @@ export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) 
                 <SelectItem value="student">{t("manage.roleStudent")}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </Field>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
@@ -98,14 +111,7 @@ export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) 
             </label>
           </div>
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <InlineButton variant="secondary" size="sm" onClick={onClose}>
-              {t("manage.cancel")}
-            </InlineButton>
-            <InlineButton variant="accent" size="sm" onClick={handleSave} loading={saving}>
-              {t("manage.saveChanges")}
-            </InlineButton>
-          </div>
+          <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
         </div>
       )}
     </Modal>

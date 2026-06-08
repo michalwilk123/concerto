@@ -3,6 +3,12 @@ import { filesApi, foldersApi, meetingFilesApi, meetingFoldersApi } from "@/lib/
 import { logger } from "@/lib/logger";
 import type { FileWithUrl, FolderDoc } from "@/types/files";
 
+interface FolderChildren {
+  folders: FolderDoc[];
+  files: FileWithUrl[];
+  loading: boolean;
+}
+
 interface FileManagerState {
   files: FileWithUrl[];
   folders: FolderDoc[];
@@ -16,6 +22,10 @@ interface FileManagerState {
   storageUsed: number;
   selectedItems: Set<string>; // "file:id" | "folder:id"
   lastSelectedId: string | null;
+  // Inline tree expansion (dashboard "My files"). Children are lazily loaded
+  // per folder and cached by folder id so re-expanding is instant.
+  expandedFolders: Set<string>;
+  folderChildren: Record<string, FolderChildren>;
 
   setCurrentGroupId: (id: string | null) => void;
   setCurrentMeetingId: (id: string | null) => void;
@@ -37,6 +47,9 @@ interface FileManagerState {
   rangeSelect: (key: string, allKeys: string[]) => void;
   selectAll: (allKeys: string[]) => void;
   clearSelection: () => void;
+  toggleFolderExpanded: (folderId: string) => void;
+  fetchFolderChildren: (folderId: string) => Promise<void>;
+  refreshExpanded: () => Promise<void>;
 }
 
 export const useFileManagerStore = create<FileManagerState>((set, get) => ({
@@ -52,14 +65,22 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   storageUsed: 0,
   selectedItems: new Set(),
   lastSelectedId: null,
+  expandedFolders: new Set(),
+  folderChildren: {},
 
   setCurrentGroupId: (id) =>
-    set({ currentGroupId: id, currentMeetingId: null, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null }),
+    set({ currentGroupId: id, currentMeetingId: null, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null, expandedFolders: new Set(), folderChildren: {} }),
 
   setCurrentMeetingId: (id) =>
-    set({ currentMeetingId: id, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null }),
+    set({ currentMeetingId: id, currentFolderId: null, files: [], folders: [], hasFetched: false, selectedItems: new Set(), lastSelectedId: null, expandedFolders: new Set(), folderChildren: {} }),
 
-  setCurrentFolderId: (id) => set({ currentFolderId: id }),
+  // Drilling into a different root folder invalidates any inline tree expansion.
+  setCurrentFolderId: (id) =>
+    set((state) =>
+      state.currentFolderId === id
+        ? { currentFolderId: id }
+        : { currentFolderId: id, expandedFolders: new Set(), folderChildren: {} },
+    ),
 
   setPreviewFile: (file) => set({ previewFile: file }),
 
@@ -133,6 +154,9 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     } else {
       await filesApi.delete(id);
     }
+    set({
+      folderChildren: mapCacheFiles(get().folderChildren, (f) => (f.id === id ? null : f)),
+    });
     await get().fetchContents(get().currentFolderId);
     if (!currentMeetingId) await get().fetchStorage();
   },
@@ -160,6 +184,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
         previewFile: previewFile?.id === id ? renamed : previewFile,
         selectedItems: nextSelectedItems,
         lastSelectedId: lastSelectedId === oldSelectionKey ? newSelectionKey : lastSelectedId,
+        folderChildren: mapCacheFiles(get().folderChildren, (f) => (f.id === id ? renamed : f)),
       });
     } catch (err) {
       set({ files: prev });
@@ -170,7 +195,11 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   renameFolder: async (id, name) => {
     const { currentMeetingId } = get();
     const prev = get().folders;
-    set({ folders: prev.map((f) => (f.id === id ? { ...f, name } : f)) });
+    const prevChildren = get().folderChildren;
+    set({
+      folders: prev.map((f) => (f.id === id ? { ...f, name } : f)),
+      folderChildren: mapCacheFolders(prevChildren, (f) => (f.id === id ? { ...f, name } : f)),
+    });
     try {
       if (currentMeetingId) {
         await meetingFoldersApi.rename(id, name);
@@ -178,7 +207,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
         await foldersApi.rename(id, name);
       }
     } catch (err) {
-      set({ folders: prev });
+      set({ folders: prev, folderChildren: prevChildren });
       throw err;
     }
   },
@@ -193,6 +222,10 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
       await foldersApi.create({ name, groupId: currentGroupId, parentId: effectiveParentId });
     }
     await get().fetchContents(effectiveParentId);
+    // If the new folder lands inside an expanded folder, refresh that node's children.
+    if (effectiveParentId && get().expandedFolders.has(effectiveParentId)) {
+      await get().fetchFolderChildren(effectiveParentId);
+    }
   },
 
   deleteFolder: async (id) => {
@@ -202,7 +235,9 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     } else {
       await foldersApi.delete(id);
     }
+    pruneFolderFromTree(get, set, id);
     await get().fetchContents(get().currentFolderId);
+    await get().refreshExpanded();
   },
 
   moveFile: async (fileId, targetFolderId) => {
@@ -216,6 +251,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
       } else {
         await filesApi.move(fileId, targetFolderId);
       }
+      await get().refreshExpanded();
     } catch (err) {
       set({ files: prev.files, folders: prev.folders });
       throw err;
@@ -233,6 +269,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
       } else {
         await foldersApi.move(folderId, targetFolderId);
       }
+      await get().refreshExpanded();
     } catch (err) {
       set({ files: prev.files, folders: prev.folders });
       throw err;
@@ -255,6 +292,7 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
       } else {
         await filesApi.bulkMove(items, targetFolderId);
       }
+      await get().refreshExpanded();
     } catch (err) {
       set({ files: prev.files, folders: prev.folders });
       throw err;
@@ -268,7 +306,18 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     } else {
       await filesApi.bulkDelete(items);
     }
+    // Prune deleted folders (with their subtrees) and files from the tree cache.
+    for (const item of items) {
+      if (item.type === "folder") pruneFolderFromTree(get, set, item.id);
+    }
+    const deletedFileIds = new Set(items.filter((i) => i.type === "file").map((i) => i.id));
+    set({
+      folderChildren: mapCacheFiles(get().folderChildren, (f) =>
+        deletedFileIds.has(f.id) ? null : f,
+      ),
+    });
     await get().fetchContents(get().currentFolderId);
+    await get().refreshExpanded();
     if (!currentMeetingId) await get().fetchStorage();
     get().clearSelection();
   },
@@ -312,4 +361,141 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
   },
 
   clearSelection: () => set({ selectedItems: new Set(), lastSelectedId: null }),
+
+  toggleFolderExpanded: (folderId) => {
+    const expanded = new Set(get().expandedFolders);
+    if (expanded.has(folderId)) {
+      expanded.delete(folderId);
+      set({ expandedFolders: expanded });
+      return;
+    }
+    expanded.add(folderId);
+    set({ expandedFolders: expanded });
+    if (!get().folderChildren[folderId]) {
+      void get().fetchFolderChildren(folderId);
+    }
+  },
+
+  fetchFolderChildren: async (folderId) => {
+    const { currentGroupId, currentMeetingId } = get();
+    if (!currentMeetingId && !currentGroupId) return;
+
+    set({
+      folderChildren: {
+        ...get().folderChildren,
+        [folderId]: {
+          folders: get().folderChildren[folderId]?.folders ?? [],
+          files: get().folderChildren[folderId]?.files ?? [],
+          loading: true,
+        },
+      },
+    });
+
+    try {
+      let files: FileWithUrl[];
+      let folders: FolderDoc[];
+      if (currentMeetingId) {
+        [files, folders] = await Promise.all([
+          meetingFilesApi.list(currentMeetingId, folderId),
+          meetingFoldersApi.list(currentMeetingId, folderId),
+        ]);
+      } else {
+        [files, folders] = await Promise.all([
+          filesApi.list(currentGroupId!, folderId),
+          foldersApi.list(currentGroupId!, folderId),
+        ]);
+      }
+      set({
+        folderChildren: {
+          ...get().folderChildren,
+          [folderId]: { folders, files, loading: false },
+        },
+      });
+    } catch (error) {
+      logger.error("[file-manager] fetchFolderChildren failed", error);
+      set({
+        folderChildren: {
+          ...get().folderChildren,
+          [folderId]: {
+            folders: get().folderChildren[folderId]?.folders ?? [],
+            files: get().folderChildren[folderId]?.files ?? [],
+            loading: false,
+          },
+        },
+      });
+    }
+  },
+
+  refreshExpanded: async () => {
+    const ids = Array.from(get().expandedFolders);
+    await Promise.all(ids.map((id) => get().fetchFolderChildren(id)));
+  },
 }));
+
+// --- tree cache helpers --------------------------------------------------
+
+type StoreGet = () => FileManagerState;
+type StoreSet = (partial: Partial<FileManagerState>) => void;
+
+// Map every file in every cached folder; returning null drops the file.
+function mapCacheFiles(
+  cache: Record<string, FolderChildren>,
+  fn: (file: FileWithUrl) => FileWithUrl | null,
+): Record<string, FolderChildren> {
+  const next: Record<string, FolderChildren> = {};
+  for (const [key, entry] of Object.entries(cache)) {
+    next[key] = {
+      ...entry,
+      files: entry.files.map(fn).filter((f): f is FileWithUrl => f !== null),
+    };
+  }
+  return next;
+}
+
+// Map every folder in every cached folder; returning null drops the folder.
+function mapCacheFolders(
+  cache: Record<string, FolderChildren>,
+  fn: (folder: FolderDoc) => FolderDoc | null,
+): Record<string, FolderChildren> {
+  const next: Record<string, FolderChildren> = {};
+  for (const [key, entry] of Object.entries(cache)) {
+    next[key] = {
+      ...entry,
+      folders: entry.folders.map(fn).filter((f): f is FolderDoc => f !== null),
+    };
+  }
+  return next;
+}
+
+// Remove a folder and its entire cached subtree from expansion state, and drop
+// the folder from any cached parent's child list. Used on delete (server cascades).
+function pruneFolderFromTree(get: StoreGet, set: StoreSet, folderId: string) {
+  const cache = get().folderChildren;
+
+  // Collect the folder and all of its descendants reachable through the cache.
+  const toRemove = new Set<string>([folderId]);
+  const stack = [folderId];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    for (const child of cache[current]?.folders ?? []) {
+      if (!toRemove.has(child.id)) {
+        toRemove.add(child.id);
+        stack.push(child.id);
+      }
+    }
+  }
+
+  const nextCache: Record<string, FolderChildren> = {};
+  for (const [key, entry] of Object.entries(cache)) {
+    if (toRemove.has(key)) continue; // drop the removed subtree's own entries
+    nextCache[key] = {
+      ...entry,
+      folders: entry.folders.filter((f) => !toRemove.has(f.id)),
+    };
+  }
+
+  const nextExpanded = new Set(get().expandedFolders);
+  for (const id of toRemove) nextExpanded.delete(id);
+
+  set({ folderChildren: nextCache, expandedFolders: nextExpanded });
+}

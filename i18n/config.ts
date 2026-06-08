@@ -25,6 +25,10 @@ const LOCALE_ALIASES: Record<string, SupportedLocale> = {
 
 export const defaultLocale: SupportedLocale = "eng";
 
+// Cookie that stores the user's chosen UI locale. Client-safe constant so it
+// can be shared between the client hook and the server-side resolver.
+export const LOCALE_COOKIE = "NEXT_LOCALE";
+
 export function normalizeSupportedLocaleCode(locale: string): string {
   const normalized = locale.trim().toLowerCase();
   return LOCALE_ALIASES[normalized] ?? normalized;

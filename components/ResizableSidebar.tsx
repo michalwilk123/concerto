@@ -2,8 +2,10 @@
 
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { IconButton } from "@/components/ui/icon-button";
 import { useTranslation } from "@/hooks/useTranslation";
+import { logVisualBoolean, logVisualRange } from "@/lib/visual-debug";
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 560;
@@ -39,22 +41,66 @@ export function ResizableSidebar({
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = parseInt(stored, 10);
-      if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) return parsed;
+      if (!Number.isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) return parsed;
     }
     return DEFAULT_WIDTH;
   });
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    startX.current = e.clientX;
-    startWidth.current = width;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+
+    const logLayout = () => {
+      const rendered = sidebar.getBoundingClientRect().width;
+      // State width must stay inside the configured clamp range.
+      logVisualRange("ResizableSidebar", {
+        label: "state width",
+        value: width,
+        min: MIN_WIDTH,
+        max: MAX_WIDTH,
+      });
+      // Rendered width should match state width (flexShrink:0 means it shouldn't shrink).
+      logVisualRange("ResizableSidebar", {
+        label: "rendered width",
+        value: rendered,
+        min: MIN_WIDTH - 1,
+        max: MAX_WIDTH + 1,
+      });
+      // On a viewport narrower than the sidebar, flexShrink:0 forces overflow.
+      logVisualBoolean(
+        "ResizableSidebar",
+        "wider than viewport (forces horizontal overflow)",
+        rendered > window.innerWidth,
+        false,
+        { rendered, viewport: window.innerWidth },
+      );
+    };
+
+    logLayout();
+    const resizeObserver = new ResizeObserver(logLayout);
+    resizeObserver.observe(sidebar);
+    window.addEventListener("resize", logLayout);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", logLayout);
+    };
   }, [width]);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = width;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [width],
+  );
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -89,6 +135,7 @@ export function ResizableSidebar({
 
   return (
     <div
+      ref={sidebarRef}
       className="meeting-sidebar"
       style={{
         width,
@@ -104,6 +151,8 @@ export function ResizableSidebar({
       {/* Drag handle */}
       <div
         className="sidebar-drag-handle"
+        role="separator"
+        aria-orientation="vertical"
         onMouseDown={handleMouseDown}
         style={{
           position: "absolute",
@@ -115,7 +164,7 @@ export function ResizableSidebar({
           zIndex: 10,
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget.style.background = "var(--accent-purple)");
+          e.currentTarget.style.background = "var(--accent-purple)";
           e.currentTarget.style.opacity = "0.5";
         }}
         onMouseLeave={(e) => {
@@ -129,78 +178,23 @@ export function ResizableSidebar({
       {/* Tab bar */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          borderBottom: "1px solid var(--border-subtle)",
           position: "relative",
         }}
       >
-        <div style={{ display: "flex", flex: 1, overflow: "hidden", paddingRight: 40 }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--space-xs)",
-                padding: "var(--space-md) var(--space-sm)",
-                background: "transparent",
-                border: "none",
-                borderBottom:
-                  activeTab === tab.id
-                    ? "2px solid var(--text-primary)"
-                    : "2px solid transparent",
-                borderRadius: 0,
-                color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-secondary)",
-                fontSize: "0.82rem",
-                fontWeight: activeTab === tab.id ? 600 : 400,
-                cursor: "pointer",
-                transition: "color 0.15s ease, border-color 0.15s ease",
-                whiteSpace: "nowrap",
-                position: "relative",
-              }}
-            >
-              {tab.icon}
-              {tab.label}
-              {tab.badge != null && tab.badge > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 4,
-                    background: "var(--accent-purple)",
-                    color: "#fff",
-                    borderRadius: "50%",
-                    fontSize: "0.65rem",
-                    fontWeight: 700,
-                    minWidth: 16,
-                    height: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 3px",
-                  }}
-                >
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <ButtonGroup
+          variant="segmented"
+          grow
+          items={tabs}
+          activeId={activeTab}
+          onSelect={onTabChange}
+          className="rounded-none border-x-0 border-t-0 pr-10"
+        />
         <IconButton
           variant="square"
           size="sm"
           onClick={onClose}
           title={t("sidebar.close")}
-          style={{
-            borderRadius: "var(--radius-sm)",
-            position: "absolute",
-            top: 6,
-            right: 6,
-          }}
+          className="absolute right-1.5 top-1.5"
         >
           <X size={16} />
         </IconButton>

@@ -3,10 +3,16 @@
 import { Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { InlineErrorBanner } from "@/components/ui/inline-error-banner";
 import { Modal } from "@/components/ui/modal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Spinner from "@/components/ui/spinner";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
@@ -32,7 +38,9 @@ export function ManageMembersModal({ group, onClose }: ManageMembersModalProps) 
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; email: string }[]>(
+    [],
+  );
   const [searching, setSearching] = useState(false);
   const [addRole, setAddRole] = useState<"teacher" | "student">("student");
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
@@ -50,7 +58,6 @@ export function ManageMembersModal({ group, onClose }: ManageMembersModalProps) 
     }
   }, [group, t]);
 
-  // eslint-disable-next-line react-you-might-not-need-an-effect/no-adjust-state-on-prop-change, react-you-might-not-need-an-effect/no-derived-state
   useEffect(() => {
     if (group) {
       setMembers(null);
@@ -131,27 +138,25 @@ export function ManageMembersModal({ group, onClose }: ManageMembersModalProps) 
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </Typography>
               </div>
-              <InlineButton
-                variant={showAddForm ? "secondary" : "primary"}
+              <ButtonGroup
+                variant="toolbar"
                 size="sm"
-                onClick={() => {
-                  setShowAddForm(!showAddForm);
-                  if (showAddForm) {
-                    setSearch("");
-                    setSearchResults([]);
-                  }
-                }}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-              >
-                {showAddForm ? (
-                  t("manage.cancel")
-                ) : (
-                  <>
-                    <UserPlus size={14} />
-                    {t("groupMembers.addMember")}
-                  </>
-                )}
-              </InlineButton>
+                items={[
+                  {
+                    id: "toggle-add",
+                    label: showAddForm ? t("manage.cancel") : t("groupMembers.addMember"),
+                    icon: showAddForm ? undefined : <UserPlus size={14} />,
+                    tone: showAddForm ? undefined : "primary",
+                    onClick: () => {
+                      setShowAddForm(!showAddForm);
+                      if (showAddForm) {
+                        setSearch("");
+                        setSearchResults([]);
+                      }
+                    },
+                  },
+                ]}
+              />
             </div>
 
             {error && (
@@ -187,7 +192,10 @@ export function ManageMembersModal({ group, onClose }: ManageMembersModalProps) 
                     />
                   </div>
                   <div style={{ flexShrink: 0, width: 110 }}>
-                    <Select value={addRole} onValueChange={(v) => setAddRole(v as "teacher" | "student")}>
+                    <Select
+                      value={addRole}
+                      onValueChange={(v) => setAddRole(v as "teacher" | "student")}
+                    >
                       <SelectTrigger variant="compact" className="bg-[var(--bg-secondary)]">
                         <SelectValue />
                       </SelectTrigger>
@@ -246,22 +254,21 @@ export function ManageMembersModal({ group, onClose }: ManageMembersModalProps) 
                               {u.email}
                             </Typography>
                           </div>
-                          <InlineButton
-                            variant="ghost"
-                            size="xs"
-                            onClick={() => handleAddMember(u.id)}
-                            loading={addingUserId === u.id}
-                            style={{
-                              padding: "4px 10px",
-                              flexShrink: 0,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <Plus size={13} />
-                            {t("groupMembers.add")}
-                          </InlineButton>
+                          <ButtonGroup
+                            variant="toolbar"
+                            size="sm"
+                            className="shrink-0"
+                            items={[
+                              {
+                                id: "add",
+                                label: t("groupMembers.add"),
+                                icon: <Plus size={13} />,
+                                quiet: true,
+                                onClick: () => handleAddMember(u.id),
+                                loading: addingUserId === u.id,
+                              },
+                            ]}
+                          />
                         </div>
                       ))
                     )}
@@ -348,15 +355,21 @@ export function ManageMembersModal({ group, onClose }: ManageMembersModalProps) 
                     <Badge label={m.role} color={ROLE_COLORS[m.role] || ROLE_COLORS.student} />
 
                     {/* Remove */}
-                    <InlineButton
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => handleRemoveMember(m.userId)}
-                      title={t("groupMembers.removeMember")}
-                      style={{ padding: "4px 6px", color: "var(--text-tertiary)", flexShrink: 0 }}
-                    >
-                      <Trash2 size={14} />
-                    </InlineButton>
+                    <ButtonGroup
+                      variant="toolbar"
+                      size="sm"
+                      className="shrink-0"
+                      items={[
+                        {
+                          id: "remove",
+                          label: t("groupMembers.removeMember"),
+                          ariaLabel: t("groupMembers.removeMember"),
+                          icon: <Trash2 size={14} />,
+                          quiet: true,
+                          onClick: () => handleRemoveMember(m.userId),
+                        },
+                      ]}
+                    />
                   </div>
                 ))}
               </div>

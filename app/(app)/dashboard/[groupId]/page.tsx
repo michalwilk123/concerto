@@ -6,12 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
-import { ManagePanel } from "@/components/manage/ManagePanel";
 import { MeetingsPanel } from "@/components/meetings/MeetingsPanel";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { MeetingRecordingsPanel } from "@/components/recordings/MeetingRecordingsPanel";
 import { TranslationsPanel } from "@/components/translations/TranslationsPanel";
+import { IconButton } from "@/components/ui/icon-button";
 import { LoadingIndicator } from "@/components/ui/loading-state";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useRouter } from "@/i18n/navigation";
 import { filesApi, foldersApi } from "@/lib/api-client";
@@ -29,6 +30,7 @@ export default function DashboardGroupPage() {
   const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const hasSeeded = useRef(false);
   const [ancestors, setAncestors] = useState<FolderDoc[]>([]);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(true);
@@ -137,10 +139,6 @@ export default function DashboardGroupPage() {
           <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <TranslationsPanel />
           </div>
-        ) : activeTab === "manage" ? (
-          <div style={{ flex: 1, overflow: "auto" }}>
-            <ManagePanel />
-          </div>
         ) : activeTab === "meetings" ? (
           <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
             <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
@@ -152,25 +150,15 @@ export default function DashboardGroupPage() {
                   isPrivileged={isPrivileged}
                   headerExtra={
                     selectedMeetingId && !chatSidebarOpen ? (
-                      <button
-                        type="button"
+                      <IconButton
+                        aria-label={t("dashboard.openChatSidebar")}
                         onClick={() => setChatSidebarOpen(true)}
+                        size="md"
                         title={t("dashboard.openChatSidebar")}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 32,
-                          height: 32,
-                          border: "1px solid var(--border-default)",
-                          borderRadius: "var(--radius-md)",
-                          background: "var(--bg-primary)",
-                          color: "var(--text-secondary)",
-                          cursor: "pointer",
-                        }}
+                        variant="square"
                       >
                         <PanelRightOpen size={16} />
-                      </button>
+                      </IconButton>
                     ) : undefined
                   }
                 />
@@ -185,7 +173,15 @@ export default function DashboardGroupPage() {
                     icon: <MessageSquare size={14} />,
                   },
                   { id: "files", label: t("sidebar.files"), icon: <Files size={14} /> },
-                  ...(isPrivileged ? [{ id: "recordings", label: t("sidebar.recordings"), icon: <Film size={14} /> }] : []),
+                  ...(isPrivileged
+                    ? [
+                        {
+                          id: "recordings",
+                          label: t("sidebar.recordings"),
+                          icon: <Film size={14} />,
+                        },
+                      ]
+                    : []),
                 ]}
                 activeTab={meetingSidebarTab}
                 onTabChange={(tab) => setMeetingSidebarTab(tab as MeetingSidebarTab)}
@@ -225,7 +221,7 @@ export default function DashboardGroupPage() {
             )}
           </div>
         ) : (
-          <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
+          <div style={{ flex: 1, overflow: "auto", padding: isMobile ? 12 : 24 }}>
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
               <FileBrowserPanel
                 allowManage={isPrivileged}

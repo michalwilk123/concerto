@@ -14,7 +14,13 @@ interface FileUploaderProps {
   onUploadComplete?: () => void;
 }
 
-export function FileUploader({ groupId, folderId, meetingId, compact = false, onUploadComplete }: FileUploaderProps) {
+export function FileUploader({
+  groupId,
+  folderId,
+  meetingId,
+  compact = false,
+  onUploadComplete,
+}: FileUploaderProps) {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +63,7 @@ export function FileUploader({ groupId, folderId, meetingId, compact = false, on
         title={uploading ? t("uploader.uploading") : t("uploader.uploadFile")}
       >
         <Upload size={compact ? 14 : 16} />
-        {!compact && (uploading ? t("uploader.uploading") : t("uploader.uploadFile"))}
+        {uploading ? t("uploader.uploading") : t("uploader.uploadFile")}
       </InlineButton>
     </>
   );

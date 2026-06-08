@@ -1,7 +1,6 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { type FormEvent, useState, Suspense } from "react";
 import { Eye, EyeOff } from "lucide-react";
@@ -10,7 +9,6 @@ import { signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
 
 function LoginForm() {
-  const locale = useLocale();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [error, setError] = useState("");
@@ -45,7 +43,7 @@ function LoginForm() {
       const user = result.data?.user as { isActive?: boolean } | undefined;
       const isUserActive = user?.isActive ?? true;
       const target = user && !isUserActive ? "waiting-approval" : "dashboard";
-      window.location.assign(`/${locale}/${target}`);
+      window.location.assign(`/${target}`);
     }
   };
 
@@ -160,29 +158,44 @@ function LoginForm() {
             </div>
           </div>
 
-          <InlineButton
-            variant="primary"
-            size="lg"
-            type="submit"
-            loading={loading}
-            fullWidth
-            style={{ fontWeight: 600, marginTop: "var(--space-sm)", padding: "var(--space-md)" }}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "var(--space-sm)",
+              marginTop: "var(--space-sm)",
+            }}
           >
-            {loading ? t("auth.login.signingIn") : t("auth.login.submit")}
-          </InlineButton>
+            <InlineButton
+              variant="primary"
+              size="lg"
+              type="submit"
+              loading={loading}
+              fullWidth
+              style={{ fontWeight: 600, padding: "var(--space-md)" }}
+            >
+              {loading ? t("auth.login.signingIn") : t("auth.login.submit")}
+            </InlineButton>
+            <Link
+              href="/register"
+              style={{
+                alignItems: "center",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-default)",
+                borderRadius: "var(--radius-md)",
+                color: "var(--text-primary)",
+                display: "inline-flex",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                justifyContent: "center",
+                padding: "var(--space-md)",
+                textDecoration: "none",
+              }}
+            >
+              {t("auth.login.register")}
+            </Link>
+          </div>
         </form>
-
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "var(--space-xl)",
-            marginBottom: 0,
-            fontSize: "0.85rem",
-            color: "var(--text-secondary)",
-          }}
-        >
-          {t("auth.login.noAccount")} <Link href="/register">{t("auth.login.register")}</Link>
-        </p>
       </div>
     </div>
   );

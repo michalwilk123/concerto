@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
+import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
@@ -100,6 +101,22 @@ function CreateMeetingModalContent({
     }
   };
 
+  const actions: ButtonGroupItem[] = [
+    {
+      id: "cancel",
+      label: t("createMeeting.cancel"),
+      onClick: onClose,
+    },
+    {
+      id: "submit",
+      label: t("createMeeting.submit"),
+      tone: "primary",
+      onClick: handleSubmit,
+      loading,
+      disabled: !meetingName.trim() || !groupId || groups.length === 0,
+    },
+  ];
+
   return (
     <div style={{ padding: 24 }}>
       <Typography as="h2" variant="titleMd" style={{ margin: "0 0 20px 0" }}>
@@ -122,34 +139,39 @@ function CreateMeetingModalContent({
         </div>
       )}
 
-      <label htmlFor="create-meeting-name" style={{ display: "block", marginBottom: 6 }}>
-        <Typography as="span" variant="label" tone="secondary">
-          {t("createMeeting.nameLabel")}
-        </Typography>
-      </label>
-      <TextInput
-        id="create-meeting-name"
-        value={meetingName}
-        onChange={(e) => setMeetingName(e.target.value)}
-        placeholder={t("createMeeting.namePlaceholder")}
-        style={{ width: "100%", marginBottom: 16, fontSize: "0.84rem" }}
-      />
+      <Field label={t("createMeeting.nameLabel")} required style={{ marginBottom: 16 }}>
+        <TextInput
+          value={meetingName}
+          onChange={(e) => setMeetingName(e.target.value)}
+          placeholder={t("createMeeting.namePlaceholder")}
+          style={{ width: "100%", fontSize: "0.84rem" }}
+        />
+      </Field>
 
-        <label htmlFor="create-meeting-group" style={{ display: "block", marginBottom: 6 }}>
-          <Typography as="span" variant="label" tone="secondary">
-            {t("createMeeting.groupLabel")}
-          </Typography>
-        </label>
         {fetchingGroups ? (
-          <Typography as="p" variant="bodySm" tone="tertiary" style={{ margin: "0 0 16px" }}>
-            {t("createMeeting.loadingGroups")}
-          </Typography>
+          <>
+            <label htmlFor="create-meeting-group" style={{ display: "block", marginBottom: 6 }}>
+              <Typography as="span" variant="label" tone="secondary">
+                {t("createMeeting.groupLabel")}
+              </Typography>
+            </label>
+            <Typography as="p" variant="bodySm" tone="tertiary" style={{ margin: "0 0 16px" }}>
+              {t("createMeeting.loadingGroups")}
+            </Typography>
+          </>
         ) : groups.length === 0 ? (
-          <Typography as="p" variant="bodySm" tone="tertiary" style={{ margin: "0 0 16px" }}>
-            {t("createMeeting.noGroups")}
-          </Typography>
+          <>
+            <label htmlFor="create-meeting-group" style={{ display: "block", marginBottom: 6 }}>
+              <Typography as="span" variant="label" tone="secondary">
+                {t("createMeeting.groupLabel")}
+              </Typography>
+            </label>
+            <Typography as="p" variant="bodySm" tone="tertiary" style={{ margin: "0 0 16px" }}>
+              {t("createMeeting.noGroups")}
+            </Typography>
+          </>
         ) : (
-          <div style={{ marginBottom: 16 }}>
+          <Field label={t("createMeeting.groupLabel")} required style={{ marginBottom: 16 }}>
             <Select value={groupId} onValueChange={setSelectedGroupId}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -162,7 +184,7 @@ function CreateMeetingModalContent({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </Field>
         )}
 
         <label
@@ -209,20 +231,7 @@ function CreateMeetingModalContent({
           </Typography>
         </label>
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <InlineButton variant="secondary" size="sm" onClick={onClose}>
-          {t("createMeeting.cancel")}
-        </InlineButton>
-        <InlineButton
-          variant="primary"
-          size="sm"
-          onClick={handleSubmit}
-          loading={loading}
-          disabled={!meetingName.trim() || !groupId || groups.length === 0}
-        >
-          {t("createMeeting.submit")}
-        </InlineButton>
-      </div>
+      <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />
     </div>
   );
 }

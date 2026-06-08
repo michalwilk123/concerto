@@ -3,6 +3,7 @@
 import { Trash2, X } from "lucide-react";
 import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { useTranslation } from "@/hooks/useTranslation";
 
 interface BulkActionBarProps {
@@ -44,50 +45,39 @@ export function BulkActionBar({ count, onClear, onDelete }: BulkActionBarProps) 
 
         <div style={{ width: 1, height: 20, background: "var(--border-subtle)" }} />
 
-        <button
-          type="button"
-          onClick={() => setShowConfirm(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            background: "none",
-            border: "none",
-            padding: "4px 8px",
-            cursor: "pointer",
-            color: "var(--accent-red)",
-            fontWeight: 500,
-            fontSize: "0.875rem",
-            borderRadius: "var(--radius-sm)",
-          }}
-        >
-          <Trash2 size={14} />
-          {t("fileList.deleteSelected")}
-        </button>
-
-        <button
-          type="button"
-          onClick={onClear}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            background: "none",
-            border: "none",
-            padding: 4,
-            cursor: "pointer",
-            color: "var(--text-tertiary)",
-            borderRadius: "var(--radius-sm)",
-          }}
-          title={t("fileList.clearSelection")}
-        >
-          <X size={16} />
-        </button>
+        <ButtonGroup
+          variant="toolbar"
+          size="sm"
+          collapse="never"
+          aria-label={t("fileList.deleteSelected")}
+          items={[
+            {
+              id: "delete-selected",
+              label: t("fileList.deleteSelected"),
+              icon: <Trash2 size={14} />,
+              quiet: true,
+              tone: "danger",
+              onClick: () => setShowConfirm(true),
+            },
+            {
+              id: "clear",
+              label: t("fileList.clearSelection"),
+              ariaLabel: t("fileList.clearSelection"),
+              icon: <X size={16} />,
+              quiet: true,
+              onClick: onClear,
+            },
+          ]}
+        />
       </div>
 
       <ConfirmDialog
         open={showConfirm}
         onCancel={() => setShowConfirm(false)}
-        onConfirm={() => { setShowConfirm(false); onDelete(); }}
+        onConfirm={() => {
+          setShowConfirm(false);
+          onDelete();
+        }}
         title={t("fileItem.deleteTitle")}
         message={t("fileList.bulkDeleteConfirm", { count: String(count) })}
         confirmLabel={t("folders.delete")}

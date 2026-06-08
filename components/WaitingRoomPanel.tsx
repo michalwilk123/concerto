@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { InlineButton } from "@/components/ui/inline-button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
 import { roomApi, type WaitingParticipant } from "@/lib/api-client";
@@ -75,9 +75,18 @@ export default function WaitingRoomPanel({
           {t("sidebar.waitingRoom")}
         </Typography>
         {waiting.length > 1 && (
-          <InlineButton variant="primary" size="xs" onClick={handleAdmitAll}>
-            {t("waiting.admitAll")}
-          </InlineButton>
+          <ButtonGroup
+            variant="toolbar"
+            size="sm"
+            items={[
+              {
+                id: "admitAll",
+                label: t("waiting.admitAll"),
+                tone: "primary",
+                onClick: handleAdmitAll,
+              },
+            ]}
+          />
         )}
       </div>
 
@@ -103,24 +112,26 @@ export default function WaitingRoomPanel({
               <Typography as="span" variant="bodySm">
                 {participant.participantName}
               </Typography>
-              <div style={{ display: "flex", gap: 6 }}>
-                <InlineButton
-                  variant="primary"
-                  size="xs"
-                  onClick={() => handleApprove(participant.participantName)}
-                  loading={processing.has(participant.participantName)}
-                >
-                  {t("waiting.admit")}
-                </InlineButton>
-                <InlineButton
-                  variant="danger"
-                  size="xs"
-                  onClick={() => handleReject(participant.participantName)}
-                  loading={processing.has(participant.participantName)}
-                >
-                  {t("waiting.reject")}
-                </InlineButton>
-              </div>
+              <ButtonGroup
+                variant="toolbar"
+                size="sm"
+                items={[
+                  {
+                    id: "admit",
+                    label: t("waiting.admit"),
+                    tone: "primary",
+                    onClick: () => handleApprove(participant.participantName),
+                    loading: processing.has(participant.participantName),
+                  },
+                  {
+                    id: "reject",
+                    label: t("waiting.reject"),
+                    tone: "danger",
+                    onClick: () => handleReject(participant.participantName),
+                    loading: processing.has(participant.participantName),
+                  },
+                ]}
+              />
             </div>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -183,5 +183,37 @@ export const file = pgTable(
   (table) => [
     index("file_group_folder_idx").on(table.groupId, table.folderId),
     index("file_meeting_idx").on(table.meetingId),
+  ],
+);
+
+// App-wide UI languages. Fully dynamic: admins can add any code at runtime.
+export const language = pgTable("language", {
+  code: text("code").primaryKey(), // "eng", "pl", … arbitrary
+  label: text("label").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  enabled: boolean("enabled").notNull().default(true),
+  rtl: boolean("rtl").notNull().default(false), // drives <html dir="rtl">
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Per-language overrides of the default (English) translation keys.
+// Missing keys fall back to defaultTranslations in lib/translations.ts.
+export const translation = pgTable(
+  "translation",
+  {
+    id: text("id").primaryKey(), // nanoid
+    languageCode: text("language_code")
+      .notNull()
+      .references(() => language.code, { onDelete: "cascade" }),
+    key: text("key").notNull(), // "sidebar.myFiles"
+    value: text("value").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("translation_lang_idx").on(table.languageCode),
+    uniqueIndex("translation_lang_key_uq").on(table.languageCode, table.key),
   ],
 );

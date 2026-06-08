@@ -17,8 +17,10 @@ import {
   RtkScreenShareToggle,
   RtkSettings,
 } from "@cloudflare/realtimekit-react-ui";
+import { LogOut, Settings as SettingsIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -322,45 +324,31 @@ function RoomContent({
             <RtkMicToggle meeting={meeting} size="md" />
             <RtkCameraToggle meeting={meeting} size="md" />
             <RtkScreenShareToggle meeting={meeting} size="md" />
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              style={{
-                background: "var(--bg-secondary)",
-                color: "var(--text-primary)",
-                border: "1px solid var(--border-color)",
-                borderRadius: 8,
-                padding: "8px 16px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-              }}
-            >
-              {t("video.settings")}
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                if (isTeacherRole) {
-                  await onEndMeeting();
-                } else {
-                  meeting.leaveRoom();
-                  onLeave();
-                }
-              }}
-              style={{
-                background: "#e53935",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 16px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-              }}
-            >
-              {t("video.leave")}
-            </button>
+            <ButtonGroup
+              variant="toolbar"
+              items={[
+                {
+                  id: "settings",
+                  label: t("video.settings"),
+                  icon: <SettingsIcon size={16} />,
+                  onClick: () => setSettingsOpen(true),
+                },
+                {
+                  id: "leave",
+                  label: t("video.leave"),
+                  icon: <LogOut size={16} />,
+                  tone: "danger",
+                  onClick: async () => {
+                    if (isTeacherRole) {
+                      await onEndMeeting();
+                    } else {
+                      meeting.leaveRoom();
+                      onLeave();
+                    }
+                  },
+                },
+              ]}
+            />
           </div>
         </div>
 
@@ -563,24 +551,20 @@ export default function VideoRoom(props: VideoRoomProps) {
           {initError ? (
             <>
               <span style={{ color: "var(--error, #e53935)" }}>{initError}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setInitError(null);
-                  setRetryKey((k) => k + 1);
-                }}
-                style={{
-                  background: "var(--accent-purple, #7c3aed)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
-                  cursor: "pointer",
-                  fontSize: "0.875rem",
-                }}
-              >
-                Retry
-              </button>
+              <ButtonGroup
+                variant="toolbar"
+                items={[
+                  {
+                    id: "retry",
+                    label: "Retry",
+                    tone: "primary",
+                    onClick: () => {
+                      setInitError(null);
+                      setRetryKey((k) => k + 1);
+                    },
+                  },
+                ]}
+              />
             </>
           ) : (
             t("video.connecting")

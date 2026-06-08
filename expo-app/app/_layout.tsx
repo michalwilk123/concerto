@@ -14,10 +14,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/auth-store";
 import { colors } from "@/constants/theme";
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
@@ -27,10 +27,11 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { token, user, isInitialized, initialize } = useAuthStore();
+  const fontsReady = fontsLoaded || !!fontError;
 
   useEffect(() => {
-    initialize();
-  }, []);
+    void initialize();
+  }, [initialize]);
 
   useEffect(() => {
     void SplashScreen.hideAsync();
@@ -55,7 +56,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      {fontsLoaded && isInitialized ? (
+      {fontsReady && isInitialized ? (
         <Slot />
       ) : (
         <View

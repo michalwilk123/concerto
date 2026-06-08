@@ -2,6 +2,7 @@
 
 import { Download, Film, Play } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntityListRow } from "@/components/ui/entity-list-row";
 import { IconButton } from "@/components/ui/icon-button";
@@ -175,26 +176,12 @@ function RecordingItem({
           </>
         }
         actions={
-          <a
-            href={recording.url}
-            download
-            title={t("recordings.downloadTitle")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 32,
-              height: 32,
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-default)",
-              background: "var(--bg-primary)",
-              color: "var(--text-secondary)",
-              textDecoration: "none",
-              flexShrink: 0,
-            }}
-          >
-            <Download size={16} />
-          </a>
+          <Button asChild size="sm" variant="secondary">
+            <a href={recording.url} download>
+              <Download size={16} />
+              {t("recordings.downloadTitle")}
+            </a>
+          </Button>
         }
       />
     </div>

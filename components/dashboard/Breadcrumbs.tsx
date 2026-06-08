@@ -3,8 +3,10 @@
 import { useDroppable } from "@dnd-kit/core";
 import { ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { buildDashboardUrl } from "@/lib/dashboard-url";
 import { useTranslation } from "@/hooks/useTranslation";
+import { logVisualBoolean, logVisualRange } from "@/lib/visual-debug";
 import type { FolderDoc } from "@/types/files";
 
 interface BreadcrumbsProps {
@@ -67,9 +69,33 @@ function DroppableCrumb({
 export function Breadcrumbs({ groupId, ancestors, compact = false, onNavigate }: BreadcrumbsProps) {
   const isAtRoot = ancestors.length === 0;
   const { t } = useTranslation();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const logLayout = () => {
+      // Container is overflow:hidden; only the last crumb truncates. A long middle
+      // crumb overflows and gets silently clipped — measure how many px are hidden.
+      const hidden = Math.max(0, container.scrollWidth - container.clientWidth);
+      logVisualRange("Breadcrumbs", {
+        label: "hidden overflow (clipped px)",
+        value: hidden,
+        min: 0,
+        max: 0,
+      }, { crumbCount: ancestors.length + 1, scrollWidth: container.scrollWidth, clientWidth: container.clientWidth });
+      logVisualBoolean("Breadcrumbs", "trail clipped", hidden > 1, false, { compact, hidden });
+    };
+
+    logLayout();
+    const resizeObserver = new ResizeObserver(logLayout);
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [ancestors.length, compact]);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8, fontSize: "0.875rem", minWidth: 0, overflow: "hidden" }}>
+    <div ref={containerRef} style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8, fontSize: "0.875rem", minWidth: 0, overflow: "hidden" }}>
       <DroppableCrumb
         dropId="breadcrumb:root"
         folderId={null}
