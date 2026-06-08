@@ -9,6 +9,11 @@ export const metadata = {
   description: "Collaborative music education platform",
 };
 
+// Every route depends on per-request state (locale cookie + DB-backed
+// translations + auth), so nothing should be statically prerendered at build
+// time — where the database and secrets are unavailable.
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { code, rtl } = await resolveLocale();
   const [messages, languages] = await Promise.all([getMessages(code), getActiveLanguages()]);
