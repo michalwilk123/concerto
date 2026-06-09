@@ -8,11 +8,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
+ARG NEXT_PUBLIC_ANDROID_APK_URL
+ENV NEXT_PUBLIC_ANDROID_APK_URL=$NEXT_PUBLIC_ANDROID_APK_URL
 RUN bun run build
 
 FROM oven/bun:1-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ARG NEXT_PUBLIC_ANDROID_APK_URL
+ENV NEXT_PUBLIC_ANDROID_APK_URL=$NEXT_PUBLIC_ANDROID_APK_URL
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server.mjs ./server.mjs
