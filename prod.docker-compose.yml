@@ -1,19 +1,14 @@
 services:
-  migrate:
-    build: .
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
-    command: ["bun", "run", "db:migrate"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
-
   app:
     build:
       context: .
       args:
         NEXT_PUBLIC_ANDROID_APK_URL: ${NEXT_PUBLIC_ANDROID_APK_URL}
+    # Run pending DB migrations before booting the server. Folded into app
+    # startup (instead of a one-shot `migrate` service) so a redeploy can never
+    # leave a dangling migrate container holding its name. drizzle-kit migrate
+    # only applies pending migrations, so this is an idempotent no-op on restart.
+    command: ["sh", "-c", "bun run db:migrate && bun run start"]
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_ANDROID_APK_URL=${NEXT_PUBLIC_ANDROID_APK_URL}
@@ -35,8 +30,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test:
