@@ -26,7 +26,7 @@ export default function RootLayout() {
 
   const router = useRouter();
   const segments = useSegments();
-  const { token, user, isInitialized, initialize } = useAuthStore();
+  const { token, isInitialized, initialize } = useAuthStore();
   const fontsReady = fontsLoaded || !!fontError;
 
   useEffect(() => {
@@ -40,18 +40,13 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isInitialized) return;
     const inAuthGroup = segments[0] === "(auth)";
-    const currentSegment = segments.at(-1);
 
     if (!token) {
       if (!inAuthGroup) router.replace("/(auth)/login");
-    } else if (!user?.isActive) {
-      if (currentSegment !== "waiting-approval") {
-        router.replace("/(auth)/waiting-approval");
-      }
     } else {
       if (inAuthGroup) router.replace("/(main)/meetings");
     }
-  }, [isInitialized, token, user?.isActive, segments, router]);
+  }, [isInitialized, token, segments, router]);
 
   return (
     <SafeAreaProvider>

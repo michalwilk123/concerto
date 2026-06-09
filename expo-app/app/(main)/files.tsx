@@ -4,7 +4,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Text,
   View,
   ActivityIndicator,
   RefreshControl,
@@ -13,7 +12,10 @@ import {
 import { useGroupsStore } from "@/stores/groups-store";
 import { useFilesStore } from "@/stores/files-store";
 import { FilePreviewModal } from "@/components/FilePreviewModal";
-import { colors, spacing, radius } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
+import { Typography } from "@/components/ui/Typography";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import type { FileWithUrl, FolderDoc } from "@/lib/types";
 
 type ListItem =
@@ -109,10 +111,12 @@ export default function FilesScreen() {
   if (!selectedGroupId) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>No group selected</Text>
-        <Text style={styles.emptySubtext}>
+        <Typography variant="titleMd" tone="secondary">
+          No group selected
+        </Typography>
+        <Typography variant="body" tone="tertiary" style={styles.emptySub}>
           Open the sidebar to select a group
-        </Text>
+        </Typography>
       </View>
     );
   }
@@ -121,23 +125,29 @@ export default function FilesScreen() {
     <View style={styles.container}>
       {error && (
         <View style={styles.errorBar}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Typography variant="bodySm" tone="danger" style={styles.errorText}>
+            {error}
+          </Typography>
         </View>
       )}
 
       {folderPath.length > 1 && (
         <View style={styles.breadcrumbBar}>
-          <Pressable
-            style={styles.upButton}
-            onPress={() => navigateUp(selectedGroupId)}
-            hitSlop={8}
-          >
-            <Text style={styles.upButtonText}>Back</Text>
-          </Pressable>
+          <View style={styles.upButton}>
+            <Button
+              title="Back"
+              onPress={() => navigateUp(selectedGroupId)}
+              variant="ghost"
+              size="sm"
+              iconStart={"‹"}
+            />
+          </View>
           {folderPath.map((entry, index) => (
             <View key={entry.id ?? "root"} style={styles.breadcrumbItem}>
               {index > 0 && (
-                <Text style={styles.breadcrumbSep}>/</Text>
+                <Typography variant="bodySm" tone="tertiary" style={styles.breadcrumbSep}>
+                  /
+                </Typography>
               )}
               <Pressable
                 onPress={() => {
@@ -147,15 +157,19 @@ export default function FilesScreen() {
                 }}
                 hitSlop={8}
               >
-                <Text
-                  style={[
-                    styles.breadcrumbText,
-                    index === folderPath.length - 1 && styles.breadcrumbActive,
-                  ]}
+                <Typography
+                  variant="bodySm"
+                  weight="medium"
+                  tone={index === folderPath.length - 1 ? "primary" : "secondary"}
                   numberOfLines={1}
+                  style={
+                    index === folderPath.length - 1
+                      ? undefined
+                      : styles.breadcrumbLink
+                  }
                 >
                   {entry.name}
-                </Text>
+                </Typography>
               </Pressable>
             </View>
           ))}
@@ -169,41 +183,47 @@ export default function FilesScreen() {
         }
         renderItem={({ item }) =>
           item.type === "folder" ? (
-            <Pressable
-              style={styles.row}
+            <Card
+              interactive
+              padding="md"
               onPress={() => handleFolderPress(item.data)}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.icon}>DIR</Text>
-              </View>
-              <View style={styles.rowBody}>
-                <Text style={styles.rowName} numberOfLines={1}>
-                  {item.data.name}
-                </Text>
-              </View>
-              <Text style={styles.chevron}>{"\u203A"}</Text>
-            </Pressable>
-          ) : (
-            <Pressable
               style={styles.row}
-              onPress={() => handleFilePress(item.data)}
             >
               <View style={styles.iconContainer}>
-                <Text style={styles.icon}>
-                  {getFileIcon(item.data.mimeType)}
-                </Text>
+                <Typography variant="overline" style={styles.icon}>
+                  DIR
+                </Typography>
               </View>
               <View style={styles.rowBody}>
-                <Text style={styles.rowName} numberOfLines={1}>
+                <Typography variant="body" weight="semibold" numberOfLines={1}>
                   {item.data.name}
-                </Text>
-                <Text style={styles.rowMeta}>
-                  {formatFileSize(item.data.size)}
-                  {"  \u00B7  "}
-                  {new Date(item.data.createdAt).toLocaleDateString()}
-                </Text>
+                </Typography>
               </View>
-            </Pressable>
+              <Typography style={styles.chevron}>{"›"}</Typography>
+            </Card>
+          ) : (
+            <Card
+              interactive
+              padding="md"
+              onPress={() => handleFilePress(item.data)}
+              style={styles.row}
+            >
+              <View style={styles.iconContainer}>
+                <Typography variant="overline" style={styles.icon}>
+                  {getFileIcon(item.data.mimeType)}
+                </Typography>
+              </View>
+              <View style={styles.rowBody}>
+                <Typography variant="body" weight="semibold" numberOfLines={1}>
+                  {item.data.name}
+                </Typography>
+                <Typography variant="caption" tone="tertiary" style={styles.rowMeta}>
+                  {formatFileSize(item.data.size)}
+                  {"  ·  "}
+                  {new Date(item.data.createdAt).toLocaleDateString()}
+                </Typography>
+              </View>
+            </Card>
           )
         }
         contentContainerStyle={
@@ -225,10 +245,12 @@ export default function FilesScreen() {
             />
           ) : (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No files</Text>
-              <Text style={styles.emptySubtext}>
+              <Typography variant="titleMd" tone="secondary">
+                No files
+              </Typography>
+              <Typography variant="body" tone="tertiary" style={styles.emptySub}>
                 Pull down to refresh
-              </Text>
+              </Typography>
             </View>
           )
         }
@@ -259,9 +281,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   errorText: {
-    fontSize: 13,
-    fontFamily: "DMSans_500Medium",
-    color: colors.accentRed,
     textAlign: "center",
   },
 
@@ -277,51 +296,32 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   upButton: {
-    minHeight: 36,
-    justifyContent: "center",
-    paddingRight: spacing.md,
+    paddingRight: spacing.sm,
     marginRight: spacing.sm,
     borderRightWidth: 1,
     borderRightColor: colors.borderSubtle,
-  },
-  upButtonText: {
-    fontSize: 14,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.accentPurple,
   },
   breadcrumbItem: {
     flexDirection: "row",
     alignItems: "center",
   },
   breadcrumbSep: {
-    fontSize: 14,
-    color: colors.textTertiary,
     marginHorizontal: spacing.xs,
   },
-  breadcrumbText: {
-    fontSize: 13,
-    fontFamily: "DMSans_500Medium",
+  breadcrumbLink: {
     color: colors.accentPurple,
-  },
-  breadcrumbActive: {
-    color: colors.textPrimary,
   },
 
   // Rows
   row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.md,
     marginBottom: spacing.sm,
   },
   iconContainer: {
     width: 42,
     height: 36,
-    borderRadius: radius.md,
+    borderRadius: 6,
     backgroundColor: colors.bgTertiary,
     alignItems: "center",
     justifyContent: "center",
@@ -329,26 +329,18 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 10,
-    fontFamily: "DMSans_700Bold",
     color: colors.accentPurple,
   },
   rowBody: {
     flex: 1,
     marginRight: spacing.sm,
   },
-  rowName: {
-    fontSize: 15,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textPrimary,
-  },
   rowMeta: {
-    fontSize: 12,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textTertiary,
     marginTop: 2,
   },
   chevron: {
     fontSize: 22,
+    lineHeight: 24,
     color: colors.textTertiary,
     marginLeft: spacing.xs,
   },
@@ -360,15 +352,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.bgPrimary,
   },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textTertiary,
+  emptySub: {
+    marginTop: spacing.xs,
   },
 });

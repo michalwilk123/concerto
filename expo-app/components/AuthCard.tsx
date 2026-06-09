@@ -3,11 +3,12 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing, radius } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
+import { Typography } from "@/components/ui/Typography";
+import { Card } from "@/components/ui/Card";
 
 interface AuthCardProps {
   title: string;
@@ -26,14 +27,16 @@ export function AuthCard({ title, children }: AuthCardProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>
-              Concert<Text style={styles.logoAccent}>o</Text>
-            </Text>
+            <Typography variant="pageTitle" style={styles.logoText}>
+              Concert<Typography weight="bold" style={styles.logoAccent}>o</Typography>
+            </Typography>
           </View>
-          <View style={styles.card}>
-            <Text style={styles.title}>{title}</Text>
+          <Card padding="lg" style={styles.card}>
+            <Typography variant="titleLg" style={styles.title}>
+              {title}
+            </Typography>
             {children}
-          </View>
+          </Card>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -59,26 +62,19 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: 32,
-    fontFamily: "DMSans_700Bold",
-    color: colors.textPrimary,
+    lineHeight: 38,
   },
   logoAccent: {
+    fontSize: 32,
+    lineHeight: 38,
     color: colors.accentPurple,
   },
   card: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.xl,
     width: "100%",
     maxWidth: 400,
     alignSelf: "center",
   },
   title: {
-    fontSize: 20,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textPrimary,
     marginBottom: spacing.xl,
     textAlign: "center",
   },

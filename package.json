@@ -11,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "bun run db/seed.ts",
+    "db:seed-default-group": "bun run db/seed-default-group.ts",
     "db:create-test-user": "bun run db/create-test-user.ts",
     "format": "biome format --write .",
     "lint": "eslint .",

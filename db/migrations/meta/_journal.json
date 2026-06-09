@@ -57,6 +57,13 @@
       "when": 1780774632495,
       "tag": "0007_jazzy_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780992198594,
+      "tag": "0008_concerned_jackpot",
+      "breakpoints": true
     }
   ]
 }

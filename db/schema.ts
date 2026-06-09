@@ -12,7 +12,6 @@ export const user = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
-  isActive: boolean("is_active").notNull().default(false),
 });
 
 export const session = pgTable("session", {
@@ -59,6 +58,8 @@ export const verification = pgTable("verification", {
 export const group = pgTable("group", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  // The single onboarding group every user is auto-joined to; read-only for non-admins.
+  isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

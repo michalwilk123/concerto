@@ -1,10 +1,10 @@
+import { defaultLocale } from "@/i18n/config";
 import type { ChatMessage, CreateChatMessageParams, ToggleReactionParams } from "@/types/chat";
 import type { FileWithUrl, FolderDoc } from "@/types/files";
 import type { Group, GroupMember } from "@/types/group";
 import type { Meeting } from "@/types/meeting";
 import type { Recording } from "@/types/recording";
 import type { Role } from "@/types/room";
-import { defaultLocale } from "@/i18n/config";
 
 // Request/Response types
 export interface CreateRoomParams {
@@ -438,7 +438,11 @@ export const meetingFilesApi = {
     return response.json();
   },
 
-  async upload(params: { meetingId: string; file: File; folderId?: string | null }): Promise<FileWithUrl> {
+  async upload(params: {
+    meetingId: string;
+    file: File;
+    folderId?: string | null;
+  }): Promise<FileWithUrl> {
     const formData = new FormData();
     formData.append("meetingId", params.meetingId);
     formData.append("file", params.file);
@@ -456,7 +460,9 @@ export const meetingFilesApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`/api/meeting-files?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const response = await fetch(`/api/meeting-files?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Delete failed");
@@ -542,7 +548,11 @@ export const meetingFoldersApi = {
     return response.json();
   },
 
-  async create(params: { name: string; meetingId: string; parentId?: string | null }): Promise<FolderDoc> {
+  async create(params: {
+    name: string;
+    meetingId: string;
+    parentId?: string | null;
+  }): Promise<FolderDoc> {
     const response = await fetch("/api/meeting-files/folders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -717,7 +727,6 @@ export interface AdminUser {
   role: string | null;
   banned: boolean | null;
   banReason: string | null;
-  isActive: boolean;
   createdAt: string;
   image: string | null;
 }
@@ -731,7 +740,6 @@ export interface ListUsersResponse {
 
 export interface UpdateUserParams {
   role?: string;
-  isActive?: boolean;
   banned?: boolean;
   banReason?: string | null;
 }
@@ -765,7 +773,6 @@ export const adminApi = {
     email: string;
     password: string;
     role?: string;
-    isActive?: boolean;
   }): Promise<AdminUser> {
     const response = await fetch("/api/admin/users", {
       method: "POST",

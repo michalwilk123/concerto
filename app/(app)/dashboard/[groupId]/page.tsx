@@ -16,7 +16,7 @@ import { LoadingIndicator } from "@/components/ui/loading-state";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useRouter } from "@/i18n/navigation";
-import { filesApi, foldersApi } from "@/lib/api-client";
+import { filesApi, foldersApi, groupsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { buildDashboardUrl, type DashboardTab } from "@/lib/dashboard-url";
 import { logger } from "@/lib/logger";
@@ -44,19 +44,39 @@ export default function DashboardGroupPage() {
   const selectedMeetingId = searchParams.get("meetingId") || null;
 
   const user = session?.user;
-  const isUserActive = (session?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
-  const isPrivileged = user?.role === "teacher" || user?.role === "admin";
+  const isAdmin = user?.role === "admin";
+  const [isDefaultGroup, setIsDefaultGroup] = useState(false);
+  // The default ("Welcome") onboarding group is read-only for everyone except
+  // admins. For normal groups, teachers and admins keep their privileges.
+  const isPrivileged = isDefaultGroup
+    ? isAdmin
+    : user?.role === "teacher" || user?.role === "admin";
+  // Any member may upload to a normal group; only admins may upload to the default group.
+  const canUpload = isDefaultGroup ? isAdmin : true;
 
   // Redirect unauthenticated users
   useEffect(() => {
     if (!isPending && !session) {
       router.push("/login");
-      return;
     }
-    if (!isPending && session && !isUserActive) {
-      router.push("/waiting-approval");
-    }
-  }, [isPending, session, router, isUserActive]);
+  }, [isPending, session, router]);
+
+  // Determine whether this is the read-only default group.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    groupsApi
+      .get(groupId)
+      .then((g) => {
+        if (!cancelled) setIsDefaultGroup(Boolean(g.isDefault));
+      })
+      .catch(() => {
+        if (!cancelled) setIsDefaultGroup(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId, user]);
 
   // Sync groupId to store. While a meeting is selected its sidebar panel owns the
   // (single-context) file store, so skip group sync until the meeting is deselected.
@@ -133,7 +153,7 @@ export default function DashboardGroupPage() {
     );
   }
 
-  if (!session || !isUserActive) return null;
+  if (!session) return null;
 
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden", background: "var(--bg-primary)" }}>
@@ -221,7 +241,7 @@ export default function DashboardGroupPage() {
                       meetingId={selectedMeetingId}
                       groupId={groupId}
                       allowManage={isPrivileged}
-                      allowUpload
+                      allowUpload={canUpload}
                       showCreateFolderButton={isPrivileged}
                       compact
                       ancestors={[]}
@@ -255,7 +275,7 @@ export default function DashboardGroupPage() {
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
               <FileBrowserPanel
                 allowManage={isPrivileged}
-                allowUpload
+                allowUpload={canUpload}
                 showCreateFolderButton={isPrivileged}
                 groupId={groupId}
                 folderId={folderId}

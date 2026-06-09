@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -11,7 +9,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { useAuthStore } from "@/stores/auth-store";
 import { BASE_URL, meetingsApi } from "@/lib/api";
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
+import { Typography } from "@/components/ui/Typography";
+import { Button } from "@/components/ui/Button";
 import type { MobileMeetingJoinResponse, StatusPollResponse } from "@/lib/types";
 
 type MeetingPhase =
@@ -32,14 +32,24 @@ export default function MeetingWebViewScreen() {
   const [role, setRole] = useState<"teacher" | "student" | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debugDetails, setDebugDetails] = useState<string | null>(null);
 
   const applyJoinResult = useCallback(
     (result: MobileMeetingJoinResponse | StatusPollResponse) => {
+      console.log("[mobile meeting] join result", {
+        meetingId,
+        status: result.status,
+        hasToken: Boolean(result.token),
+        role: result.role,
+        groupId: result.groupId,
+      });
+
       if (result.status === "joined" || result.status === "approved") {
         const nextToken = result.token ?? null;
         const nextGroupId = result.groupId ?? null;
         if (!nextToken || !nextGroupId) {
           setError("Meeting join succeeded but returned incomplete room data.");
+          setDebugDetails(JSON.stringify(result));
           setPhase("error");
           return;
         }
@@ -48,6 +58,7 @@ export default function MeetingWebViewScreen() {
         setRole(result.role === "teacher" ? "teacher" : "student");
         setGroupId(nextGroupId);
         setError(null);
+        setDebugDetails(null);
         setPhase("ready");
         return;
       }
@@ -55,12 +66,14 @@ export default function MeetingWebViewScreen() {
       if (result.status === "waiting_for_host" || result.status === "waiting_for_approval") {
         setPhase(result.status);
         setError(null);
+        setDebugDetails(null);
         return;
       }
 
       if (result.status === "host_present") {
         setPhase("joining");
         setError(null);
+        setDebugDetails(null);
         return;
       }
 
@@ -71,26 +84,39 @@ export default function MeetingWebViewScreen() {
       }
 
       setError("Meeting join failed with an unsupported response.");
+      setDebugDetails(JSON.stringify(result));
       setPhase("error");
     },
-    [],
+    [meetingId],
   );
 
   const joinMeeting = useCallback(async () => {
+    console.log("[mobile meeting] join start", {
+      meetingId,
+      baseUrl: BASE_URL,
+      hasToken: Boolean(token),
+      participantName,
+    });
+
     if (!meetingId) {
       setError("Meeting ID is missing.");
+      setDebugDetails("Route params did not include meetingId.");
       setPhase("error");
       return;
     }
 
     if (!token || !participantName) {
       setError("You need to be signed in before joining the meeting.");
+      setDebugDetails(
+        `hasAuthToken=${Boolean(token)} participantName=${participantName || "<empty>"}`,
+      );
       setPhase("error");
       return;
     }
 
     setPhase("joining");
     setError(null);
+    setDebugDetails(null);
 
     try {
       const result = await meetingsApi.join(meetingId, participantName);
@@ -98,7 +124,14 @@ export default function MeetingWebViewScreen() {
     } catch (joinError) {
       const message =
         joinError instanceof Error ? joinError.message : "Failed to join the meeting.";
+      console.error("[mobile meeting] join failed", {
+        meetingId,
+        baseUrl: BASE_URL,
+        participantName,
+        error: joinError,
+      });
       setError(message);
+      setDebugDetails(`POST /api/mobile/meetings/${meetingId}/join`);
       setPhase("error");
     }
   }, [applyJoinResult, meetingId, participantName, token]);
@@ -158,7 +191,7 @@ export default function MeetingWebViewScreen() {
     return (
       <SafeAreaView style={styles.stateContainer}>
         <ActivityIndicator color={colors.accentPurple} size="large" />
-        <Text style={styles.stateTitle}>
+        <Typography variant="titleLg" style={styles.stateTitle}>
           {phase === "waiting_for_host"
             ? "Waiting for the host"
             : phase === "waiting_for_approval"
@@ -166,18 +199,27 @@ export default function MeetingWebViewScreen() {
               : phase === "error"
                 ? "Could not open the meeting"
                 : "Joining meeting"}
-        </Text>
-        <Text style={styles.stateMessage}>
+        </Typography>
+        <Typography variant="body" tone="secondary" style={styles.stateMessage}>
           {phase === "waiting_for_host"
             ? "The meeting room will open as soon as a teacher joins."
             : phase === "waiting_for_approval"
               ? "Your request is pending approval."
               : error ?? "Preparing the meeting room and media access."}
-        </Text>
+        </Typography>
+        {debugDetails ? (
+          <Typography variant="caption" tone="tertiary" style={styles.debugDetails}>
+            {debugDetails}
+          </Typography>
+        ) : null}
         {phase === "error" ? (
-          <Pressable onPress={() => void joinMeeting()} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
+          <View style={styles.retryButton}>
+            <Button
+              title="Retry"
+              onPress={() => void joinMeeting()}
+              variant="primary"
+            />
+          </View>
         ) : null}
       </SafeAreaView>
     );
@@ -186,9 +228,12 @@ export default function MeetingWebViewScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.meetingHeader}>
-        <Pressable style={styles.leaveButton} onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.leaveButtonText}>Back</Text>
-        </Pressable>
+        <Button
+          title="Leave"
+          onPress={() => router.back()}
+          variant="danger"
+          size="sm"
+        />
       </View>
       <WebView
         source={{
@@ -202,6 +247,26 @@ export default function MeetingWebViewScreen() {
         allowsInlineMediaPlayback
         mediaCapturePermissionGrantType="grant"
         onPermissionRequest={(request: any) => request.grant(request.resources)}
+        onLoadStart={() => {
+          console.log("[mobile meeting] webview load start", { meetingUrl });
+        }}
+        onLoadEnd={() => {
+          console.log("[mobile meeting] webview load end", { meetingUrl });
+        }}
+        onError={(event) => {
+          const { nativeEvent } = event;
+          console.error("[mobile meeting] webview error", nativeEvent);
+          setError(nativeEvent.description || "The meeting page failed to load.");
+          setDebugDetails(`WebView error code=${nativeEvent.code} url=${nativeEvent.url}`);
+          setPhase("error");
+        }}
+        onHttpError={(event) => {
+          const { nativeEvent } = event;
+          console.error("[mobile meeting] webview http error", nativeEvent);
+          setError(`The meeting page returned HTTP ${nativeEvent.statusCode}.`);
+          setDebugDetails(`WebView HTTP error url=${nativeEvent.url}`);
+          setPhase("error");
+        }}
       />
     </SafeAreaView>
   );
@@ -218,17 +283,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSubtle,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-  },
-  leaveButton: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-  },
-  leaveButtonText: {
-    fontSize: 15,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.accentPurple,
+    flexDirection: "row",
   },
   stateContainer: {
     flex: 1,
@@ -239,30 +294,18 @@ const styles = StyleSheet.create({
   },
   stateTitle: {
     marginTop: spacing.lg,
-    fontSize: 20,
-    fontFamily: "DMSans_700Bold",
-    color: colors.textPrimary,
     textAlign: "center",
   },
   stateMessage: {
     marginTop: spacing.sm,
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textSecondary,
     textAlign: "center",
-    lineHeight: 20,
+  },
+  debugDetails: {
+    marginTop: spacing.md,
+    textAlign: "center",
   },
   retryButton: {
     marginTop: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.accentPurple,
-  },
-  retryButtonText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontFamily: "DMSans_700Bold",
   },
   webview: {
     flex: 1,

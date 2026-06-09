@@ -13,7 +13,6 @@ interface User {
   id: string;
   name: string;
   email: string;
-  isActive: boolean;
 }
 
 interface AuthState {
@@ -37,7 +36,7 @@ async function syncAppData(user: User | null) {
     import("./meetings-store"),
   ]);
 
-  if (user?.isActive) {
+  if (user) {
     void useGroupsStore.getState().fetchGroups();
     return;
   }

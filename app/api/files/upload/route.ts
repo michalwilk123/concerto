@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { requireGroupMember } from "@/lib/auth-helpers";
+import { requireGroupUploadAccess } from "@/lib/auth-helpers";
 import { uploadGroupFile } from "@/lib/services/file-service";
 
 export async function POST(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   if (!groupId) return NextResponse.json({ error: "groupId is required" }, { status: 400 });
 
-  const { error, session } = await requireGroupMember(groupId);
+  const { error, session } = await requireGroupUploadAccess(groupId);
   if (error) return error;
 
   if (!uploadedFile) return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -24,6 +24,9 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(fileDoc);
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Upload failed" }, { status: 400 });
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Upload failed" },
+      { status: 400 },
+    );
   }
 }

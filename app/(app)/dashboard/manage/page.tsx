@@ -13,7 +13,6 @@ export default function DashboardManagePage() {
   const { t } = useTranslation();
 
   const user = session?.user;
-  const isUserActive = (session?.user as { isActive?: boolean } | undefined)?.isActive ?? true;
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
@@ -22,14 +21,10 @@ export default function DashboardManagePage() {
       router.push("/login");
       return;
     }
-    if (!isUserActive) {
-      router.push("/waiting-approval");
-      return;
-    }
     if (!isAdmin) {
       router.replace("/dashboard");
     }
-  }, [isPending, session, isUserActive, isAdmin, router]);
+  }, [isPending, session, isAdmin, router]);
 
   if (isPending) {
     return (
@@ -41,7 +36,7 @@ export default function DashboardManagePage() {
     );
   }
 
-  if (!session || !isUserActive || !isAdmin) return null;
+  if (!session || !isAdmin) return null;
 
   return (
     <main style={{ flex: 1, overflow: "auto" }}>

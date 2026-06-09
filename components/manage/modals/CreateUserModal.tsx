@@ -4,7 +4,13 @@ import { useState } from "react";
 import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
 import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -22,7 +28,6 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
-  const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +36,6 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     setEmail("");
     setPassword("");
     setRole("student");
-    setIsActive(true);
     setError(null);
   };
 
@@ -45,7 +49,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     setSaving(true);
     setError(null);
     try {
-      await adminApi.createUser({ name: name.trim(), email: email.trim(), password, role, isActive });
+      await adminApi.createUser({ name: name.trim(), email: email.trim(), password, role });
       resetForm();
       onSuccess();
     } catch (e) {
@@ -129,17 +133,6 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
               </SelectContent>
             </Select>
           </Field>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              style={{ accentColor: "var(--accent-primary)" }}
-            />
-            <Typography as="span" variant="bodySm">
-              {t("manage.activeLabel")}
-            </Typography>
-          </label>
         </div>
 
         <ButtonGroup variant="toolbar" size="sm" items={actions} className="justify-end" />

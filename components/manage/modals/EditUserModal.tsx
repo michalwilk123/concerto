@@ -4,7 +4,13 @@ import { useState } from "react";
 import { ButtonGroup, type ButtonGroupItem } from "@/components/ui/button-group";
 import { Field } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
 import { type AdminUser, adminApi } from "@/lib/api-client";
@@ -18,7 +24,6 @@ interface EditUserModalProps {
 export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) {
   const { t } = useTranslation();
   const [role, setRole] = useState(user?.role || "student");
-  const [isActive, setIsActive] = useState(user?.isActive ?? true);
   const [banned, setBanned] = useState(user?.banned ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +33,7 @@ export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) 
     setSaving(true);
     setError(null);
     try {
-      await adminApi.updateUser(user.id, { role, isActive, banned });
+      await adminApi.updateUser(user.id, { role, banned });
       onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("manage.updateUserFailed"));
@@ -87,17 +92,6 @@ export function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) 
           </Field>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                style={{ accentColor: "var(--accent-primary)" }}
-              />
-              <Typography as="span" variant="bodySm">
-                {t("manage.activeLabel")}
-              </Typography>
-            </label>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"

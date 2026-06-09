@@ -22,11 +22,11 @@ const ROLE_COLORS: Record<string, string> = {
   student: "linear-gradient(135deg, #a78bfa, #7c3aed)",
 };
 
-const USER_TABLE_COLUMNS = "150px 220px 100px 110px 110px 230px";
+const USER_TABLE_COLUMNS = "150px 220px 100px 110px 230px";
 const USER_TABLE_MIN_WIDTH = MANAGE_TABLE_MIN_WIDTH;
 const USER_TABLE_MAX_WIDTH = MANAGE_TABLE_MAX_WIDTH;
 
-type SortField = "name" | "email" | "role" | "createdAt" | "isActive";
+type SortField = "name" | "email" | "role" | "createdAt";
 type SortDir = "asc" | "desc";
 
 type OpenModalFn = (modal: { type: string; user?: AdminUser }) => void;
@@ -137,15 +137,6 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
     setPage(1);
   };
 
-  const handleToggleActive = async (u: AdminUser) => {
-    try {
-      await adminApi.updateUser(u.id, { isActive: !u.isActive });
-      fetchUsers();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("manage.updateUserFailed"));
-    }
-  };
-
   const totalPages = Math.ceil(total / limit);
 
   const sortableHeaders = [
@@ -169,14 +160,6 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
       key="role"
       label={t("manage.tableRole")}
       field="role"
-      currentField={sortField}
-      currentDir={sortDir}
-      onSort={handleSort}
-    />,
-    <SortHeader
-      key="status"
-      label={t("manage.tableStatus")}
-      field="isActive"
       currentField={sortField}
       currentDir={sortDir}
       onSort={handleSort}
@@ -266,7 +249,6 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
           t("manage.tableName"),
           t("manage.tableEmail"),
           t("manage.tableRole"),
-          t("manage.tableStatus"),
           t("manage.tableCreated"),
           t("manage.tableActions"),
         ]}
@@ -344,27 +326,6 @@ export function UsersTable({ openModal, refreshKey }: UsersTableProps) {
                 label={u.role || "student"}
                 color={ROLE_COLORS[u.role || "student"] || ROLE_COLORS.student}
               />
-            </div>
-
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (session && u.id !== session.user.id) handleToggleActive(u);
-                }}
-                title={t("manage.toggleActive")}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-secondary)",
-                  cursor: session && u.id !== session.user.id ? "pointer" : "default",
-                  padding: 0,
-                  font: "inherit",
-                  fontSize: "0.8rem",
-                }}
-              >
-                {u.isActive && !u.banned ? "Yes" : "No"}
-              </button>
             </div>
 
             <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>
