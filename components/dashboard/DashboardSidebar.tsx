@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderOpen, HardDrive, Languages, Music } from "lucide-react";
+import { FolderOpen, HardDrive, Languages, Music, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
@@ -81,6 +81,7 @@ export function DashboardSidebar({
 
   const storageLimit = 1024 * 1024 * 1024; // 1GB
   const usedPercentage = Math.min((storageUsed / storageLimit) * 100, 100);
+  const androidApkUrl = process.env.NEXT_PUBLIC_ANDROID_APK_URL;
 
   const formatSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -161,6 +162,39 @@ export function DashboardSidebar({
               limit: formatSize(storageLimit),
             })}
           </p>
+
+          {androidApkUrl && (
+            <a
+              href={androidApkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 12,
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-secondary)",
+                fontSize: "0.75rem",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "background 0.15s, border-color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--bg-tertiary)";
+                e.currentTarget.style.borderColor = "var(--accent-purple)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "var(--border-subtle)";
+              }}
+            >
+              <Smartphone size={14} style={{ color: "var(--accent-purple)" }} />
+              {t("sidebar.downloadAndroid")}
+            </a>
+          )}
         </div>
       </div>
     </aside>

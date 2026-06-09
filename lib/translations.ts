@@ -55,6 +55,7 @@ export const defaultTranslations: Record<string, string> = {
   "sidebar.translations": "Translations",
   "sidebar.storage": "Storage",
   "sidebar.storageUsed": "{used} of {limit} used",
+  "sidebar.downloadAndroid": "Download Android app",
   "sidebar.video": "Video",
   "sidebar.participants": "Participants",
   "sidebar.files": "Files",
