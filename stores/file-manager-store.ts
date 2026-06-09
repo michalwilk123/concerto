@@ -34,6 +34,7 @@ interface FileManagerState {
   fetchContents: (folderId?: string | null) => Promise<void>;
   fetchStorage: (groupId?: string) => Promise<void>;
   uploadFile: (file: File, folderId?: string | null) => Promise<void>;
+  addUploadedFile: (file: FileWithUrl) => void;
   deleteFile: (id: string) => Promise<void>;
   renameFile: (id: string, name: string) => Promise<void>;
   renameFolder: (id: string, name: string) => Promise<void>;
@@ -146,6 +147,12 @@ export const useFileManagerStore = create<FileManagerState>((set, get) => ({
     await get().fetchContents(get().currentFolderId);
     if (!currentMeetingId) await get().fetchStorage();
   },
+
+  // Show a freshly uploaded file in the current folder's list immediately,
+  // without waiting for the reconciling fetchContents() round-trip. Deduped by
+  // id so the later refetch (which may reorder/enrich) is idempotent.
+  addUploadedFile: (file) =>
+    set({ files: [...get().files.filter((f) => f.id !== file.id), file] }),
 
   deleteFile: async (id) => {
     const { currentMeetingId } = get();

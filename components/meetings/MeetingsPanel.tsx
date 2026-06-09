@@ -29,8 +29,9 @@ import {
 // Column tracks sum to 920 so the table lines up with the manage tables
 // (920 + 40px padding === MANAGE_TABLE_MIN_WIDTH). The two setting selects only
 // hold short values (Yes/No, Anyone/Group only), so their columns are narrow and
-// the freed width goes to the Name column.
-const MEETINGS_TABLE_COLUMNS = "380px 150px 100px 100px 190px";
+// the freed width goes to the Name column. The "Needs approval" column gets a bit
+// more width so its header stays on one line.
+const MEETINGS_TABLE_COLUMNS = "350px 150px 130px 100px 190px";
 
 // Fixed width for the two setting selects so they hug their short values
 // (Yes/No, Anyone/Group only) instead of stretching to fill the column.
@@ -247,7 +248,13 @@ function MeetingRow({
       isLast={isLast}
       style={{
         cursor: onSelect ? "pointer" : undefined,
-        background: isSelected ? "var(--bg-tertiary)" : undefined,
+        // Selected rows use the app's purple accent (see EntityListRow) rather than
+        // bg-tertiary, which matches the table header and made selection invisible.
+        // Inset box-shadow draws the purple outline without shifting the grid layout.
+        background: isSelected
+          ? "color-mix(in srgb, var(--accent-purple) 10%, transparent)"
+          : undefined,
+        boxShadow: isSelected ? "inset 0 0 0 1px var(--accent-purple)" : undefined,
       }}
     >
       <Typography variant="bodySm" weight={500} truncate>

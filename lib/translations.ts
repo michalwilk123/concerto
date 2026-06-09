@@ -49,6 +49,7 @@ export const defaultTranslations: Record<string, string> = {
   // Sidebar
   "sidebar.myFiles": "My Files",
   "sidebar.meetings": "Meetings",
+  "sidebar.group": "Group",
   "sidebar.recordings": "Recordings",
   "sidebar.manage": "Manage",
   "sidebar.translations": "Translations",
@@ -63,6 +64,7 @@ export const defaultTranslations: Record<string, string> = {
 
   // Breadcrumbs
   "breadcrumbs.myFiles": "My Files",
+  "breadcrumbs.parent": "Parent",
 
   // Files
   "files.newFolder": "New Folder",
@@ -164,6 +166,7 @@ export const defaultTranslations: Record<string, string> = {
   "recordings.retentionInfo": "Recordings are kept for {days} days.",
   "recordings.daysLeft": "{days} days left",
   "recordings.playTitle": "Play recording",
+  "recordings.download": "Download",
   "recordings.downloadTitle": "Download recording",
   "recordings.englishCaptions": "English captions",
   "recordings.closePlayer": "Close player",
@@ -251,6 +254,7 @@ export const defaultTranslations: Record<string, string> = {
 
   // Manage panel
   "manage.title": "Manage",
+  "manage.back": "Back to dashboard",
   "manage.groupsTitle": "Groups",
   "manage.usersTitle": "Users",
   "manage.usersRegistered": "{total} user(s) registered",

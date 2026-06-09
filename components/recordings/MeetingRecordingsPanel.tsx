@@ -14,6 +14,8 @@ import type { Recording } from "@/types/recording";
 interface MeetingRecordingsPanelProps {
   meetingId: string;
   groupId: string;
+  /** When the panel is kept mounted but hidden, set false to stop playback. */
+  active?: boolean;
 }
 
 const RECORDING_RETENTION_DAYS = 6;
@@ -44,7 +46,11 @@ function getDaysLeft(lastModifiedIso: string): number {
   return Math.max(0, Math.ceil(remainingMs / DAY_MS));
 }
 
-export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordingsPanelProps) {
+export function MeetingRecordingsPanel({
+  meetingId,
+  groupId,
+  active = true,
+}: MeetingRecordingsPanelProps) {
   const { t } = useTranslation();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +65,11 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
       .catch(() => setRecordings([]))
       .finally(() => setIsLoading(false));
   }, [groupId, meetingId]);
+
+  // Stop playback when the panel is hidden (kept mounted for background fetch).
+  useEffect(() => {
+    if (!active) setPlayingUrl(null);
+  }, [active]);
 
   if (isLoading) {
     return <LoadingIndicator message={t("recordings.loadingMessage")} size={20} minHeight={80} />;
@@ -160,14 +171,14 @@ export function MeetingRecordingsPanel({ meetingId, groupId }: MeetingRecordings
                   items={[
                     {
                       id: "download",
-                      label: t("recordings.downloadTitle"),
+                      label: t("recordings.download"),
                       ariaLabel: t("recordings.downloadTitle"),
                       quiet: true,
                       asChild: true,
                       children: (
                         <a href={rec.url} download>
                           <Download size={14} />
-                          <span>{t("recordings.downloadTitle")}</span>
+                          <span>{t("recordings.download")}</span>
                         </a>
                       ),
                     },

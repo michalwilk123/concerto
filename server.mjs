@@ -82,7 +82,10 @@ function broadcast(payload) {
   }
   for (const client of clients) {
     if (client.readyState !== client.OPEN) continue;
-    if (meetingId && client.meetingId && client.meetingId !== meetingId) continue;
+    // Room-scoped delivery: a room message goes only to sockets joined to that
+    // room. Sockets with no room joined (idle persistent connections) receive
+    // nothing until they send a `join`.
+    if (meetingId && client.meetingId !== meetingId) continue;
     client.send(payload);
   }
 }
@@ -233,8 +236,13 @@ async function main() {
     ws.on("message", (data) => {
       try {
         const msg = JSON.parse(data.toString());
+        // A single persistent socket switches rooms over its lifetime: `join`
+        // subscribes it to a meeting, `leave` unsubscribes (so it stops
+        // receiving that room's messages without closing the connection).
         if (msg.type === "join" && typeof msg.meetingId === "string") {
           ws.meetingId = msg.meetingId;
+        } else if (msg.type === "leave") {
+          ws.meetingId = null;
         }
       } catch {
         // ignore malformed messages

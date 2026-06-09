@@ -49,8 +49,9 @@ export function UnifiedFileList({
   onSelectAll,
 }: UnifiedFileListProps) {
   const { t } = useTranslation();
-  // Inline tree is only enabled in the non-compact dashboard view.
-  const treeEnabled = !compact && !!expandedFolders && !!folderChildren && !!onToggleExpand;
+  // Inline tree is enabled wherever the expand props are supplied — including the
+  // compact meeting browsers, not just the non-compact dashboard view.
+  const treeEnabled = !!expandedFolders && !!folderChildren && !!onToggleExpand;
 
   const isEmpty = folders.length === 0 && files.length === 0;
   const allKeys = [
@@ -88,7 +89,9 @@ export function UnifiedFileList({
     paddingTop: 6,
     paddingBottom: 6,
     paddingRight: 8,
-    paddingLeft: 8 + depth * 16 + 34,
+    // Align under child names: chevron+icon offset, plus the checkbox column when
+    // it's shown (non-compact only).
+    paddingLeft: 8 + depth * 16 + (compact ? 26 : 34),
     fontSize: "0.8125rem",
     color: "var(--text-tertiary)",
   });
@@ -101,6 +104,7 @@ export function UnifiedFileList({
       isSelected={selectedItems.has(`file:${file.id}`)}
       readOnly={readOnly}
       compact={compact}
+      tree
       depth={depth}
       onCheckboxChange={(e) => onToggleSelect(`file:${file.id}`, e)}
       onClick={() => onPreviewFile(file)}
@@ -123,6 +127,7 @@ export function UnifiedFileList({
           isSelected={selectedItems.has(`folder:${folder.id}`)}
           readOnly={readOnly}
           compact={compact}
+          tree
           depth={depth}
           expanded={expanded}
           childrenLoading={!!child?.loading}

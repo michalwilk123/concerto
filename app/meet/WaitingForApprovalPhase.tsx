@@ -20,7 +20,7 @@ export default function WaitingForApprovalPhase({ onBack }: WaitingForApprovalPh
         background: "var(--bg-primary)",
       }}
     >
-      <AppHeader mode="app" />
+      <AppHeader mode="meet" />
       <div
         style={{
           flex: 1,

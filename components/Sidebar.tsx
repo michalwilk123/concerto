@@ -29,7 +29,7 @@ export default function Sidebar({
   onTabChange,
   isOpen,
 }: SidebarProps) {
-  const { role, meetingId, groupId, participantName } = useRoomStore();
+  const { role, meetingId, groupId } = useRoomStore();
   const { t } = useTranslation();
   const { waiting, removeParticipant } = useWaitingRoom(meetingId ?? "", role);
 
@@ -87,11 +87,7 @@ export default function Sidebar({
             minHeight: 0,
           }}
         >
-          <MeetChatPanel
-            key={`chat-${meetingId}-${participantName ?? "anon"}`}
-            meetingId={meetingId}
-            participantName={participantName}
-          />
+          <MeetChatPanel />
         </div>
       )}
       {activeTab === "waitingRoom" && meetingId && (

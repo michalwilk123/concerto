@@ -3,6 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { type FormEvent, Suspense, useEffect, useRef, useState } from "react";
+import { AppHeader } from "@/components/AppHeader";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import VideoRoom from "@/components/VideoRoom";
 import { roomApi } from "@/lib/api-client";
@@ -280,7 +281,23 @@ function MeetContent() {
   }
 
   if (phase === "joining" || phase === "guestJoining" || phase === "init") {
-    return <LoadingIndicator fullscreen message={t("room.joining")} />;
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100vh",
+          background: "var(--bg-primary)",
+        }}
+      >
+        <AppHeader mode="meet" />
+        <LoadingIndicator
+          message={t("room.joining")}
+          minHeight="100%"
+          containerStyle={{ flex: 1 }}
+        />
+      </div>
+    );
   }
 
   if (phase === "waitingForHost") {

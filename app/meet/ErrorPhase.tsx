@@ -22,7 +22,7 @@ export default function ErrorPhase({ message, onRetry, onBack }: ErrorPhaseProps
         background: "var(--bg-primary)",
       }}
     >
-      <AppHeader mode="app" />
+      <AppHeader mode="meet" />
       <div
         style={{
           flex: 1,

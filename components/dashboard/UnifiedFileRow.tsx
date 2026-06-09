@@ -25,6 +25,8 @@ interface UnifiedFileRowProps {
   isDragOverlay?: boolean;
   readOnly: boolean;
   compact?: boolean;
+  /** Render inline tree controls (expand chevron + per-depth indent) regardless of `compact`. */
+  tree?: boolean;
   depth?: number;
   expanded?: boolean;
   childrenLoading?: boolean;
@@ -56,6 +58,7 @@ export function UnifiedFileRow({
   isDragOverlay = false,
   readOnly,
   compact = false,
+  tree,
   depth = 0,
   expanded = false,
   childrenLoading = false,
@@ -202,9 +205,11 @@ export function UnifiedFileRow({
 
   const showActions = !readOnly && !isEditing;
 
-  // Inline tree controls (non-compact only): per-depth indent plus an expand
-  // chevron for folders, or a matching spacer for files so names stay aligned.
-  const showTreeControls = !compact;
+  // Inline tree controls: per-depth indent plus an expand chevron for folders,
+  // or a matching spacer for files so names stay aligned. Driven by the explicit
+  // `tree` flag when provided (so the compact meeting browsers can be trees too);
+  // otherwise defaults to the non-compact dashboard behavior.
+  const showTreeControls = tree ?? !compact;
   const Chevron = expanded ? ChevronDown : ChevronRight;
   const chevronOrSpacer = !showTreeControls ? null : isFolder && onToggleExpand ? (
     <button

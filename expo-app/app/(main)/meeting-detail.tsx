@@ -64,12 +64,14 @@ export default function MeetingDetailScreen() {
     setFilesLoading(false);
   }, [meetingId]);
 
+  // Preload the file list when the meeting opens (not when the Files tab is
+  // first tapped) so switching to Files is instant.
   useEffect(() => {
-    if (activeTab === "files" && !filesFetchedRef.current) {
+    if (!filesFetchedRef.current) {
       filesFetchedRef.current = true;
       loadFiles();
     }
-  }, [activeTab, loadFiles]);
+  }, [loadFiles]);
 
   const handleFilePress = useCallback(
     async (file: FileWithUrl) => {
@@ -153,8 +155,12 @@ export default function MeetingDetailScreen() {
         </View>
       )}
 
-      {activeTab === "chat" && meetingId && token && (
-        <ChatPanel meetingId={meetingId} authToken={token} />
+      {/* Mounted as soon as the meeting opens (hidden when inactive) so the chat
+          WebSocket connects + history loads in the background. */}
+      {meetingId && token && (
+        <View style={[styles.tabPanel, activeTab !== "chat" && styles.hidden]}>
+          <ChatPanel meetingId={meetingId} authToken={token} />
+        </View>
       )}
 
       {activeTab === "files" && (
@@ -211,6 +217,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,
+  },
+  tabPanel: {
+    flex: 1,
+  },
+  hidden: {
+    display: "none",
   },
   backBar: {
     backgroundColor: colors.bgSecondary,

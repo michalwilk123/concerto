@@ -19,14 +19,16 @@ import {
 } from "@cloudflare/realtimekit-react-ui";
 import { LogOut, Settings as SettingsIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ChatProvider } from "@/components/chat/ChatProvider";
 import { MeetChatPanel } from "@/components/chat/MeetChatPanel";
-import { ButtonGroup } from "@/components/ui/button-group";
 import { FileBrowserPanel } from "@/components/files/FileBrowserPanel";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useWaitingRoom } from "@/hooks/useWaitingRoom";
 import { meetingsApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
+import { useFileManagerStore } from "@/stores/file-manager-store";
 import { useRoomStore } from "@/stores/room-store";
 import type { Role, RoomParticipant } from "@/types/room";
 import { isTeacher, presetToRole } from "@/types/room";
@@ -108,6 +110,18 @@ function RoomContent({
     initialize(meetingId, participantName, role, groupId);
   }, [meetingId, participantName, role, groupId, initialize]);
 
+  // Preload the meeting file list at meeting start so opening the Files tab is
+  // instant. The store persists across panel unmounts and FileBrowserPanel skips
+  // its own fetch when currentMeetingId already matches.
+  useEffect(() => {
+    if (!meetingId) return;
+    const store = useFileManagerStore.getState();
+    if (store.currentMeetingId !== meetingId) {
+      store.setCurrentMeetingId(meetingId);
+      store.fetchContents(null);
+    }
+  }, [meetingId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -184,191 +198,193 @@ function RoomContent({
   }, [recordingState, t, toast]);
 
   return (
-    <div
-      style={{
-        height: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg-primary)",
-      }}
-    >
-      {!mobileMode && (
-        <AppHeader
-          mode="room"
-          meetingId={meetingId}
-          roomDescription={roomDescription}
-          onRoomDescriptionChange={setRoomDescription}
-          participantName={participantName}
-          participantRole={currentRole}
-          canEditDescription={isAdmin}
-          onRoomDescriptionBlur={persistMeetingName}
-          sidebarOpen={sidebarOpen}
-          onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-          onCopyLink={copyRoomLink}
-        />
-      )}
-
+    <ChatProvider meetingId={meetingId} participantName={participantName}>
       <div
         style={{
-          flex: 1,
+          height: "100dvh",
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          overflow: "hidden",
+          flexDirection: "column",
+          background: "var(--bg-primary)",
         }}
       >
+        {!mobileMode && (
+          <AppHeader
+            mode="room"
+            meetingId={meetingId}
+            roomDescription={roomDescription}
+            onRoomDescriptionChange={setRoomDescription}
+            participantName={participantName}
+            participantRole={currentRole}
+            canEditDescription={isAdmin}
+            onRoomDescriptionBlur={persistMeetingName}
+            sidebarOpen={sidebarOpen}
+            onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
+            onCopyLink={copyRoomLink}
+          />
+        )}
+
         <div
           style={{
             flex: 1,
             display: "flex",
-            flexDirection: "column",
+            flexDirection: isMobile ? "column" : "row",
             overflow: "hidden",
-            minWidth: 0,
           }}
         >
-          {/* Video grid — hidden via display:none when viewing a tab on mobile */}
           <div
             style={{
               flex: 1,
+              display: "flex",
+              flexDirection: "column",
               overflow: "hidden",
-              display: isMobile && activeTab !== "video" ? "none" : "block",
+              minWidth: 0,
             }}
           >
-            <div style={{ position: "relative", height: "100%", width: "100%" }}>
-              <RtkGrid meeting={meeting} style={{ height: "100%", width: "100%" }} />
-              <div
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  right: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  zIndex: 10,
-                }}
-              >
-                <RtkRecordingIndicator meeting={meeting} />
-                {canRecord ? (
-                  <RtkRecordingToggle
-                    meeting={meeting}
-                    onRtkApiError={(event) => {
-                      const detail = event?.detail;
-                      const message = detail?.message || t("video.recordingStateFailed");
-                      toast.error(message);
-                    }}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile tab panels */}
-          {isMobile && activeTab === "participants" && (
-            <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-              <ParticipantMenu participants={sidebarParticipants} />
-            </div>
-          )}
-          {isMobile && activeTab === "files" && meetingId && groupId && (
-            <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-              <FileBrowserPanel
-                key={`files-${meetingId}`}
-                meetingId={meetingId}
-                groupId={groupId}
-                allowManage={isTeacherRole}
-                showCreateFolderButton={isTeacherRole}
-                compact
-                ancestors={[]}
-              />
-            </div>
-          )}
-          {isMobile && activeTab === "waitingRoom" && meetingId && (
-            <WaitingRoomPanel
-              meetingId={meetingId}
-              waiting={waiting}
-              onParticipantHandled={removeParticipant}
-            />
-          )}
-          {/* Mobile chat — always mounted to preserve WebSocket */}
-          {isMobile && meetingId && (
+            {/* Video grid — hidden via display:none when viewing a tab on mobile */}
             <div
               style={{
-                flex: activeTab === "chat" ? 1 : 0,
-                display: activeTab === "chat" ? "flex" : "none",
-                minHeight: 0,
+                flex: 1,
+                overflow: "hidden",
+                display: isMobile && activeTab !== "video" ? "none" : "block",
               }}
             >
-              <MeetChatPanel meetingId={meetingId} participantName={participantName} />
+              <div style={{ position: "relative", height: "100%", width: "100%" }}>
+                <RtkGrid meeting={meeting} style={{ height: "100%", width: "100%" }} />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    right: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    zIndex: 10,
+                  }}
+                >
+                  <RtkRecordingIndicator meeting={meeting} />
+                  {canRecord ? (
+                    <RtkRecordingToggle
+                      meeting={meeting}
+                      onRtkApiError={(event) => {
+                        const detail = event?.detail;
+                        const message = detail?.message || t("video.recordingStateFailed");
+                        toast.error(message);
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Mobile tab bar */}
-          {isMobile && (
-            <MobileTabBar
+            {/* Mobile tab panels */}
+            {isMobile && activeTab === "participants" && (
+              <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+                <ParticipantMenu participants={sidebarParticipants} />
+              </div>
+            )}
+            {isMobile && activeTab === "files" && meetingId && groupId && (
+              <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+                <FileBrowserPanel
+                  key={`files-${meetingId}`}
+                  meetingId={meetingId}
+                  groupId={groupId}
+                  allowManage={isTeacherRole}
+                  showCreateFolderButton={isTeacherRole}
+                  compact
+                  ancestors={[]}
+                />
+              </div>
+            )}
+            {isMobile && activeTab === "waitingRoom" && meetingId && (
+              <WaitingRoomPanel
+                meetingId={meetingId}
+                waiting={waiting}
+                onParticipantHandled={removeParticipant}
+              />
+            )}
+            {/* Mobile chat — always mounted to preserve WebSocket */}
+            {isMobile && meetingId && (
+              <div
+                style={{
+                  flex: activeTab === "chat" ? 1 : 0,
+                  display: activeTab === "chat" ? "flex" : "none",
+                  minHeight: 0,
+                }}
+              >
+                <MeetChatPanel />
+              </div>
+            )}
+
+            {/* Mobile tab bar */}
+            {isMobile && (
+              <MobileTabBar
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                isTeacher={isTeacherRole}
+                waitingCount={waiting.length}
+              />
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                padding: "12px 0",
+                background: "var(--bg-secondary)",
+              }}
+            >
+              <RtkMicToggle meeting={meeting} size="md" />
+              <RtkCameraToggle meeting={meeting} size="md" />
+              <RtkScreenShareToggle meeting={meeting} size="md" />
+              <ButtonGroup
+                variant="toolbar"
+                items={[
+                  {
+                    id: "settings",
+                    label: t("video.settings"),
+                    icon: <SettingsIcon size={16} />,
+                    onClick: () => setSettingsOpen(true),
+                  },
+                  {
+                    id: "leave",
+                    label: t("video.leave"),
+                    icon: <LogOut size={16} />,
+                    tone: "danger",
+                    onClick: async () => {
+                      if (isTeacherRole) {
+                        await onEndMeeting();
+                      } else {
+                        meeting.leaveRoom();
+                        onLeave();
+                      }
+                    },
+                  },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Desktop sidebar — not rendered on mobile */}
+          {!isMobile && (
+            <Sidebar
+              participants={sidebarParticipants}
+              onClose={() => setSidebarOpen(false)}
               activeTab={activeTab}
               onTabChange={setActiveTab}
-              isTeacher={isTeacherRole}
-              waitingCount={waiting.length}
+              isOpen={sidebarOpen}
             />
           )}
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              padding: "12px 0",
-              background: "var(--bg-secondary)",
-            }}
-          >
-            <RtkMicToggle meeting={meeting} size="md" />
-            <RtkCameraToggle meeting={meeting} size="md" />
-            <RtkScreenShareToggle meeting={meeting} size="md" />
-            <ButtonGroup
-              variant="toolbar"
-              items={[
-                {
-                  id: "settings",
-                  label: t("video.settings"),
-                  icon: <SettingsIcon size={16} />,
-                  onClick: () => setSettingsOpen(true),
-                },
-                {
-                  id: "leave",
-                  label: t("video.leave"),
-                  icon: <LogOut size={16} />,
-                  tone: "danger",
-                  onClick: async () => {
-                    if (isTeacherRole) {
-                      await onEndMeeting();
-                    } else {
-                      meeting.leaveRoom();
-                      onLeave();
-                    }
-                  },
-                },
-              ]}
-            />
-          </div>
         </div>
 
-        {/* Desktop sidebar — not rendered on mobile */}
-        {!isMobile && (
-          <Sidebar
-            participants={sidebarParticipants}
-            onClose={() => setSidebarOpen(false)}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            isOpen={sidebarOpen}
-          />
-        )}
+        <RtkDialog open={settingsOpen} onRtkDialogClose={() => setSettingsOpen(false)}>
+          <RtkSettings meeting={meeting} />
+        </RtkDialog>
+        {hasAudioOutput ? <RtkParticipantsAudio meeting={meeting} /> : null}
       </div>
-
-      <RtkDialog open={settingsOpen} onRtkDialogClose={() => setSettingsOpen(false)}>
-        <RtkSettings meeting={meeting} />
-      </RtkDialog>
-      {hasAudioOutput ? <RtkParticipantsAudio meeting={meeting} /> : null}
-    </div>
+    </ChatProvider>
   );
 }
 
@@ -446,7 +462,7 @@ export default function VideoRoom(props: VideoRoomProps) {
         cancelled = true;
       };
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryKey]);
 
   useEffect(() => {

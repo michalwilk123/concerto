@@ -15,6 +15,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { BulkActionBar } from "@/components/dashboard/BulkActionBar";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
+import { ParentDirButton } from "@/components/dashboard/ParentDirButton";
 import { CreateFolderModal } from "@/components/dashboard/CreateFolderModal";
 import { FileUploader } from "@/components/dashboard/FileUploader";
 import { LoadingSkeleton } from "@/components/dashboard/LoadingSkeleton";
@@ -86,6 +87,7 @@ export function FileBrowserPanel({
     setCurrentFolderId,
     setPreviewFile,
     fetchContents,
+    addUploadedFile,
     deleteFile,
     renameFile,
     renameFolder,
@@ -158,9 +160,9 @@ export function FileBrowserPanel({
     files.forEach((file) => keys.push(`file:${file.id}`));
     return keys;
   };
-  const allKeys = effectiveCompact
-    ? [...folders.map((f) => `folder:${f.id}`), ...files.map((f) => `file:${f.id}`)]
-    : buildVisibleKeys();
+  // Walk the visible tree (incl. expanded children) so range/select-all match
+  // what's on screen — the browsers are now expandable trees even when compact.
+  const allKeys = buildVisibleKeys();
 
   const handleNavigateToFolder = async (folderId: string | null) => {
     if (meetingId) {
@@ -182,7 +184,9 @@ export function FileBrowserPanel({
     }
   };
 
-  const handleUploadComplete = () => {
+  const handleUploadComplete = (file: FileWithUrl) => {
+    // Show it right away, then reconcile order/metadata from the server.
+    addUploadedFile(file);
     fetchContents(activeFolderId);
     toast.success(t("files.uploadSuccess"));
   };
@@ -349,12 +353,20 @@ export function FileBrowserPanel({
               overflow: "hidden",
             }}
           >
-            <Breadcrumbs
-              groupId={groupId}
-              ancestors={activeAncestors}
-              compact={effectiveCompact}
-              onNavigate={meetingId ? (folderId) => handleNavigateToFolder(folderId) : undefined}
-            />
+            {meetingId ? (
+              <ParentDirButton
+                ancestors={activeAncestors}
+                compact={effectiveCompact}
+                onNavigate={(folderId) => handleNavigateToFolder(folderId)}
+              />
+            ) : (
+              <Breadcrumbs
+                groupId={groupId}
+                ancestors={activeAncestors}
+                compact={effectiveCompact}
+                onNavigate={undefined}
+              />
+            )}
             {(canUpload || allowManage) && (
               <div
                 style={{

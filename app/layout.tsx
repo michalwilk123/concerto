@@ -1,4 +1,5 @@
 import "./globals.css";
+import { ChatSocketProvider } from "@/components/chat/ChatSocketProvider";
 import { ToastProvider } from "@/components/Toast";
 import { TranslationProvider } from "@/components/TranslationProvider";
 import { resolveLocale } from "@/lib/locale";
@@ -31,7 +32,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             rtl: l.rtl,
           }))}
         >
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <ChatSocketProvider>{children}</ChatSocketProvider>
+          </ToastProvider>
         </TranslationProvider>
         <div id="portal-root" />
       </body>

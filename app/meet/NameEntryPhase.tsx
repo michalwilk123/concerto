@@ -32,7 +32,7 @@ export default function NameEntryPhase({
         background: "var(--bg-primary)",
       }}
     >
-      <AppHeader mode="app" />
+      <AppHeader mode="meet" />
       <div
         style={{
           flex: 1,

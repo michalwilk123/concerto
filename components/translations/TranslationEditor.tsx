@@ -9,6 +9,7 @@ import {
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogIconHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +88,8 @@ export function TranslationEditor({
 
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
-  const [isRenamingLanguage, setIsRenamingLanguage] = useState(false);
+  // The language's display name is edited inline and saved through the same
+  // dirty/diff/floating-save flow as the translation overrides below.
   const [languageLabel, setLanguageLabel] = useState(locale.label);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -166,7 +168,11 @@ export function TranslationEditor({
     () => diffOverrides(original, overrides),
     [original, overrides],
   );
-  const isDirty = changes.length > 0;
+  const trimmedLabel = languageLabel.trim();
+  // The display-name edit counts as a change too, on equal footing with overrides.
+  const labelChanged = !isReadOnly && trimmedLabel !== "" && trimmedLabel !== locale.label;
+  const totalCount = changes.length + (labelChanged ? 1 : 0);
+  const isDirty = totalCount > 0;
   const showSave = isDirty && !isReadOnly;
 
   // Warn on tab close while there are unsaved changes.
@@ -189,17 +195,12 @@ export function TranslationEditor({
   }, [isDirty, isReadOnly, onBack]);
 
   const handleConfirmSave = useCallback(async () => {
-    await onSave({ ...locale, overrides });
-    setOriginal({ ...overrides });
+    const nextLabel = languageLabel.trim() || locale.label;
     setSummaryOpen(false);
-  }, [onSave, locale, overrides]);
-
-  const handleRenameLanguage = useCallback(async () => {
-    const trimmed = languageLabel.trim();
-    if (!trimmed) return;
-    await onSave({ ...locale, label: trimmed, overrides });
-    setIsRenamingLanguage(false);
-  }, [languageLabel, locale, onSave, overrides]);
+    await onSave({ ...locale, label: nextLabel, overrides });
+    setOriginal({ ...overrides });
+    setLanguageLabel(nextLabel);
+  }, [onSave, locale, overrides, languageLabel]);
 
   // ── TEMP styling diagnosis (outliers only) ──────────────────────────────
   const rootRef = useRef<HTMLDivElement>(null);
@@ -280,67 +281,31 @@ export function TranslationEditor({
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 8,
+            flexDirection: "column",
+            gap: 4,
             marginBottom: 12,
           }}
         >
-          {isRenamingLanguage ? (
-            <>
-              <TextInput
-                autoFocus
-                value={languageLabel}
-                onChange={(e) => setLanguageLabel(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleRenameLanguage();
-                  if (e.key === "Escape") {
-                    setLanguageLabel(locale.label);
-                    setIsRenamingLanguage(false);
-                  }
-                }}
-                style={{ width: "min(360px, 100%)", fontSize: "0.9rem" }}
-              />
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={!languageLabel.trim() || languageLabel.trim() === locale.label}
-                onClick={() => void handleRenameLanguage()}
-                style={{ flexShrink: 0 }}
-              >
-                {t("manage.saveChanges")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setLanguageLabel(locale.label);
-                  setIsRenamingLanguage(false);
-                }}
-                style={{ flexShrink: 0 }}
-              >
-                {t("confirmDialog.cancel")}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Typography as="h2" variant="titleMd" style={{ minWidth: 0 }}>
-                {t("translations.editingTitle", { label: locale.label })}
-              </Typography>
-              {!isReadOnly && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setLanguageLabel(locale.label);
-                    setIsRenamingLanguage(true);
-                  }}
-                  style={{ flexShrink: 0 }}
-                >
-                  {t("translations.rename")}
-                </Button>
-              )}
-            </>
-          )}
+          <label
+            htmlFor="language-name-input"
+            style={{
+              fontSize: "0.7rem",
+              color: "var(--text-tertiary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {t("translations.labelLabel")}
+          </label>
+          <TextInput
+            id="language-name-input"
+            value={languageLabel}
+            onChange={(e) => setLanguageLabel(e.target.value)}
+            placeholder={locale.label}
+            disabled={isReadOnly}
+            aria-label={t("translations.labelLabel")}
+            style={{ width: "min(360px, 100%)", fontSize: "1rem", fontWeight: 600 }}
+          />
         </div>
 
         {isReadOnly && (
@@ -514,7 +479,7 @@ export function TranslationEditor({
             loading={isSaving}
             style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.25)" }}
           >
-            {t("translations.saveCount", { count: String(changes.length) })}
+            {t("translations.saveCount", { count: String(totalCount) })}
           </Button>
         </div>
       )}
@@ -523,12 +488,12 @@ export function TranslationEditor({
       <AlertDialog open={summaryOpen} onOpenChange={setSummaryOpen}>
         <AlertDialogContent className="max-w-[520px]">
           <div style={{ padding: "20px 24px 0" }}>
-            <Typography as="h3" variant="titleMd">
+            <AlertDialogTitle>
               {t("translations.summaryTitle", {
-                count: String(changes.length),
+                count: String(totalCount),
                 label: locale.label,
               })}
-            </Typography>
+            </AlertDialogTitle>
           </div>
           <div
             style={{
@@ -539,6 +504,25 @@ export function TranslationEditor({
               gap: 8,
             }}
           >
+            {labelChanged && (
+              <div
+                style={{
+                  fontSize: "0.8125rem",
+                  fontFamily: "var(--font-mono, monospace)",
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ color: "var(--text-tertiary)" }}>
+                  {t("translations.labelLabel")}:
+                </span>
+                <span style={{ color: "var(--text-secondary)" }}>{locale.label}</span>
+                <span style={{ color: "var(--text-tertiary)" }}>→</span>
+                <span style={{ color: "var(--text-primary)" }}>{trimmedLabel}</span>
+              </div>
+            )}
             {changes.map((change) => (
               <div
                 key={change.key}
@@ -594,7 +578,7 @@ export function TranslationEditor({
             variant="warning"
             title={t("translations.unsavedTitle")}
             description={t("translations.unsavedMessage", {
-              count: String(changes.length),
+              count: String(totalCount),
             })}
           />
           <AlertDialogFooter>

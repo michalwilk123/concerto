@@ -102,33 +102,48 @@ export function DashboardSidebar({
       }}
     >
       <nav style={{ flex: 1, padding: "0 8px" }}>
-        {groups.length > 1 && (
-          <div style={{ padding: "0 4px", marginBottom: 12 }}>
-            <Select value={groupId} onValueChange={(v) => router.push(buildDashboardUrl(v))}>
-              <SelectTrigger variant="compact" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {groups.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        <ButtonGroup
-          variant="nav"
-          orientation="vertical"
-          collapse="never"
-          activeId={activeItem}
-          items={navItems}
-        />
+        <div>
+          {groups.length > 1 && (
+            <div style={{ padding: "0 4px", marginBottom: 12 }}>
+              <div
+                style={{
+                  margin: "0 0 6px 2px",
+                  fontSize: "0.68rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.04em",
+                  color: "var(--text-tertiary)",
+                  textTransform: "uppercase",
+                }}
+              >
+                {t("sidebar.group")}
+              </div>
+              <Select value={groupId} onValueChange={(v) => router.push(buildDashboardUrl(v))}>
+                <SelectTrigger variant="compact" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <ButtonGroup
+            variant="nav"
+            orientation="vertical"
+            collapse="never"
+            activeId={activeItem}
+            items={navItems}
+          />
+        </div>
+      </nav>
 
+      <div style={{ padding: "0 20px" }}>
         <div
           style={{
-            margin: "24px 12px",
             padding: "16px 0",
             borderTop: "1px solid var(--border-subtle)",
           }}
@@ -147,7 +162,7 @@ export function DashboardSidebar({
             })}
           </p>
         </div>
-      </nav>
+      </div>
     </aside>
   );
 }

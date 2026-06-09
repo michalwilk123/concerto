@@ -5,34 +5,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { LoadingIndicator } from "@/components/ui/loading-state";
 import { useTranslation } from "@/hooks/useTranslation";
-import { chatApi } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
-import type { ChatMessage } from "@/types/chat";
+import { useChat } from "./ChatProvider";
 
 const ALLOWED_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
 
-function getChatSocketUrl() {
-  if (typeof window === "undefined") return "";
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${window.location.host}/ws/chat`;
-}
-
-interface MeetChatPanelProps {
-  meetingId: string;
-  participantName?: string;
-}
-
-export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps) {
+export function MeetChatPanel() {
   const toast = useToast();
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Chat connection + history live in ChatProvider (mounted at meeting level) so
+  // they persist across sidebar/tab open-close; this panel is purely presentational.
+  const {
+    messages,
+    isLoadingHistory,
+    sendMessage: sendChatMessage,
+    toggleReaction: toggleChatReaction,
+  } = useChat();
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
   const scrollToBottom = useCallback(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -44,88 +37,10 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
   const userId = session?.user.id ?? null;
   const isReadOnly = !session;
 
-  // Load history
+  // Keep the view pinned to the latest message (history + live updates).
   useEffect(() => {
-    if (!meetingId) return;
-    let mounted = true;
-
-    chatApi
-      .list(meetingId, 100, { participantName })
-      .then((history) => {
-        if (!mounted) return;
-        setMessages(history);
-        scrollToBottom();
-      })
-      .catch((error) => {
-        if (mounted) {
-          toast.error(error instanceof Error ? error.message : t("chat.loadHistoryFailed"));
-        }
-      })
-      .finally(() => {
-        if (mounted) setIsLoadingHistory(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [meetingId, participantName, scrollToBottom, t, toast]);
-
-  // WebSocket connection
-  useEffect(() => {
-    if (!meetingId) return;
-    let active = true;
-    let ws: WebSocket | null = null;
-
-    const connect = () => {
-      if (!active) return;
-      ws = new WebSocket(getChatSocketUrl());
-
-      ws.onopen = () => {
-        ws?.send(JSON.stringify({ type: "join", meetingId }));
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === "reaction_update") {
-            // Update reactions on an existing message
-            setMessages((prev) =>
-              prev.map((m) => (m.id === data.messageId ? { ...m, reactions: data.reactions } : m)),
-            );
-            return;
-          }
-
-          // Regular chat message
-          const incoming = data as ChatMessage;
-          if (incoming.meetingId !== meetingId) return;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === incoming.id)) return prev;
-            return [...prev, incoming];
-          });
-          scrollToBottom();
-        } catch {
-          // ignore malformed
-        }
-      };
-
-      ws.onclose = () => {
-        if (active) {
-          reconnectTimeoutRef.current = window.setTimeout(connect, 1200);
-        }
-      };
-    };
-
-    connect();
-
-    return () => {
-      active = false;
-      if (reconnectTimeoutRef.current) {
-        window.clearTimeout(reconnectTimeoutRef.current);
-      }
-      ws?.close();
-    };
-  }, [meetingId, scrollToBottom]);
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const canSend = useMemo(
     () => !isReadOnly && input.trim().length > 0 && !isSending,
@@ -139,11 +54,7 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
     setInput("");
 
     try {
-      const created = await chatApi.create({ content, meetingId });
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === created.id)) return prev;
-        return [...prev, created];
-      });
+      await sendChatMessage(content);
       scrollToBottom();
     } catch (error) {
       setInput(content);
@@ -156,8 +67,7 @@ export function MeetChatPanel({ meetingId, participantName }: MeetChatPanelProps
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (isReadOnly) return;
     try {
-      const { reactions } = await chatApi.toggleReaction({ messageId, emoji });
-      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+      await toggleChatReaction(messageId, emoji);
     } catch {
       // WS will update the state
     }

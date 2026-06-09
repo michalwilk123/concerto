@@ -179,7 +179,7 @@ function RecordingItem({
           <Button asChild size="sm" variant="secondary">
             <a href={recording.url} download>
               <Download size={16} />
-              {t("recordings.downloadTitle")}
+              {t("recordings.download")}
             </a>
           </Button>
         }

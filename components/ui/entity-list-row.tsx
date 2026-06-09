@@ -33,11 +33,18 @@ export function EntityListRow({
     <>
       {icon ? <div style={{ flexShrink: 0 }}>{icon}</div> : null}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body" weight={500} truncate>
+        {/* display:block is required for text-overflow ellipsis — the Typography
+            span sits inside this wrapper div, so it isn't blockified by flex. */}
+        <Typography variant="body" weight={500} truncate style={{ display: "block" }}>
           {title}
         </Typography>
         {subtitle ? (
-          <Typography variant="meta" tone="tertiary" truncate style={{ marginTop: 2 }}>
+          <Typography
+            variant="meta"
+            tone="tertiary"
+            truncate
+            style={{ marginTop: 2, display: "block" }}
+          >
             {subtitle}
           </Typography>
         ) : null}

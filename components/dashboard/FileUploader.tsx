@@ -5,13 +5,14 @@ import { useRef, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { filesApi, meetingFilesApi } from "@/lib/api-client";
+import type { FileWithUrl } from "@/types/files";
 
 interface FileUploaderProps {
   groupId: string;
   folderId?: string | null;
   meetingId?: string;
   compact?: boolean;
-  onUploadComplete?: () => void;
+  onUploadComplete?: (file: FileWithUrl) => void;
 }
 
 export function FileUploader({
@@ -28,13 +29,11 @@ export function FileUploader({
   const handleUpload = async (file: File) => {
     try {
       setUploading(true);
-      if (meetingId) {
-        await meetingFilesApi.upload({ file, meetingId, folderId });
-      } else {
-        await filesApi.upload({ file, groupId, folderId });
-      }
+      const uploaded = meetingId
+        ? await meetingFilesApi.upload({ file, meetingId, folderId })
+        : await filesApi.upload({ file, groupId, folderId });
       setUploading(false);
-      onUploadComplete?.();
+      onUploadComplete?.(uploaded);
     } catch (error) {
       console.error(t("uploader.uploadFailed"), error);
       setUploading(false);

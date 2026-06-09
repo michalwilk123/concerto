@@ -1,7 +1,10 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Link } from "@/i18n/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import { type AdminUser, adminApi, groupsApi } from "@/lib/api-client";
 import type { Group } from "@/types/group";
@@ -76,6 +79,14 @@ export function ManagePanel() {
 
   return (
     <div style={{ padding: "32px 40px" }}>
+      {/* Back to dashboard */}
+      <Button asChild variant="ghost" size="sm" className="mb-5 -ml-3 gap-2">
+        <Link href="/dashboard">
+          <ArrowLeft className="size-4" />
+          {t("manage.back")}
+        </Link>
+      </Button>
+
       {/* Tab bar */}
       <ButtonGroup
         variant="segmented"

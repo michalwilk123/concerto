@@ -109,6 +109,7 @@ function LanguageSelector() {
 
 type AppHeaderProps =
   | { mode: "app" }
+  | { mode: "meet" }
   | {
       mode: "room";
       meetingId: string;
@@ -127,10 +128,12 @@ export function AppHeader(props: AppHeaderProps) {
   if (props.mode === "room") {
     return <RoomHeader {...props} />;
   }
-  return <AppModeHeader />;
+  // The meeting flow uses a guest-safe header: logged-in users keep their usual
+  // buttons, but guests see only the logo + language selector (no Sign In/Register).
+  return <AppModeHeader showGuestAuth={props.mode === "app"} />;
 }
 
-function AppModeHeader() {
+function AppModeHeader({ showGuestAuth = true }: { showGuestAuth?: boolean }) {
   const { t } = useTranslation();
   const { data: session, isPending } = useSession();
   const user = session?.user;
@@ -237,7 +240,7 @@ function AppModeHeader() {
               {t("common.actions.logout")}
             </Button>
           </>
-        ) : (
+        ) : !showGuestAuth ? null : (
           <ButtonGroup
             ref={authRef}
             className="app-header-auth-buttons"
