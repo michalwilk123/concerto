@@ -189,38 +189,45 @@ export default function MeetingWebViewScreen() {
 
   if (phase !== "ready" || !meetingUrl) {
     return (
-      <SafeAreaView style={styles.stateContainer}>
-        <ActivityIndicator color={colors.accentPurple} size="large" />
-        <Typography variant="titleLg" style={styles.stateTitle}>
-          {phase === "waiting_for_host"
-            ? "Waiting for the host"
-            : phase === "waiting_for_approval"
-              ? "Waiting for approval"
-              : phase === "error"
-                ? "Could not open the meeting"
-                : "Joining meeting"}
-        </Typography>
-        <Typography variant="body" tone="secondary" style={styles.stateMessage}>
-          {phase === "waiting_for_host"
-            ? "The meeting room will open as soon as a teacher joins."
-            : phase === "waiting_for_approval"
-              ? "Your request is pending approval."
-              : error ?? "Preparing the meeting room and media access."}
-        </Typography>
-        {debugDetails ? (
-          <Typography variant="caption" tone="tertiary" style={styles.debugDetails}>
-            {debugDetails}
+      <SafeAreaView style={styles.stateScreen}>
+        <View style={styles.topBar}>
+          <Typography variant="titleLg" style={styles.logo}>
+            Concerto
           </Typography>
-        ) : null}
-        {phase === "error" ? (
-          <View style={styles.retryButton}>
-            <Button
-              title="Retry"
-              onPress={() => void joinMeeting()}
-              variant="primary"
-            />
-          </View>
-        ) : null}
+        </View>
+        <View style={styles.stateBody}>
+          <ActivityIndicator color={colors.accentPurple} size="large" />
+          <Typography variant="titleLg" style={styles.stateTitle}>
+            {phase === "waiting_for_host"
+              ? "Waiting for the host"
+              : phase === "waiting_for_approval"
+                ? "Waiting for approval"
+                : phase === "error"
+                  ? "Could not open the meeting"
+                  : "Joining meeting"}
+          </Typography>
+          <Typography variant="body" tone="secondary" style={styles.stateMessage}>
+            {phase === "waiting_for_host"
+              ? "The meeting room will open as soon as a teacher joins."
+              : phase === "waiting_for_approval"
+                ? "Your request is pending approval."
+                : error ?? "Preparing the meeting room and media access."}
+          </Typography>
+          {debugDetails ? (
+            <Typography variant="caption" tone="tertiary" style={styles.debugDetails}>
+              {debugDetails}
+            </Typography>
+          ) : null}
+          {phase === "error" ? (
+            <View style={styles.retryButton}>
+              <Button
+                title="Retry"
+                onPress={() => void joinMeeting()}
+                variant="primary"
+              />
+            </View>
+          ) : null}
+        </View>
       </SafeAreaView>
     );
   }
@@ -285,12 +292,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     flexDirection: "row",
   },
-  stateContainer: {
+  stateScreen: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
+  },
+  topBar: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  logo: {
+    color: colors.accentPurple,
+  },
+  stateBody: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
-    backgroundColor: colors.bgPrimary,
   },
   stateTitle: {
     marginTop: spacing.lg,

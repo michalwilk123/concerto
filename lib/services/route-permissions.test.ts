@@ -33,12 +33,6 @@ test("recordings route requires group teacher (not just member)", () => {
   assert.ok(!src.includes("requireGroupMember"), "should not use requireGroupMember");
 });
 
-test("room rejoin route requires group member (not teacher)", () => {
-  const src = readRoute("app/api/room/rejoin/route.ts");
-  assert.ok(src.includes("requireGroupMember"), "should use requireGroupMember");
-  assert.ok(!src.includes("requireGroupTeacher"), "should not use requireGroupTeacher");
-});
-
 test("file delete routes still require group teacher", () => {
   // meeting-files DELETE uses requireGroupTeacher
   const meetingFilesSrc = readRoute("app/api/meeting-files/route.ts");

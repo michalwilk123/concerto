@@ -354,38 +354,6 @@ test("POST /api/mobile/chat/reactions: rejects invalid emoji", async () => {
   assert.equal(res.status, 400);
 });
 
-// ─── POST /api/mobile/meetings/[meetingId]/rejoin ────────────────────────────
-
-test("POST /api/mobile/meetings/[meetingId]/rejoin: restores meeting room", async () => {
-  const { POST } = await import("./meetings/[meetingId]/rejoin/route");
-  const res = await POST(
-    makeReq(`/api/mobile/meetings/${MEETING_ID}/rejoin`, { method: "POST" }),
-    params({ meetingId: MEETING_ID }),
-  );
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.success, true);
-  assert.equal(data.meetingId, MEETING_ID);
-});
-
-test("POST /api/mobile/meetings/[meetingId]/rejoin: 404 for nonexistent meeting", async () => {
-  const { POST } = await import("./meetings/[meetingId]/rejoin/route");
-  const res = await POST(
-    makeReq("/api/mobile/meetings/nonexistent-mtg/rejoin", { method: "POST" }),
-    params({ meetingId: "nonexistent-mtg" }),
-  );
-  assert.equal(res.status, 404);
-});
-
-test("POST /api/mobile/meetings/[meetingId]/rejoin: rejects unauthenticated", async () => {
-  const { POST } = await import("./meetings/[meetingId]/rejoin/route");
-  const res = await POST(
-    makeUnauthReq(`/api/mobile/meetings/${MEETING_ID}/rejoin`, { method: "POST" }),
-    params({ meetingId: MEETING_ID }),
-  );
-  assert.equal(res.status, 401);
-});
-
 // ─── GET /api/mobile/groups/[groupId]/files/[fileId] ─────────────────────────
 
 test("GET /api/mobile/groups/[groupId]/files/[fileId]: 404 for nonexistent file", async () => {

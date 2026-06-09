@@ -554,37 +554,46 @@ export default function VideoRoom(props: VideoRoomProps) {
       fallback={
         <div
           style={{
-            height: "100%",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 12,
+            minHeight: "100vh",
             background: "var(--bg-primary)",
-            color: "var(--text-secondary)",
           }}
         >
-          {initError ? (
-            <>
-              <span style={{ color: "var(--error, #e53935)" }}>{initError}</span>
-              <ButtonGroup
-                variant="toolbar"
-                items={[
-                  {
-                    id: "retry",
-                    label: "Retry",
-                    tone: "primary",
-                    onClick: () => {
-                      setInitError(null);
-                      setRetryKey((k) => k + 1);
+          <AppHeader mode="meet" />
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 12,
+              color: "var(--text-secondary)",
+            }}
+          >
+            {initError ? (
+              <>
+                <span style={{ color: "var(--error, #e53935)" }}>{initError}</span>
+                <ButtonGroup
+                  variant="toolbar"
+                  items={[
+                    {
+                      id: "retry",
+                      label: "Retry",
+                      tone: "primary",
+                      onClick: () => {
+                        setInitError(null);
+                        setRetryKey((k) => k + 1);
+                      },
                     },
-                  },
-                ]}
-              />
-            </>
-          ) : (
-            t("video.connecting")
-          )}
+                  ]}
+                />
+              </>
+            ) : (
+              t("video.connecting")
+            )}
+          </div>
         </div>
       }
     >

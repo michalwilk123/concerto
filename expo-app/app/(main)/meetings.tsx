@@ -48,7 +48,7 @@ export default function MeetingsScreen() {
         </Typography>
       </View>
       <Button
-        title="Open"
+        title="Join"
         onPress={() => handleJoin(item)}
         variant="secondary"
         size="sm"

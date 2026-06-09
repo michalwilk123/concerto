@@ -111,12 +111,12 @@ export const defaultTranslations: Record<string, string> = {
 
   // Meetings
   "meetings.title": "Meetings",
-  "meetings.createButton": "Create Meeting",
+  "meetings.createButton": "Save",
   "meetings.emptyTitle": "No meetings yet",
   "meetings.emptySubtitle": "Create a meeting to get started.",
   "meetings.loadingMessage": "Loading meetings...",
-  "meetings.rejoin": "Rejoin",
-  "meetings.rejoinTitle": "Rejoin meeting",
+  "meetings.join": "Join",
+  "meetings.joinTitle": "Join meeting",
   "meetings.deleteTitle": "Delete meeting record",
   "meetings.confirm": "Confirm",
   "meetings.cancel": "Cancel",
@@ -142,7 +142,7 @@ export const defaultTranslations: Record<string, string> = {
   "meetings.visibilityGroup": "Group only",
 
   // Create meeting
-  "createMeeting.title": "Create Meeting",
+  "createMeeting.title": "Save",
   "createMeeting.loadGroupsFailed": "Failed to load groups",
   "createMeeting.createFailed": "Failed to create meeting",
   "createMeeting.nameLabel": "Meeting Name",
@@ -153,7 +153,7 @@ export const defaultTranslations: Record<string, string> = {
   "createMeeting.publicLabel": "Public meeting (anyone with link can join)",
   "createMeeting.requiresApprovalLabel": "Require approval to join",
   "createMeeting.cancel": "Cancel",
-  "createMeeting.submit": "Create Meeting",
+  "createMeeting.submit": "Save",
 
   // Recordings
   "recordings.title": "Recordings",

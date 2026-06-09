@@ -18,7 +18,6 @@ import {
 import { Typography } from "@/components/ui/typography";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useRouter } from "@/i18n/navigation";
-import { roomApi } from "@/lib/api-client";
 import { useMeetingsStore } from "@/stores/meetings-store";
 import type { Meeting } from "@/types/meeting";
 import {
@@ -86,7 +85,7 @@ export function MeetingsPanel({
       <CreateMeetingModal
         open={showCreateMeeting}
         onClose={() => setShowCreateMeeting(false)}
-        onCreated={(meetingId) => router.push(`/meet/${meetingId}`)}
+        onCreated={() => fetchMeetings(groupId)}
       />
 
       <div
@@ -151,14 +150,7 @@ export function MeetingsPanel({
             isSelected={selectedMeetingId === m.id}
             isPrivileged={isPrivileged}
             onSelect={onSelectMeeting ? () => onSelectMeeting(m.id) : undefined}
-            onRejoin={async () => {
-              try {
-                const { meetingId } = await roomApi.rejoin({ meetingId: m.id, groupId });
-                router.push(`/meet/${meetingId}`);
-              } catch (err) {
-                console.error("Failed to rejoin meeting:", err);
-              }
-            }}
+            onJoin={() => router.push(`/meet/${m.id}`)}
             onPatch={async (patch) => {
               setActionError("");
               try {
@@ -188,7 +180,7 @@ function MeetingRow({
   isSelected,
   isPrivileged = true,
   onSelect,
-  onRejoin,
+  onJoin,
   onPatch,
   onDelete,
 }: {
@@ -197,7 +189,7 @@ function MeetingRow({
   isSelected?: boolean;
   isPrivileged?: boolean;
   onSelect?: () => void;
-  onRejoin: () => void;
+  onJoin: () => void;
   onPatch: (patch: { isPublic?: boolean; requiresApproval?: boolean }) => void;
   onDelete: () => void;
 }) {
@@ -206,11 +198,11 @@ function MeetingRow({
 
   const actionItems: ButtonGroupItem[] = [
     {
-      id: "rejoin",
-      label: t("meetings.rejoin"),
-      ariaLabel: t("meetings.rejoinTitle"),
+      id: "join",
+      label: t("meetings.join"),
+      ariaLabel: t("meetings.joinTitle"),
       quiet: true,
-      onClick: onRejoin,
+      onClick: onJoin,
     },
   ];
 

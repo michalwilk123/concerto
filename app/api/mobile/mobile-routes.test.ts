@@ -39,12 +39,6 @@ test("mobile meeting join derives the real meeting role", () => {
   assert.ok(src.includes("determineRole"), "should derive role from membership");
 });
 
-test("mobile meeting rejoin requires auth (not guest)", () => {
-  const src = readRoute("meetings/[meetingId]/rejoin/route.ts");
-  assert.ok(src.includes("requireAuth"), "should use requireAuth");
-  assert.ok(src.includes("requireGroupMember"), "should verify group membership");
-});
-
 test("mobile meeting files route requires requireGroupMember", () => {
   const src = readRoute("meetings/[meetingId]/files/route.ts");
   assert.ok(src.includes("requireGroupMember"), "should use requireGroupMember");
@@ -71,7 +65,6 @@ test("no mobile route uses guest-join or allows unauthenticated access", () => {
     "groups/[groupId]/files/route.ts",
     "groups/[groupId]/files/[fileId]/route.ts",
     "meetings/[meetingId]/join/route.ts",
-    "meetings/[meetingId]/rejoin/route.ts",
     "meetings/[meetingId]/files/route.ts",
     "meetings/[meetingId]/chat/route.ts",
     "chat/reactions/route.ts",
@@ -115,7 +108,6 @@ test("all mobile routes use getSessionFromRequest (not Next.js headers())", () =
     "groups/[groupId]/files/route.ts",
     "groups/[groupId]/files/[fileId]/route.ts",
     "meetings/[meetingId]/join/route.ts",
-    "meetings/[meetingId]/rejoin/route.ts",
     "meetings/[meetingId]/files/route.ts",
     "meetings/[meetingId]/chat/route.ts",
     "chat/reactions/route.ts",

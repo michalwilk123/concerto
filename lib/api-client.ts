@@ -19,11 +19,6 @@ export interface CreateRoomResponse {
   meetingId: string;
 }
 
-export interface RejoinRoomParams {
-  meetingId: string;
-  groupId: string;
-}
-
 export interface JoinRoomParams {
   meetingId: string;
   participantName: string;
@@ -109,21 +104,6 @@ export const roomApi = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to join room as guest");
-    }
-
-    return response.json();
-  },
-
-  async rejoin(params: RejoinRoomParams): Promise<CreateRoomResponse> {
-    const response = await fetch("/api/room/rejoin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to rejoin room");
     }
 
     return response.json();
