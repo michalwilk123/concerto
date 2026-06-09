@@ -13,10 +13,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect unauthenticated users from protected pages to login
-  const isProtectedPath =
-    pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/") ||
-    pathname === "/waiting-approval";
+  const isProtectedPath = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   if (!sessionCookie && isProtectedPath) {
     return NextResponse.redirect(new URL("/login", request.url));
   }

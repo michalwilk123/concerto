@@ -3,7 +3,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Text,
   View,
   ActivityIndicator,
   Alert,
@@ -15,6 +14,10 @@ import { colors, spacing, radius } from "@/constants/theme";
 import { meetingsApi, resolveApiUrl } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { ChatPanel } from "@/components/meeting/ChatPanel";
+import { Tabs } from "@/components/ui/Tabs";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Typography } from "@/components/ui/Typography";
 import type { FileWithUrl } from "@/lib/types";
 
 type Tab = "details" | "chat" | "files";
@@ -108,50 +111,48 @@ export default function MeetingDetailScreen() {
     router.back();
   };
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "details", label: "Details" },
-    { key: "chat", label: "Chat" },
-    { key: "files", label: "Files" },
+  const tabs = [
+    { id: "details", label: "Details" },
+    { id: "chat", label: "Chat" },
+    { id: "files", label: "Files" },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.backBar}>
-        <Pressable style={styles.backButton} onPress={handleBack} hitSlop={8}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
+        <Button
+          title="Back"
+          onPress={handleBack}
+          variant="ghost"
+          size="sm"
+          iconStart={"‹"}
+        />
       </View>
 
       {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {tabs.map((tab) => (
-          <Pressable
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab.key && styles.tabTextActive,
-              ]}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.tabBarWrap}>
+        <Tabs
+          items={tabs}
+          activeId={activeTab}
+          onSelect={(id) => setActiveTab(id as Tab)}
+          grow
+        />
       </View>
 
       {/* Tab content */}
       {activeTab === "details" && (
         <View style={styles.detailsContainer}>
-          <View style={styles.detailCard}>
-            <Text style={styles.meetingTitle}>{meetingName}</Text>
-          </View>
+          <Card padding="lg" style={styles.detailCard}>
+            <Typography variant="titleLg">{meetingName}</Typography>
+          </Card>
 
-          <Pressable style={styles.joinButton} onPress={handleJoinMeeting}>
-            <Text style={styles.joinButtonText}>Join Meeting</Text>
-          </Pressable>
+          <Button
+            title="Join Meeting"
+            onPress={handleJoinMeeting}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
         </View>
       )}
 
@@ -173,10 +174,12 @@ export default function MeetingDetailScreen() {
             />
           ) : files.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No files</Text>
-              <Text style={styles.emptySubtext}>
+              <Typography variant="titleMd" tone="secondary">
+                No files
+              </Typography>
+              <Typography variant="body" tone="tertiary" style={styles.emptySub}>
                 Files shared in this meeting will appear here
-              </Text>
+              </Typography>
             </View>
           ) : (
             <FlatList
@@ -189,19 +192,19 @@ export default function MeetingDetailScreen() {
                   onPress={() => handleFilePress(item)}
                 >
                   <View style={styles.fileIconContainer}>
-                    <Text style={styles.fileIcon}>
+                    <Typography variant="overline" style={styles.fileIcon}>
                       {getFileIcon(item.mimeType)}
-                    </Text>
+                    </Typography>
                   </View>
                   <View style={styles.fileBody}>
-                    <Text style={styles.fileName} numberOfLines={1}>
+                    <Typography variant="body" weight="semibold" numberOfLines={1}>
                       {item.name}
-                    </Text>
-                    <Text style={styles.fileMeta}>
+                    </Typography>
+                    <Typography variant="caption" tone="tertiary" style={styles.fileMeta}>
                       {formatFileSize(item.size)}
-                      {"  \u00B7  "}
+                      {"  ·  "}
                       {new Date(item.createdAt).toLocaleDateString()}
-                    </Text>
+                    </Typography>
                   </View>
                 </Pressable>
               )}
@@ -228,77 +231,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSecondary,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    justifyContent: "center",
     paddingHorizontal: spacing.sm,
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.accentPurple,
+    paddingVertical: spacing.sm,
+    flexDirection: "row",
   },
 
   // Tab bar
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: colors.bgSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-  },
-  tab: {
-    flex: 1,
-    alignItems: "center",
+  tabBarWrap: {
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  tabActive: {
-    borderBottomColor: colors.accentPurple,
-  },
-  tabText: {
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.accentPurple,
-    fontFamily: "DMSans_600SemiBold",
   },
 
   // Details tab
   detailsContainer: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   detailCard: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.xl,
     marginBottom: spacing.xl,
-  },
-  meetingTitle: {
-    fontSize: 20,
-    fontFamily: "DMSans_700Bold",
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  joinButton: {
-    backgroundColor: colors.accentPurple,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-  },
-  joinButtonText: {
-    fontSize: 16,
-    fontFamily: "DMSans_600SemiBold",
-    color: "#fff",
   },
 
   // Files tab
@@ -329,22 +279,13 @@ const styles = StyleSheet.create({
   },
   fileIcon: {
     fontSize: 10,
-    fontFamily: "DMSans_700Bold",
     color: colors.accentPurple,
   },
   fileBody: {
     flex: 1,
     marginRight: spacing.sm,
   },
-  fileName: {
-    fontSize: 15,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textPrimary,
-  },
   fileMeta: {
-    fontSize: 12,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textTertiary,
     marginTop: 2,
   },
 
@@ -354,15 +295,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textTertiary,
+  emptySub: {
+    marginTop: spacing.xs,
   },
 });

@@ -54,7 +54,18 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetchWithAuth(path, options);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message || `Request failed: ${res.status}`);
+    const message =
+      typeof body?.message === "string"
+        ? body.message
+        : typeof body?.error === "string"
+          ? body.error
+          : `Request failed: ${res.status}`;
+    console.error("[expo api] request failed", {
+      path,
+      status: res.status,
+      body,
+    });
+    throw new Error(`${message} (${res.status})`);
   }
   return res.json();
 }

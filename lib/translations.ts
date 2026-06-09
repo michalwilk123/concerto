@@ -24,7 +24,6 @@ export const defaultTranslations: Record<string, string> = {
   "auth.login.submit": "Sign In",
   "auth.login.noAccount": "Don't have an account?",
   "auth.login.register": "Register",
-  "auth.login.waitingActivation": "Your account is waiting for admin approval.",
   "auth.register.title": "Create Account",
   "auth.register.passwordsDoNotMatch": "Passwords do not match",
   "auth.register.registrationFailed": "Registration failed",
@@ -38,9 +37,6 @@ export const defaultTranslations: Record<string, string> = {
   "auth.register.submit": "Create Account",
   "auth.register.alreadyHaveAccount": "Already have an account?",
   "auth.register.signIn": "Sign In",
-  "auth.waitingApproval.title": "Waiting for approval",
-  "auth.waitingApproval.message":
-    "Your account has been created and is pending activation. Please wait for an administrator to approve access.",
 
   // Lobby
   "lobby.kickedWarning": "You were kicked from the room",
@@ -263,7 +259,6 @@ export const defaultTranslations: Record<string, string> = {
   "manage.tableName": "Name",
   "manage.tableEmail": "Email",
   "manage.tableRole": "Role",
-  "manage.tableStatus": "Status",
   "manage.tableCreated": "Created",
   "manage.tableActions": "Actions",
   "manage.noUsersMatch": "No users match your search",
@@ -281,7 +276,6 @@ export const defaultTranslations: Record<string, string> = {
   "manage.roleAdmin": "Admin",
   "manage.roleTeacher": "Teacher",
   "manage.roleStudent": "Student",
-  "manage.activeLabel": "Active",
   "manage.bannedLabel": "Banned",
   "manage.cancel": "Cancel",
   "manage.confirm": "Confirm",
@@ -314,7 +308,6 @@ export const defaultTranslations: Record<string, string> = {
   "manage.confirmPasswordPlaceholder": "Repeat new password",
   "manage.passwordTooShort": "Password must be at least 6 characters",
   "manage.passwordsMismatch": "Passwords do not match",
-  "manage.toggleActive": "Toggle active status",
 
   // Groups management
   "groups.createButton": "Create Group",
@@ -323,6 +316,7 @@ export const defaultTranslations: Record<string, string> = {
   "groups.tableCreated": "Created",
   "groups.tableActions": "Actions",
   "groups.emptyTitle": "No groups yet",
+  "groups.defaultBadge": "default",
   "groups.manageMembers": "Manage members",
   "groups.manage": "Manage",
   "groups.renameGroupAction": "Rename group",

@@ -259,6 +259,11 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
           >
             <Typography variant="bodySm" weight={500} truncate>
               {g.name}
+              {g.isDefault && (
+                <Typography as="span" variant="meta" tone="tertiary" style={{ marginLeft: 6 }}>
+                  ({t("groups.defaultBadge")})
+                </Typography>
+              )}
             </Typography>
             <Typography variant="caption" tone="secondary">
               {g.memberCount}
@@ -287,14 +292,20 @@ export function GroupsTable({ openModal, refreshKey }: GroupsTableProps) {
                     quiet: true,
                     onClick: () => openModal({ type: "editGroup", group: g }),
                   },
-                  {
-                    id: "delete",
-                    label: t("files.delete"),
-                    ariaLabel: t("groups.deleteGroupAction"),
-                    quiet: true,
-                    tone: "danger",
-                    onClick: () => openModal({ type: "deleteGroup", group: g }),
-                  },
+                  // The default group is the onboarding space everyone is auto-joined to;
+                  // it must not be deletable (the API rejects it too).
+                  ...(g.isDefault
+                    ? []
+                    : [
+                        {
+                          id: "delete",
+                          label: t("files.delete"),
+                          ariaLabel: t("groups.deleteGroupAction"),
+                          quiet: true,
+                          tone: "danger" as const,
+                          onClick: () => openModal({ type: "deleteGroup", group: g }),
+                        },
+                      ]),
                 ]}
               />
             </div>

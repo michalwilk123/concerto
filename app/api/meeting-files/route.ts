@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meeting } from "@/db/schema";
-import { requireGroupMember, requireGroupTeacher } from "@/lib/auth-helpers";
+import {
+  requireGroupMember,
+  requireGroupTeacher,
+  requireGroupUploadAccess,
+} from "@/lib/auth-helpers";
 import {
   deleteFileById,
   listMeetingFiles,
@@ -48,7 +52,7 @@ export async function POST(req: NextRequest) {
   const groupId = await getMeetingGroupId(meetingId);
   if (!groupId) return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
 
-  const { error, session } = await requireGroupMember(groupId);
+  const { error, session } = await requireGroupUploadAccess(groupId);
   if (error) return error;
 
   try {

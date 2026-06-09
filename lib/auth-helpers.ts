@@ -2,10 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { groupMember } from "@/db/schema";
+import { group, groupMember } from "@/db/schema";
 import { auth } from "./auth";
 
-const INACTIVE_ACCOUNT_MESSAGE = "Account is awaiting activation";
 type AuthSession = Awaited<ReturnType<typeof auth.api.getSession>>;
 
 export async function getSessionOrNull() {
@@ -22,13 +21,6 @@ function validateSession(session: AuthSession) {
   if (!session) {
     return {
       error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-      session: null,
-    };
-  }
-
-  if (!session.user.isActive) {
-    return {
-      error: NextResponse.json({ error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 }),
       session: null,
     };
   }
@@ -58,6 +50,24 @@ export async function requireAdmin() {
   return validated;
 }
 
+// The default ("Welcome") onboarding group is read-only for everyone except
+// system admins. Returns true when the group is the default one.
+async function isDefaultGroup(groupId: string) {
+  const [row] = await db
+    .select({ isDefault: group.isDefault })
+    .from(group)
+    .where(eq(group.id, groupId))
+    .limit(1);
+  return Boolean(row?.isDefault);
+}
+
+function defaultGroupReadOnlyError() {
+  return {
+    error: NextResponse.json({ error: "Only admins can modify this group" }, { status: 403 }),
+    session: null,
+  };
+}
+
 export async function requireGroupTeacher(groupId: string, existingSession?: AuthSession) {
   const session = existingSession ?? (await getSessionOrNull());
   const validated = validateSession(session);
@@ -68,6 +78,11 @@ export async function requireGroupTeacher(groupId: string, existingSession?: Aut
   // Admin can do anything
   if (validated.session.user.role === "admin") {
     return validated;
+  }
+
+  // Past this point the user is a non-admin: the default group is read-only.
+  if (await isDefaultGroup(groupId)) {
+    return defaultGroupReadOnlyError();
   }
 
   const [member] = await db
@@ -84,6 +99,27 @@ export async function requireGroupTeacher(groupId: string, existingSession?: Aut
   }
 
   return validated;
+}
+
+// Write access for routes where any group member may normally write (e.g. file
+// uploads). Same as requireGroupMember for normal groups, but the default group
+// stays admin-only.
+export async function requireGroupUploadAccess(groupId: string, existingSession?: AuthSession) {
+  const session = existingSession ?? (await getSessionOrNull());
+  const validated = validateSession(session);
+  if (validated.error) {
+    return validated;
+  }
+
+  if (validated.session.user.role === "admin") {
+    return validated;
+  }
+
+  if (await isDefaultGroup(groupId)) {
+    return defaultGroupReadOnlyError();
+  }
+
+  return requireGroupMember(groupId, validated.session);
 }
 
 export async function requireGroupMember(groupId: string, existingSession?: AuthSession) {

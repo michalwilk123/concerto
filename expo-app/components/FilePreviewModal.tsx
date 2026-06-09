@@ -3,7 +3,6 @@ import {
   Modal,
   View,
   Text,
-  Pressable,
   StyleSheet,
   Image,
   ScrollView,
@@ -16,6 +15,9 @@ import * as Sharing from "expo-sharing";
 import { colors, spacing } from "@/constants/theme";
 import { useAuthStore } from "@/stores/auth-store";
 import { resolveApiUrl } from "@/lib/api";
+import { Typography } from "@/components/ui/Typography";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import type { FileWithUrl } from "@/lib/types";
 
 const VideoPreviewLazy = lazy(() => import("./VideoPreviewComponent"));
@@ -37,7 +39,11 @@ function ImagePreview({ uri, authHeader }: { uri: string; authHeader: string }) 
   }, [uri, authHeader]);
 
   if (error) {
-    return <Text style={{ color: colors.accentRed, padding: spacing.lg }}>{error}</Text>;
+    return (
+      <Typography variant="body" tone="danger" style={{ padding: spacing.lg }}>
+        {error}
+      </Typography>
+    );
   }
   if (!localUri) {
     return (
@@ -78,9 +84,9 @@ function TextPreview({ uri, authHeader }: { uri: string; authHeader: string }) {
   }
   if (error) {
     return (
-      <Text style={{ color: colors.accentRed, padding: spacing.lg }}>
+      <Typography variant="body" tone="danger" style={{ padding: spacing.lg }}>
         {error}
-      </Text>
+      </Typography>
     );
   }
 
@@ -130,10 +136,10 @@ function FallbackPreview({
 
   return (
     <View style={fallbackStyles.container}>
-      <Text style={fallbackStyles.msg}>Preview not available</Text>
-      <Pressable onPress={handleShare} style={fallbackStyles.shareBtn}>
-        <Text style={fallbackStyles.shareBtnText}>Share</Text>
-      </Pressable>
+      <Typography variant="titleMd" tone="secondary">
+        Preview not available
+      </Typography>
+      <Button title="Share" onPress={handleShare} variant="primary" />
     </View>
   );
 }
@@ -141,7 +147,13 @@ function FallbackPreview({
 function AudioUnavailablePreview() {
   return (
     <View style={fallbackStyles.container}>
-      <Text style={fallbackStyles.msg}>Audio preview is unavailable in this Expo build.</Text>
+      <Typography
+        variant="body"
+        tone="secondary"
+        style={fallbackStyles.audioMsg}
+      >
+        Audio preview is unavailable in this Expo build.
+      </Typography>
     </View>
   );
 }
@@ -152,22 +164,10 @@ const fallbackStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: spacing.xl,
+    padding: spacing.xl,
   },
-  msg: {
-    fontSize: 16,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textSecondary,
-  },
-  shareBtn: {
-    backgroundColor: colors.accentPurple,
-    borderRadius: 8,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-  },
-  shareBtnText: {
-    fontSize: 15,
-    fontFamily: "DMSans_600SemiBold",
-    color: "#fff",
+  audioMsg: {
+    textAlign: "center",
   },
 });
 
@@ -231,12 +231,10 @@ export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Typography variant="titleMd" numberOfLines={1} style={styles.title}>
             {file.name}
-          </Text>
-          <Pressable onPress={onClose} hitSlop={8} style={styles.closeBtn}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </Pressable>
+          </Typography>
+          <IconButton glyph="✕" onPress={onClose} accessibilityLabel="Close" />
         </View>
         <View style={styles.body}>{renderBody()}</View>
       </View>
@@ -261,17 +259,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textPrimary,
     marginRight: spacing.md,
-  },
-  closeBtn: {
-    padding: spacing.sm,
-  },
-  closeBtnText: {
-    fontSize: 18,
-    color: colors.textSecondary,
   },
   body: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { requireGroupMember } from "@/lib/auth-helpers";
+import { requireGroupMember, requireGroupUploadAccess } from "@/lib/auth-helpers";
 import { listGroupFiles, uploadGroupFile } from "@/lib/services/file-service";
 import { getSessionFromRequest } from "../../../auth";
 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ grou
 export async function POST(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const session = await getSessionFromRequest(req);
-  const { error, session: validated } = await requireGroupMember(groupId, session);
+  const { error, session: validated } = await requireGroupUploadAccess(groupId, session);
   if (error) return error;
 
   const formData = await req.formData();

@@ -1,17 +1,15 @@
-import { asc, desc, ilike, or, sql } from "drizzle-orm";
+import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { user } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { eq } from "drizzle-orm";
 
 const SORTABLE_COLUMNS = {
   name: user.name,
   email: user.email,
   role: user.role,
   createdAt: user.createdAt,
-  isActive: user.isActive,
 } as const;
 
 export async function GET(req: NextRequest) {
@@ -43,7 +41,6 @@ export async function GET(req: NextRequest) {
         role: user.role,
         banned: user.banned,
         banReason: user.banReason,
-        isActive: user.isActive,
         createdAt: user.createdAt,
         image: user.image,
       })
@@ -68,7 +65,7 @@ export async function POST(req: NextRequest) {
   if (error) return error;
 
   const body = await req.json();
-  const { name, email, password, role, isActive } = body;
+  const { name, email, password, role } = body;
 
   if (!name || !email || !password) {
     return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
@@ -90,7 +87,6 @@ export async function POST(req: NextRequest) {
       .update(user)
       .set({
         role: finalRole,
-        isActive: isActive !== false,
         updatedAt: new Date(),
       })
       .where(eq(user.id, res.user.id))
@@ -101,7 +97,6 @@ export async function POST(req: NextRequest) {
         role: user.role,
         banned: user.banned,
         banReason: user.banReason,
-        isActive: user.isActive,
         createdAt: user.createdAt,
         image: user.image,
       });

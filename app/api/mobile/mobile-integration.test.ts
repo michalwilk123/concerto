@@ -1,17 +1,10 @@
-import assert from "node:assert/strict";
 import { afterAll, beforeAll, test } from "bun:test";
+import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { NextRequest } from "next/server";
 import { db } from "@/db";
-import {
-  chatMessage,
-  chatReaction,
-  group,
-  groupMember,
-  meeting,
-  user,
-} from "@/db/schema";
+import { chatMessage, chatReaction, group, groupMember, meeting, user } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 // ─── Test fixtures ───────────────────────────────────────────────────────────
@@ -40,9 +33,6 @@ beforeAll(async () => {
   assert.ok(signUpRes.user, "Failed to create test user");
   userId = signUpRes.user.id;
 
-  // Activate user
-  await db.update(user).set({ isActive: true }).where(eq(user.id, userId));
-
   // Sign in to get session token
   const signInRes = await auth.api.signInEmail({
     body: { email: TEST_EMAIL, password: TEST_PASSWORD },
@@ -64,7 +54,6 @@ beforeAll(async () => {
   });
   assert.ok(teacherSignUpRes.user, "Failed to create teacher test user");
   teacherUserId = teacherSignUpRes.user.id;
-  await db.update(user).set({ isActive: true }).where(eq(user.id, teacherUserId));
   await db.insert(groupMember).values({
     id: nanoid(),
     groupId: GROUP_ID,
@@ -89,17 +78,42 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.delete(chatReaction).where(
-    eq(chatReaction.messageId,
-      db.select({ id: chatMessage.id }).from(chatMessage).where(eq(chatMessage.meetingId, MEETING_ID))
+  await db
+    .delete(chatReaction)
+    .where(
+      eq(
+        chatReaction.messageId,
+        db
+          .select({ id: chatMessage.id })
+          .from(chatMessage)
+          .where(eq(chatMessage.meetingId, MEETING_ID)),
+      ),
     )
-  ).catch(() => {});
-  await db.delete(chatMessage).where(eq(chatMessage.meetingId, MEETING_ID)).catch(() => {});
-  await db.delete(meeting).where(eq(meeting.id, MEETING_ID)).catch(() => {});
-  await db.delete(groupMember).where(eq(groupMember.groupId, GROUP_ID)).catch(() => {});
-  await db.delete(group).where(eq(group.id, GROUP_ID)).catch(() => {});
-  await db.delete(user).where(eq(user.id, teacherUserId)).catch(() => {});
-  await db.delete(user).where(eq(user.id, userId)).catch(() => {});
+    .catch(() => {});
+  await db
+    .delete(chatMessage)
+    .where(eq(chatMessage.meetingId, MEETING_ID))
+    .catch(() => {});
+  await db
+    .delete(meeting)
+    .where(eq(meeting.id, MEETING_ID))
+    .catch(() => {});
+  await db
+    .delete(groupMember)
+    .where(eq(groupMember.groupId, GROUP_ID))
+    .catch(() => {});
+  await db
+    .delete(group)
+    .where(eq(group.id, GROUP_ID))
+    .catch(() => {});
+  await db
+    .delete(user)
+    .where(eq(user.id, teacherUserId))
+    .catch(() => {});
+  await db
+    .delete(user)
+    .where(eq(user.id, userId))
+    .catch(() => {});
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -167,7 +181,6 @@ test("GET /api/mobile/groups/[groupId]/meetings: rejects non-member", async () =
   });
   assert.ok(signUpRes.user);
   const otherUserId = signUpRes.user.id;
-  await db.update(user).set({ isActive: true }).where(eq(user.id, otherUserId));
 
   const signInRes = await auth.api.signInEmail({
     body: { email: otherEmail, password: TEST_PASSWORD },
@@ -175,14 +188,20 @@ test("GET /api/mobile/groups/[groupId]/meetings: rejects non-member", async () =
   assert.ok(signInRes.token);
 
   const { GET } = await import("./groups/[groupId]/meetings/route");
-  const req = new NextRequest(new URL(`/api/mobile/groups/${GROUP_ID}/meetings`, "http://localhost"), {
-    headers: { Authorization: `Bearer ${signInRes.token}` },
-  });
+  const req = new NextRequest(
+    new URL(`/api/mobile/groups/${GROUP_ID}/meetings`, "http://localhost"),
+    {
+      headers: { Authorization: `Bearer ${signInRes.token}` },
+    },
+  );
   const res = await GET(req, params({ groupId: GROUP_ID }));
   assert.equal(res.status, 403);
 
   // Cleanup other user
-  await db.delete(user).where(eq(user.id, otherUserId)).catch(() => {});
+  await db
+    .delete(user)
+    .where(eq(user.id, otherUserId))
+    .catch(() => {});
 });
 
 // ─── GET /api/mobile/groups/[groupId]/files ──────────────────────────────────

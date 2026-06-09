@@ -1,8 +1,6 @@
 import {
   FlatList,
-  Pressable,
   StyleSheet,
-  Text,
   View,
   ActivityIndicator,
   RefreshControl,
@@ -10,7 +8,11 @@ import {
 import { useRouter } from "expo-router";
 import { useGroupsStore } from "@/stores/groups-store";
 import { useMeetingsStore } from "@/stores/meetings-store";
-import { colors, spacing, radius } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
+import { Typography } from "@/components/ui/Typography";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
 import type { Meeting } from "@/lib/types";
 
 export default function MeetingsScreen() {
@@ -26,40 +28,43 @@ export default function MeetingsScreen() {
   };
 
   const renderItem = ({ item }: { item: Meeting }) => (
-    <View style={styles.card}>
+    <Card padding="lg" style={styles.card}>
       <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
-          <Text style={styles.meetingName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View
-            style={[
-              styles.badge,
-              item.isPublic ? styles.badgePublic : styles.badgePrivate,
-            ]}
+          <Typography
+            variant="titleMd"
+            numberOfLines={1}
+            style={styles.meetingName}
           >
-            <Text style={styles.badgeText}>
-              {item.isPublic ? "Public" : "Private"}
-            </Text>
-          </View>
+            {item.name}
+          </Typography>
+          <Badge
+            label={item.isPublic ? "Public" : "Private"}
+            tone={item.isPublic ? "green" : "purple"}
+          />
         </View>
-        <Text style={styles.date}>
+        <Typography variant="caption" tone="tertiary">
           {new Date(item.createdAt).toLocaleDateString()}
-        </Text>
+        </Typography>
       </View>
-      <Pressable style={styles.joinButton} onPress={() => handleJoin(item)}>
-        <Text style={styles.joinButtonText}>Open</Text>
-      </Pressable>
-    </View>
+      <Button
+        title="Open"
+        onPress={() => handleJoin(item)}
+        variant="secondary"
+        size="sm"
+      />
+    </Card>
   );
 
   if (!selectedGroupId) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>No group selected</Text>
-        <Text style={styles.emptySubtext}>
+        <Typography variant="titleMd" tone="secondary">
+          No group selected
+        </Typography>
+        <Typography variant="body" tone="tertiary" style={styles.emptySub}>
           Open the sidebar to select a group
-        </Text>
+        </Typography>
       </View>
     );
   }
@@ -68,7 +73,9 @@ export default function MeetingsScreen() {
     <View style={styles.container}>
       {error && (
         <View style={styles.errorBar}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Typography variant="bodySm" tone="danger" style={styles.errorText}>
+            {error}
+          </Typography>
         </View>
       )}
       <FlatList
@@ -98,10 +105,12 @@ export default function MeetingsScreen() {
             />
           ) : (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No meetings</Text>
-              <Text style={styles.emptySubtext}>
+              <Typography variant="titleMd" tone="secondary">
+                No meetings
+              </Typography>
+              <Typography variant="body" tone="tertiary" style={styles.emptySub}>
                 Pull down to refresh
-              </Text>
+              </Typography>
             </View>
           )
         }
@@ -123,13 +132,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.lg,
     marginBottom: spacing.md,
   },
   cardBody: {
@@ -143,42 +147,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   meetingName: {
-    fontSize: 16,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textPrimary,
     flexShrink: 1,
-  },
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  badgePublic: {
-    backgroundColor: "rgba(61, 155, 79, 0.2)",
-  },
-  badgePrivate: {
-    backgroundColor: "rgba(139, 92, 246, 0.2)",
-  },
-  badgeText: {
-    fontSize: 11,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textSecondary,
-  },
-  date: {
-    fontSize: 13,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textTertiary,
-  },
-  joinButton: {
-    backgroundColor: colors.accentPurple,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  joinButtonText: {
-    fontSize: 14,
-    fontFamily: "DMSans_600SemiBold",
-    color: "#fff",
   },
   empty: {
     flex: 1,
@@ -186,25 +155,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.bgPrimary,
   },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textTertiary,
+  emptySub: {
+    marginTop: spacing.xs,
   },
   errorBar: {
     backgroundColor: "rgba(229, 57, 53, 0.15)",
     padding: spacing.md,
   },
   errorText: {
-    fontSize: 13,
-    fontFamily: "DMSans_500Medium",
-    color: colors.accentRed,
     textAlign: "center",
   },
 });

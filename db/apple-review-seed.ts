@@ -8,15 +8,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
 import { and, eq } from "drizzle-orm";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/postgres-js";
-import {
-  boolean,
-  index,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 import postgres from "postgres";
 
@@ -33,7 +26,6 @@ const user = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
-  isActive: boolean("is_active").notNull().default(false),
 });
 
 const session = pgTable("session", {
@@ -144,7 +136,6 @@ const db = drizzle(sql, { schema });
 const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: { enabled: true, maxPasswordLength: 128 },
-  user: { additionalFields: { isActive: { type: "boolean", defaultValue: false, input: false } } },
   plugins: [admin({ defaultRole: "student" })],
 });
 
@@ -161,7 +152,9 @@ const s3 = new S3Client({
 const bucket = process.env.S3_BUCKET_NAME ?? "concerto-files";
 
 async function putS3(key: string, body: Buffer, contentType: string) {
-  await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
+  await s3.send(
+    new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }),
+  );
 }
 
 // ---- inputs ----
@@ -169,7 +162,7 @@ const TEST_EMAIL = "test@test.com";
 const TEST_PASSWORD = "test1234";
 const TEST_NAME = "Test User";
 const GROUP_NAME = "Apple Review Demo";
-const MEETING_NAMES = ["Welcome Meeting", "Demo Lesson"];
+const MEETING_NAMES = ["Demo Meeting", "Welcome Meeting"];
 
 // 1x1 transparent PNG
 const PNG_BYTES = Buffer.from(
@@ -203,27 +196,37 @@ const PDF_BYTES = Buffer.from(PDF_TEXT, "utf8");
 
 // ---- run ----
 async function ensureUser(): Promise<string> {
-  const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.email, TEST_EMAIL)).limit(1);
+  const [existing] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, TEST_EMAIL))
+    .limit(1);
   if (existing) {
     console.log(`User ${TEST_EMAIL} already exists (id=${existing.id})`);
     await db
       .update(user)
-      .set({ role: "teacher", isActive: true, emailVerified: true })
+      .set({ role: "teacher", emailVerified: true })
       .where(eq(user.email, TEST_EMAIL));
     return existing.id;
   }
-  const res = await auth.api.signUpEmail({ body: { email: TEST_EMAIL, password: TEST_PASSWORD, name: TEST_NAME } });
+  const res = await auth.api.signUpEmail({
+    body: { email: TEST_EMAIL, password: TEST_PASSWORD, name: TEST_NAME },
+  });
   if (!res.user) throw new Error("signUpEmail failed");
   await db
     .update(user)
-    .set({ role: "teacher", isActive: true, emailVerified: true })
+    .set({ role: "teacher", emailVerified: true })
     .where(eq(user.email, TEST_EMAIL));
   console.log(`Created user ${TEST_EMAIL} (id=${res.user.id}) as teacher`);
   return res.user.id;
 }
 
 async function ensureGroup(): Promise<string> {
-  const [existing] = await db.select({ id: group.id }).from(group).where(eq(group.name, GROUP_NAME)).limit(1);
+  const [existing] = await db
+    .select({ id: group.id })
+    .from(group)
+    .where(eq(group.name, GROUP_NAME))
+    .limit(1);
   if (existing) {
     console.log(`Group "${GROUP_NAME}" already exists (id=${existing.id})`);
     return existing.id;

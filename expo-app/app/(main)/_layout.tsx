@@ -2,7 +2,6 @@ import { Drawer } from "expo-router/drawer";
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 import {
   View,
-  Text,
   Pressable,
   StyleSheet,
   ActivityIndicator,
@@ -12,6 +11,8 @@ import { useRouter } from "expo-router";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGroupsStore } from "@/stores/groups-store";
 import { colors, spacing, radius } from "@/constants/theme";
+import { Typography } from "@/components/ui/Typography";
+import { Button } from "@/components/ui/Button";
 
 function CustomDrawerContent() {
   const router = useRouter();
@@ -51,40 +52,44 @@ function CustomDrawerContent() {
       contentContainerStyle={styles.drawerContent}
     >
       <View style={styles.header}>
-        <Text style={styles.appName}>Concerto</Text>
-        <Text style={styles.userName} numberOfLines={1}>
+        <Typography variant="titleLg" style={styles.appName}>
+          Concerto
+        </Typography>
+        <Typography variant="body" tone="secondary" numberOfLines={1}>
           {user?.name}
-        </Text>
+        </Typography>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Groups</Text>
+        <Typography variant="overline" tone="tertiary" style={styles.sectionTitle}>
+          Groups
+        </Typography>
         {isLoading ? (
           <ActivityIndicator
             color={colors.accentPurple}
             style={{ marginTop: spacing.md }}
           />
         ) : (
-          groups.map((group) => (
-            <Pressable
-              key={group.id}
-              style={[
-                styles.groupItem,
-                group.id === selectedGroupId && styles.groupItemActive,
-              ]}
-              onPress={() => selectGroup(group.id)}
-            >
-              <Text
-                style={[
-                  styles.groupItemText,
-                  group.id === selectedGroupId && styles.groupItemTextActive,
-                ]}
-                numberOfLines={1}
+          groups.map((group) => {
+            const active = group.id === selectedGroupId;
+            return (
+              <Pressable
+                key={group.id}
+                style={[styles.groupItem, active && styles.groupItemActive]}
+                onPress={() => selectGroup(group.id)}
               >
-                {group.name}
-              </Text>
-            </Pressable>
-          ))
+                <Typography
+                  variant="body"
+                  tone={active ? "primary" : "secondary"}
+                  weight="medium"
+                  numberOfLines={1}
+                  style={active ? styles.groupItemTextActive : undefined}
+                >
+                  {group.name}
+                </Typography>
+              </Pressable>
+            );
+          })
         )}
       </View>
 
@@ -93,23 +98,33 @@ function CustomDrawerContent() {
           style={styles.navItem}
           onPress={() => router.navigate("/(main)/meetings")}
         >
-          <Text style={styles.navItemText}>Meetings</Text>
+          <Typography variant="body" weight="medium">
+            Meetings
+          </Typography>
         </Pressable>
         <Pressable
           style={styles.navItem}
           onPress={() => router.navigate("/(main)/files")}
         >
-          <Text style={styles.navItemText}>Files</Text>
+          <Typography variant="body" weight="medium">
+            Files
+          </Typography>
         </Pressable>
       </View>
 
       <View style={styles.footer}>
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </Pressable>
-        <Pressable style={styles.logoutButton} onPress={handleDeleteAccount}>
-          <Text style={styles.deleteText}>Delete Account</Text>
-        </Pressable>
+        <Button
+          title="Sign Out"
+          onPress={handleLogout}
+          variant="ghost"
+          size="sm"
+        />
+        <Button
+          title="Delete Account"
+          onPress={handleDeleteAccount}
+          variant="danger"
+          size="sm"
+        />
       </View>
     </DrawerContentScrollView>
   );
@@ -178,25 +193,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   appName: {
-    fontSize: 20,
-    fontFamily: "DMSans_700Bold",
     color: colors.accentPurple,
     marginBottom: spacing.xs,
-  },
-  userName: {
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textSecondary,
   },
   section: {
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontFamily: "DMSans_600SemiBold",
-    color: colors.textTertiary,
-    textTransform: "uppercase",
-    letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   groupItem: {
@@ -208,11 +211,6 @@ const styles = StyleSheet.create({
   groupItemActive: {
     backgroundColor: "rgba(139, 92, 246, 0.15)",
   },
-  groupItemText: {
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textSecondary,
-  },
   groupItemTextActive: {
     color: colors.accentPurple,
   },
@@ -221,29 +219,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
   },
-  navItemText: {
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textPrimary,
-  },
   footer: {
     marginTop: "auto",
     paddingVertical: spacing.xl,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
-  },
-  logoutButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  logoutText: {
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-    color: colors.textSecondary,
-  },
-  deleteText: {
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-    color: colors.accentRed,
+    alignItems: "flex-start",
+    gap: spacing.xs,
   },
 });

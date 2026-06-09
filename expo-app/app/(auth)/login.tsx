@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { AuthCard } from "@/components/AuthCard";
 import { FormInput } from "@/components/FormInput";
-import { PrimaryButton } from "@/components/PrimaryButton";
+import { Button } from "@/components/ui/Button";
+import { Typography } from "@/components/ui/Typography";
 import { useAuthStore } from "@/stores/auth-store";
 import { colors, spacing } from "@/constants/theme";
 
@@ -23,7 +24,11 @@ export default function LoginScreen() {
 
   return (
     <AuthCard title="Sign In">
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && (
+        <Typography variant="body" tone="danger" style={styles.error}>
+          {error}
+        </Typography>
+      )}
 
       <FormInput
         label="Email"
@@ -46,16 +51,20 @@ export default function LoginScreen() {
       />
 
       <View style={styles.buttonContainer}>
-        <PrimaryButton
+        <Button
           title="Sign In"
           onPress={handleLogin}
           loading={isLoading}
           disabled={!email || !password}
+          size="lg"
+          fullWidth
         />
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
+        <Typography variant="body" tone="secondary">
+          Don't have an account?{" "}
+        </Typography>
         <Link href="/(auth)/register" style={styles.link}>
           Sign Up
         </Link>
@@ -66,9 +75,6 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   error: {
-    color: colors.accentRed,
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
     textAlign: "center",
     marginBottom: spacing.lg,
   },
@@ -78,12 +84,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
     marginTop: spacing.xl,
-  },
-  footerText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
   },
   link: {
     color: colors.accentPurple,

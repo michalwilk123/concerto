@@ -1,6 +1,6 @@
-import { eq, and } from "drizzle-orm";
-import { type NextRequest, NextResponse } from "next/server";
 import { hashPassword } from "better-auth/crypto";
+import { and, eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { account, groupMember, user } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-helpers";
@@ -32,10 +32,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     roleToApply = body.role;
   }
 
-  if ("isActive" in body) {
-    updates.isActive = Boolean(body.isActive);
-  }
-
   if ("banned" in body) {
     updates.banned = Boolean(body.banned);
   }
@@ -58,7 +54,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       role: user.role,
       banned: user.banned,
       banReason: user.banReason,
-      isActive: user.isActive,
       createdAt: user.createdAt,
       image: user.image,
     });
@@ -88,10 +83,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { newPassword } = body;
 
   if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
-    return NextResponse.json(
-      { error: "Password must be at least 6 characters" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
   }
 
   const hashed = await hashPassword(newPassword);

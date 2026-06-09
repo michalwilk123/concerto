@@ -50,6 +50,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { error } = await requireAdmin();
   if (error) return error;
 
+  const [existing] = await db
+    .select({ isDefault: group.isDefault })
+    .from(group)
+    .where(eq(group.id, id))
+    .limit(1);
+  if (existing?.isDefault) {
+    return NextResponse.json({ error: "The default group cannot be deleted" }, { status: 403 });
+  }
+
   const [deleted] = await db.delete(group).where(eq(group.id, id)).returning();
   if (!deleted) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });

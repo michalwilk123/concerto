@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { AuthCard } from "@/components/AuthCard";
 import { FormInput } from "@/components/FormInput";
-import { PrimaryButton } from "@/components/PrimaryButton";
+import { Button } from "@/components/ui/Button";
+import { Typography } from "@/components/ui/Typography";
 import { useAuthStore } from "@/stores/auth-store";
 import { colors, spacing } from "@/constants/theme";
 
@@ -40,7 +41,11 @@ export default function RegisterScreen() {
 
   return (
     <AuthCard title="Create Account">
-      {displayError && <Text style={styles.error}>{displayError}</Text>}
+      {displayError && (
+        <Typography variant="body" tone="danger" style={styles.error}>
+          {displayError}
+        </Typography>
+      )}
 
       <FormInput
         label="Name"
@@ -79,16 +84,20 @@ export default function RegisterScreen() {
       />
 
       <View style={styles.buttonContainer}>
-        <PrimaryButton
+        <Button
           title="Create Account"
           onPress={handleRegister}
           loading={isLoading}
           disabled={!name || !email || !password || !confirmPassword}
+          size="lg"
+          fullWidth
         />
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
+        <Typography variant="body" tone="secondary">
+          Already have an account?{" "}
+        </Typography>
         <Link href="/(auth)/login" style={styles.link}>
           Sign In
         </Link>
@@ -99,9 +108,6 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   error: {
-    color: colors.accentRed,
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
     textAlign: "center",
     marginBottom: spacing.lg,
   },
@@ -111,12 +117,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
     marginTop: spacing.xl,
-  },
-  footerText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
   },
   link: {
     color: colors.accentPurple,

@@ -1,20 +1,17 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Link } from "@/i18n/navigation";
-import { type FormEvent, useState, Suspense } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { type FormEvent, Suspense, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
-import { signIn } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
+import { Link } from "@/i18n/navigation";
+import { signIn } from "@/lib/auth-client";
 
 function LoginForm() {
-  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const showPendingMessage = searchParams.get("pendingActivation") === "1";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,22 +25,14 @@ function LoginForm() {
     });
 
     if (result.error) {
-      const message = result.error.message || t("auth.login.signInFailed");
-      setError(
-        message.toLowerCase().includes("awaiting activation")
-          ? t("auth.login.waitingActivation")
-          : message,
-      );
+      setError(result.error.message || t("auth.login.signInFailed"));
       setLoading(false);
     } else {
       // Hard navigation: matches lib/logout.ts pattern. Soft router.replace
       // didn't reliably leave /login — the destination re-checks useSession()
       // and could bounce back. A full reload makes middleware re-evaluate
       // with the fresh session cookie and rebuilds useSession() cleanly.
-      const user = result.data?.user as { isActive?: boolean } | undefined;
-      const isUserActive = user?.isActive ?? true;
-      const target = user && !isUserActive ? "waiting-approval" : "dashboard";
-      window.location.assign(`/${target}`);
+      window.location.assign("/dashboard");
     }
   };
 
@@ -71,18 +60,6 @@ function LoginForm() {
         <h2 style={{ margin: "0 0 var(--space-xl)", fontSize: "1.25rem" }}>
           {t("auth.login.title")}
         </h2>
-
-        {showPendingMessage && (
-          <p
-            style={{
-              color: "var(--text-secondary)",
-              fontSize: "0.85rem",
-              margin: "0 0 var(--space-lg)",
-            }}
-          >
-            {t("auth.login.waitingActivation")}
-          </p>
-        )}
 
         {error && (
           <p

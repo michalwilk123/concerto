@@ -13,6 +13,8 @@ import {
 import { colors, spacing, radius } from "@/constants/theme";
 import { meetingsApi, BASE_URL } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
+import { Typography } from "@/components/ui/Typography";
+import { Button } from "@/components/ui/Button";
 import type { ChatMessage } from "@/lib/types";
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
@@ -150,8 +152,16 @@ export function ChatPanel({ meetingId, authToken }: ChatPanelProps) {
           onLongPress={() => setReactionTarget(item.id)}
           style={[styles.messageBubble, own ? styles.ownBubble : styles.otherBubble]}
         >
-          {!own && <Text style={styles.senderName}>{item.senderName}</Text>}
-          <Text style={styles.messageText}>{item.content}</Text>
+          {!own && (
+            <Typography
+              variant="bodySm"
+              weight="semibold"
+              style={styles.senderName}
+            >
+              {item.senderName}
+            </Typography>
+          )}
+          <Typography variant="body">{item.content}</Typography>
           <Text style={styles.messageTime}>{formatTime(item.createdAt)}</Text>
         </Pressable>
 
@@ -226,13 +236,13 @@ export function ChatPanel({ meetingId, authToken }: ChatPanelProps) {
           onSubmitEditing={handleSend}
           blurOnSubmit
         />
-        <Pressable
-          style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+        <Button
+          title="Send"
           onPress={handleSend}
+          variant="primary"
+          size="sm"
           disabled={!input.trim() || sending}
-        >
-          <Text style={styles.sendButtonText}>Send</Text>
-        </Pressable>
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -271,16 +281,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.sm,
   },
   senderName: {
-    fontSize: 12,
-    fontFamily: "DMSans_600SemiBold",
     color: "rgba(139, 92, 246, 0.9)",
     marginBottom: 2,
-  },
-  messageText: {
-    fontSize: 15,
-    fontFamily: "DMSans_400Regular",
-    color: colors.textPrimary,
-    lineHeight: 21,
   },
   messageTime: {
     fontSize: 11,
@@ -363,21 +365,5 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-  },
-  sendButton: {
-    backgroundColor: colors.accentPurple,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    justifyContent: "center",
-    minHeight: 36,
-  },
-  sendButtonDisabled: {
-    opacity: 0.4,
-  },
-  sendButtonText: {
-    fontSize: 14,
-    fontFamily: "DMSans_600SemiBold",
-    color: "#fff",
   },
 });

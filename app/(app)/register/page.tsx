@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter, Link } from "@/i18n/navigation";
 import { type FormEvent, useState } from "react";
 import { InlineButton } from "@/components/ui/inline-button";
-import { signUp } from "@/lib/auth-client";
 import { useTranslation } from "@/hooks/useTranslation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { signUp } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/waiting-approval");
+    router.push("/dashboard");
   };
 
   return (
@@ -174,7 +174,8 @@ export default function RegisterPage() {
             color: "var(--text-secondary)",
           }}
         >
-          {t("auth.register.alreadyHaveAccount")} <Link href="/login">{t("auth.register.signIn")}</Link>
+          {t("auth.register.alreadyHaveAccount")}{" "}
+          <Link href="/login">{t("auth.register.signIn")}</Link>
         </p>
       </div>
     </div>
